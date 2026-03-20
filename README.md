@@ -120,6 +120,9 @@ agent-md search /path/to/file.md "TODO"
 # Get all headings for navigation
 agent-md headings /path/to/file.md
 
+# Lint a file
+agent-md lint /test-md/test-lint.md
+
 # Validate markdown before writing
 agent-md lint --content "# Title\nContent with **bold** text"
 agent-md write /path/to/file.md "# Title\nValid content without bold"
