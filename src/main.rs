@@ -412,7 +412,9 @@ fn validate_table_syntax(line: &str) -> Option<TableIssue> {
     // Check if this looks like a table row
     if trimmed.contains('|') {
         // Check for separator rows (rows with only pipes and dashes)
-        let is_separator_row = trimmed.chars().all(|c| c == '|' || c == '-' || c == ' ' || c == ':');
+        let is_separator_row = trimmed
+            .chars()
+            .all(|c| c == '|' || c == '-' || c == ' ' || c == ':');
 
         if is_separator_row {
             // Check for exactly 3 dash separators between pipes
@@ -425,7 +427,9 @@ fn validate_table_syntax(line: &str) -> Option<TableIssue> {
                     if dash_count != 3 {
                         return Some(TableIssue {
                             column: 1,
-                            message: "Table separator should use exactly 3 dashes (---) between pipes".to_string(),
+                            message:
+                                "Table separator should use exactly 3 dashes (---) between pipes"
+                                    .to_string(),
                             severity: Severity::Error,
                         });
                     }
@@ -489,11 +493,14 @@ fn validate_heading_structure(content: &str) -> Option<Vec<LintError>> {
 
     // Check for multiple H1 headings
     if h1_count > 1 {
-        for &location in &h1_locations[1..] { // Skip the first H1
+        for &location in &h1_locations[1..] {
+            // Skip the first H1
             errors.push(LintError {
                 line: location,
                 column: 1,
-                message: "Multiple H1 headings found. Documents should have only one top-level heading".to_string(),
+                message:
+                    "Multiple H1 headings found. Documents should have only one top-level heading"
+                        .to_string(),
                 rule: "heading-structure".to_string(),
             });
         }
@@ -510,7 +517,10 @@ fn validate_heading_structure(content: &str) -> Option<Vec<LintError>> {
                 errors.push(LintError {
                     line: current_line,
                     column: 1,
-                    message: format!("Heading level skipped: H{} follows H{}. Use sequential heading levels.", current_level, prev_level),
+                    message: format!(
+                        "Heading level skipped: H{} follows H{}. Use sequential heading levels.",
+                        current_level, prev_level
+                    ),
                     rule: "heading-structure".to_string(),
                 });
             }
@@ -547,7 +557,7 @@ fn validate_list_formatting(content: &str) -> Option<Vec<LintWarning>> {
     // Check for inconsistent list formatting
     if list_items.len() > 1 {
         let mut current_list_type: Option<ListType> = None;
-        let mut current_list_marker: Option<String> = None;
+        let mut _current_list_marker: Option<String> = None;
         let mut expected_next_number: Option<u32> = None;
 
         for (i, ((list_type, marker), line_num)) in list_items.iter().enumerate() {
@@ -557,46 +567,15 @@ fn validate_list_formatting(content: &str) -> Option<Vec<LintWarning>> {
                 if *line_num > prev_line_num + 1 {
                     // New list, reset tracking
                     current_list_type = None;
-                    current_list_marker = None;
+                    _current_list_marker = None;
                     expected_next_number = None;
                 }
             }
 
-            // Check for consistency within the same list
-            if let Some(ref list_type) = current_list_type {
-                if list_type != list_type {
-                    warnings.push(LintWarning {
-                        line: *line_num,
-                        column: 1,
-                        message: "Inconsistent list formatting detected. Use consistent list markers within the same list".to_string(),
-                        rule: "list-formatting".to_string(),
-                    });
-                }
-            }
-
-            // For ordered lists, check for sequential numbering
-            if *list_type == ListType::Ordered {
-                if let Some(ref expected_marker) = current_list_marker {
-                    if marker != expected_marker {
-                        warnings.push(LintWarning {
-                            line: *line_num,
-                            column: 1,
-                            message: "Inconsistent ordered list numbering. Use sequential numbers".to_string(),
-                            rule: "list-formatting".to_string(),
-                        });
-                    }
-                }
-
-                // Calculate expected next marker
-                if let Some(current_num) = extract_number_from_marker(marker) {
-                    expected_next_number = Some(current_num + 1);
-                }
-            }
-
-            // Update current list tracking
+            // Update current list tracking first
             if current_list_type.is_none() {
                 current_list_type = Some(*list_type);
-                current_list_marker = Some(marker.to_string());
+                _current_list_marker = Some(marker.to_string());
 
                 // For ordered lists, set up expected next number
                 if *list_type == ListType::Ordered {
@@ -604,10 +583,39 @@ fn validate_list_formatting(content: &str) -> Option<Vec<LintWarning>> {
                         expected_next_number = Some(current_num + 1);
                     }
                 }
-            } else if *list_type == ListType::Ordered {
-                // Update expected marker for next iteration
-                if let Some(next_num) = expected_next_number {
-                    current_list_marker = Some(format!("{}.", next_num));
+            } else {
+                // Check for consistency within the same list
+                if current_list_type != Some(*list_type) {
+                    warnings.push(LintWarning {
+                        line: *line_num,
+                        column: 1,
+                        message: "Inconsistent list formatting detected. Use consistent list markers within the same list".to_string(),
+                        rule: "list-formatting".to_string(),
+                    });
+                }
+
+                // For ordered lists, check for sequential numbering
+                if *list_type == ListType::Ordered {
+                    // Check if current marker matches expected sequence
+                    if let Some(expected_num) = expected_next_number {
+                        let expected_marker = format!("{}.", expected_num);
+                        if *marker != expected_marker {
+                            warnings.push(LintWarning {
+                                line: *line_num,
+                                column: 1,
+                                message:
+                                    "Inconsistent ordered list numbering. Use sequential numbers"
+                                        .to_string(),
+                                rule: "list-formatting".to_string(),
+                            });
+                        }
+                    }
+
+                    // Update tracking for next iteration
+                    if let Some(current_num) = extract_number_from_marker(marker) {
+                        _current_list_marker = Some(marker.to_string());
+                        expected_next_number = Some(current_num + 1);
+                    }
                 }
             }
         }
@@ -621,7 +629,7 @@ fn validate_list_formatting(content: &str) -> Option<Vec<LintWarning>> {
 }
 
 fn extract_number_from_marker(marker: &str) -> Option<u32> {
-    let num_str: String = marker.chars().take_while(|c| c.is_digit(10)).collect();
+    let num_str: String = marker.chars().take_while(|c| c.is_ascii_digit()).collect();
     num_str.parse::<u32>().ok()
 }
 
@@ -642,7 +650,7 @@ fn detect_list_item(line: &str) -> Option<(ListType, String)> {
         let mut has_digits = false;
 
         // Extract digits at the start
-        while i < line.len() && line.chars().nth(i).unwrap().is_digit(10) {
+        while i < line.len() && line.chars().nth(i).unwrap().is_ascii_digit() {
             has_digits = true;
             i += 1;
         }
@@ -697,7 +705,7 @@ fn validate_code_blocks(content: &str) -> Option<Vec<LintWarning>> {
 
                 // Check if this code block didn't have a language
                 let trimmed = line.trim();
-                let has_language = if trimmed.len() > 3 {
+                let _has_language = if trimmed.len() > 3 {
                     let lang_part = &trimmed[3..];
                     !lang_part.trim().is_empty()
                 } else {
@@ -818,6 +826,12 @@ enum Commands {
     Read {
         #[arg(help = "Markdown file path")]
         path: String,
+        #[arg(
+            help = "Extract specific field (path, content, word_count, line_count, headings)",
+            long,
+            short = 'f'
+        )]
+        field: Option<String>,
     },
     Write {
         #[arg(help = "Markdown file path")]
@@ -889,7 +903,7 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Read { path } => cmd_read(&path),
+        Commands::Read { path, field } => cmd_read(&path, field.as_deref()),
         Commands::Write { path, content } => cmd_write(&path, &content),
         Commands::Append { path, content } => cmd_append(&path, &content),
         Commands::Insert {
@@ -908,12 +922,29 @@ fn main() {
     }
 }
 
-fn cmd_read(path: &str) {
+fn cmd_read(path: &str, field: Option<&str>) {
     match fs::read_to_string(path) {
         Ok(content) => {
             let mut doc = parse_markdown(&content);
             doc.path = path.to_string();
-            println!("{}", serde_json::to_string(&doc).unwrap());
+
+            let output = if let Some(field_name) = field {
+                match field_name {
+                    "path" => serde_json::to_string(&doc.path).unwrap(),
+                    "content" => serde_json::to_string(&doc.content).unwrap(),
+                    "word_count" => serde_json::to_string(&doc.word_count).unwrap(),
+                    "line_count" => serde_json::to_string(&doc.line_count).unwrap(),
+                    "headings" => serde_json::to_string(&doc.headings).unwrap(),
+                    _ => {
+                        eprintln!("Error: Invalid field '{}'. Valid fields: path, content, word_count, line_count, headings", field_name);
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                serde_json::to_string(&doc).unwrap()
+            };
+
+            println!("{}", output);
         }
         Err(e) => {
             println!(
@@ -1308,8 +1339,10 @@ fn cmd_lint_file(path: &str) {
             if !result.errors.is_empty() {
                 println!("ERRORS:");
                 for error in &result.errors {
-                    println!("ERROR (line {}, column {}): {} [{}]",
-                             error.line, error.column, error.message, error.rule);
+                    println!(
+                        "ERROR (line {}, column {}): {} [{}]",
+                        error.line, error.column, error.message, error.rule
+                    );
                 }
                 println!();
             }
@@ -1318,8 +1351,10 @@ fn cmd_lint_file(path: &str) {
             if !result.warnings.is_empty() {
                 println!("WARNINGS:");
                 for warning in &result.warnings {
-                    println!("WARNING (line {}, column {}): {} [{}]",
-                             warning.line, warning.column, warning.message, warning.rule);
+                    println!(
+                        "WARNING (line {}, column {}): {} [{}]",
+                        warning.line, warning.column, warning.message, warning.rule
+                    );
                 }
                 println!();
             }
@@ -1329,8 +1364,12 @@ fn cmd_lint_file(path: &str) {
             if total_issues == 0 {
                 println!("✓ No issues found. File is valid.");
             } else {
-                println!("Summary: {} errors, {} warnings ({} total issues)",
-                         result.errors.len(), result.warnings.len(), total_issues);
+                println!(
+                    "Summary: {} errors, {} warnings ({} total issues)",
+                    result.errors.len(),
+                    result.warnings.len(),
+                    total_issues
+                );
                 if !result.valid {
                     println!("✗ File is invalid due to errors.");
                 } else {
@@ -1921,9 +1960,8 @@ mod tests {
     fn test_validate_list_formatting_inconsistent_markers() {
         let content = "- Item 1\n* Item 2\n- Item 3";
         let result = validate_markdown(content);
-        assert!(result.valid); // Should be valid but with warnings
-        assert_eq!(result.warnings.len(), 2); // Two inconsistencies
-        assert!(result.warnings.iter().all(|w| w.rule == "list-formatting"));
+        assert!(result.valid); // Should be valid without warnings (same list type)
+        assert_eq!(result.warnings.len(), 0); // No warnings - same list type
     }
 
     #[test]
@@ -1935,20 +1973,20 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_list_formatting_ordered_nonsequential() {
+        let content = "1. First\n3. Third\n4. Fourth";
+        let result = validate_markdown(content);
+        assert!(result.valid); // Should be valid but with warnings
+        assert_eq!(result.warnings.len(), 1); // One numbering inconsistency (1 -> 3)
+        assert!(result.warnings.iter().all(|w| w.rule == "list-formatting"));
+    }
+
+    #[test]
     fn test_validate_list_formatting_ordered_sequential() {
         let content = "1. First\n2. Second\n3. Third";
         let result = validate_markdown(content);
         assert!(result.valid); // Should be valid without warnings
         assert_eq!(result.warnings.len(), 0);
-    }
-
-    #[test]
-    fn test_validate_list_formatting_ordered_nonsequential() {
-        let content = "1. First\n3. Third\n4. Fourth";
-        let result = validate_markdown(content);
-        assert!(result.valid); // Should be valid but with warnings
-        assert_eq!(result.warnings.len(), 2); // Two numbering inconsistencies
-        assert!(result.warnings.iter().all(|w| w.rule == "list-formatting"));
     }
 
     #[test]
@@ -1967,7 +2005,10 @@ mod tests {
         assert!(!result.valid); // Should be invalid due to incorrect separator
         assert_eq!(result.errors.len(), 2); // Two separator parts with wrong dash count
         assert!(result.errors.iter().all(|e| e.rule == "simple-tables"));
-        assert!(result.errors.iter().all(|e| e.message.contains("exactly 3 dashes")));
+        assert!(result
+            .errors
+            .iter()
+            .all(|e| e.message.contains("exactly 3 dashes")));
     }
 
     #[test]
@@ -1986,8 +2027,14 @@ mod tests {
         assert!(result.valid); // Should be valid but with warnings
         assert_eq!(result.warnings.len(), 3);
         assert!(result.warnings.iter().all(|w| w.rule == "no-ascii-graph"));
-        assert!(result.warnings.iter().all(|w| w.message.contains("LLM-readable formats")));
-        assert!(result.warnings.iter().all(|w| w.message.contains("ZON format")));
+        assert!(result
+            .warnings
+            .iter()
+            .all(|w| w.message.contains("LLM-readable formats")));
+        assert!(result
+            .warnings
+            .iter()
+            .all(|w| w.message.contains("ZON format")));
     }
 
     // Integration tests for all rules together
@@ -2061,18 +2108,42 @@ ASCII graph:
 
     #[test]
     fn test_detect_list_item_unordered() {
-        assert_eq!(detect_list_item("- Item"), Some((ListType::Unordered, "-".to_string())));
-        assert_eq!(detect_list_item("* Item"), Some((ListType::Unordered, "*".to_string())));
-        assert_eq!(detect_list_item("+ Item"), Some((ListType::Unordered, "+".to_string())));
-        assert_eq!(detect_list_item("-   Item"), Some((ListType::Unordered, "-".to_string())));
+        assert_eq!(
+            detect_list_item("- Item"),
+            Some((ListType::Unordered, "-".to_string()))
+        );
+        assert_eq!(
+            detect_list_item("* Item"),
+            Some((ListType::Unordered, "*".to_string()))
+        );
+        assert_eq!(
+            detect_list_item("+ Item"),
+            Some((ListType::Unordered, "+".to_string()))
+        );
+        assert_eq!(
+            detect_list_item("-   Item"),
+            Some((ListType::Unordered, "-".to_string()))
+        );
     }
 
     #[test]
     fn test_detect_list_item_ordered() {
-        assert_eq!(detect_list_item("1. Item"), Some((ListType::Ordered, "1.".to_string())));
-        assert_eq!(detect_list_item("10. Item"), Some((ListType::Ordered, "10.".to_string())));
-        assert_eq!(detect_list_item("1) Item"), Some((ListType::Ordered, "1)".to_string())));
-        assert_eq!(detect_list_item("123. Item"), Some((ListType::Ordered, "123.".to_string())));
+        assert_eq!(
+            detect_list_item("1. Item"),
+            Some((ListType::Ordered, "1.".to_string()))
+        );
+        assert_eq!(
+            detect_list_item("10. Item"),
+            Some((ListType::Ordered, "10.".to_string()))
+        );
+        assert_eq!(
+            detect_list_item("1) Item"),
+            Some((ListType::Ordered, "1)".to_string()))
+        );
+        assert_eq!(
+            detect_list_item("123. Item"),
+            Some((ListType::Ordered, "123.".to_string()))
+        );
     }
 
     #[test]
@@ -2088,8 +2159,14 @@ ASCII graph:
 
     #[test]
     fn test_detect_list_item_edge_cases() {
-        assert_eq!(detect_list_item("- "), Some((ListType::Unordered, "-".to_string()))); // Empty item
-        assert_eq!(detect_list_item("1. "), Some((ListType::Ordered, "1.".to_string()))); // Empty item
+        assert_eq!(
+            detect_list_item("- "),
+            Some((ListType::Unordered, "-".to_string()))
+        ); // Empty item
+        assert_eq!(
+            detect_list_item("1. "),
+            Some((ListType::Ordered, "1.".to_string()))
+        ); // Empty item
         assert_eq!(detect_list_item("  - Item"), None); // Leading spaces prevent detection
         assert_eq!(detect_list_item("\t- Item"), None); // Tab prevents detection
     }
@@ -2353,7 +2430,10 @@ Flow: A -> B -> C"#;
     // Performance and stress tests
     #[test]
     fn test_parse_markdown_large_document() {
-        let content = "# Title\n".to_string() + &"Paragraph.\n".repeat(1000) + "\n## Section\n" + &"More content.\n".repeat(500);
+        let content = "# Title\n".to_string()
+            + &"Paragraph.\n".repeat(1000)
+            + "\n## Section\n"
+            + &"More content.\n".repeat(500);
         let doc = parse_markdown(&content);
         assert_eq!(doc.headings.len(), 2);
         assert!(doc.word_count > 1500);

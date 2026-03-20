@@ -47,6 +47,10 @@ All commands return JSON for easy parsing.
 ```bash
 agent-md read <path>
 # Returns: {path, content, word_count, line_count, headings}
+
+# Extract specific field without jq
+agent-md read <path> --field <field_name>
+# Available fields: path, content, word_count, line_count, headings
 ```
 
 ### Write a file
@@ -210,20 +214,35 @@ agent-md lint --content "# New Title\nContent here"
 agent-md write README.md "# New Title\nValid content"
 ```
 
+## Read File and Extract Fields
+
+1. **Use --field option (recommended):**
+
+```bash
+agent-md read README.md --field path      # Get file path
+agent-md read README.md --field content   # Get content
+agent-md read README.md --field headings  # Get headings
+agent-md read README.md -f word_count     # Short form for word count
+```
+
+The issue occurs because JSON content contains unescaped control characters. The `--field` option is the recommended approach as it avoids jq parsing entirely and provides direct access to specific properties.
+
 ## Example Usage for LLMs
 
 ```bash
-# Read a file and get structured data
-DATA=$(agent-md read /path/to/file.md)
-echo "$DATA" | jq '.word_count'
-
 # Search for content
 agent-md search /path/to/file.md "TODO"
+# example:
+agent-md search README.md "TODO"
 
 # Get all headings for navigation
 agent-md headings /path/to/file.md
+# example:
+agent-md headings README.md
 
 # Lint a file
+agent-md lint README.md
+# example:
 agent-md lint README.md
 
 # Lint with human-readable output

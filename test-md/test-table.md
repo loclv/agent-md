@@ -9,5 +9,14 @@ Here's a proper link: [Google](https://google.com/)
 ### Simple Table
 
 | Name | Description |
-|---|---|
+|------|-------------|
 | Item | This is an item |
+
+### JSON format
+
+```json
+{
+  "name": "Item",
+  "description": "This is an item"
+}
+```
