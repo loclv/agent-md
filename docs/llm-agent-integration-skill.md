@@ -6,17 +6,14 @@ This skill provides guidelines for LLMs and AI agents to effectively use the age
 
 ## Core Principle
 
-**ALWAYS use agent-md commands instead of direct file operations when working with markdown files.**
+ALWAYS use agent-md commands instead of direct file operations when working with markdown files.
 
 ## Command Reference
 
 ### Reading Files
 
 ```bash
-# Read file and get structured JSON data
 DATA=$(agent-md read <path>)
-
-# Extract specific fields
 CONTENT=$(echo "$DATA" | jq -r '.content')
 WORD_COUNT=$(echo "$DATA" | jq '.word_count')
 HEADINGS=$(echo "$DATA" | jq '.headings')
@@ -26,56 +23,37 @@ LINE_COUNT=$(echo "$DATA" | jq '.line_count')
 ### Writing Files
 
 ```bash
-# Write content with automatic validation
 agent-md write <path> "<content>"
-
-# Always validate before writing
 agent-md lint --content "<content>" && agent-md write <path> "<content>"
 ```
 
 ### Searching Content
 
 ```bash
-# Search for specific text
 agent-md search <path> "<query>"
 ```
 
 ### Navigation
 
 ```bash
-# Get all headings for document structure
 agent-md headings <path>
-
-# Get document statistics
 agent-md stats <path>
-
-# List markdown files in directory
 agent-md list <directory>
 ```
 
 ### Content Modification
 
 ```bash
-# Append content
 agent-md append <path> "<content>"
-
-# Insert at specific line
 agent-md insert <path> <line> "<content>"
-
-# Delete lines
 agent-md delete <path> <line> [count]
 ```
 
 ### Validation
 
 ```bash
-# Validate file content
 agent-md lint <path>
-
-# Validate content directly
 agent-md lint --content "<content>"
-
-# Get human-readable linting report
 agent-md lint-file <path>
 ```
 

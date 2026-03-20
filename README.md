@@ -2,6 +2,21 @@
 
 A CLI markdown editor written in Rust designed for LLMs to easily read and use.
 
+## Why This Tool Exists
+
+I've seen many markdown documents written by LLM/AI Agents that cost tokens, and when another agent/LLM reads that markdown file, it also costs tokens. This is because LLMs learn from humans, and the way humans write markdown is designed for human readability. LLMs, on the other hand, don't need bold text, special character graphs, dashes, and unnecessary spaces.
+
+### The Problem
+
+- Token waste: Human-readable markdown uses formatting that adds unnecessary tokens for AI consumption
+- Inefficient parsing: LLMs pay extra attention to visual formatting like `**bold**`, `__underline__`, and ASCII art
+- Redundant structure: Human-friendly conventions like complex tables and decorative elements don't add value for AI agents
+- Cost amplification: Every agent that reads the document pays the same token tax for human-centric formatting
+
+### The Solution
+
+Agent MD enforces AI-friendly markdown standards that eliminate token waste while maintaining readability for both humans and machines.
+
 ## Installation
 
 Build from source:
@@ -148,7 +163,7 @@ cargo test
 
 When working with markdown files, always prefer the `agent-md` CLI tool over direct file editing.
 
-See `docs/llm-agent-rule.md` for the complete integration guideline.
+See `docs/llm-agent-rule.md` for the complete integration guideline and best practices.
 
 ### Why use agent-md?
 
