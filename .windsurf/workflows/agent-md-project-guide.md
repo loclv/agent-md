@@ -34,25 +34,25 @@ ralph-md/
 
 ### 1. Main Application (`src/main.rs`)
 
-- **CLI Interface**: Uses clap for command-line parsing
-- **Markdown Parser**: Uses pulldown-cmark for parsing Markdown
-- **JSON Serialization**: Uses serde for JSON output
-- **Validation**: Built-in linting for Markdown content
-- **Commands**: Read, Write, Append, Insert, Delete, List, Search, Headings, Stats, ToJsonl, Lint
+- CLI Interface: Uses clap for command-line parsing
+- Markdown Parser: Uses pulldown-cmark for parsing Markdown
+- JSON Serialization: Uses serde for JSON output
+- Validation: Built-in linting for Markdown content
+- Commands: Read, Write, Append, Insert, Delete, List, Search, Headings, Stats, ToJsonl, Lint
 
 ### 2. Configuration Files
 
-- **Cargo.toml**: Dependencies, binary configuration, build profiles
-- **rust-toolchain.toml**: Specifies Rust 1.94.0 with rustfmt and clippy
-- **rustfmt.toml**: Code formatting rules (100-char width, 4-space indent)
-- **clippy.toml**: Linting rules (complexity limits, documentation requirements)
+- Cargo.toml: Dependencies, binary configuration, build profiles
+- rust-toolchain.toml: Specifies Rust 1.94.0 with rustfmt and clippy
+- rustfmt.toml: Code formatting rules (100-char width, 4-space indent)
+- clippy.toml: Linting rules (complexity limits, documentation requirements)
 
 ### 3. Development Tools
 
-- **Makefile**: Convenient commands for building, testing, linting
-- **VS Code Integration**: Tasks and settings for IDE development
-- **GitHub Actions**: Automated CI/CD pipeline
-- **Pre-commit Hooks**: Optional local validation
+- Makefile: Convenient commands for building, testing, linting
+- VS Code Integration: Tasks and settings for IDE development
+- GitHub Actions: Automated CI/CD pipeline
+- Pre-commit Hooks: Optional local validation
 
 ## Available Commands
 
@@ -300,16 +300,16 @@ pre-commit run --all-files
 
 ### Core Dependencies
 
-- **clap 4.5**: Command-line argument parsing
-- **pulldown-cmark 0.12**: Markdown parsing
-- **serde 1.0**: JSON serialization
-- **dirs 5.0**: Directory handling
-- **chrono 0.4**: Date/time utilities
+- clap 4.5: Command-line argument parsing
+- pulldown-cmark 0.12: Markdown parsing
+- serde 1.0: JSON serialization
+- dirs 5.0: Directory handling
+- chrono 0.4: Date/time utilities
 
 ### Development Dependencies
 
-- **cargo-watch**: File watching for development
-- **cargo-audit**: Security vulnerability checking
+- cargo-watch: File watching for development
+- cargo-audit: Security vulnerability checking
 
 ## Build Configuration
 
@@ -334,11 +334,11 @@ path = "src/main.rs"
 
 ### GitHub Actions Workflow
 
-- **Test**: Runs unit tests on Ubuntu
-- **Lint**: Checks formatting and runs clippy
-- **Security**: Runs cargo audit
-- **Build**: Creates release binary
-- **Artifact**: Uploads binary as GitHub artifact
+- Test: Runs unit tests on Ubuntu
+- Lint: Checks formatting and runs clippy
+- Security: Runs cargo audit
+- Build: Creates release binary
+- Artifact: Uploads binary as GitHub artifact
 
 ### Pipeline Steps
 
@@ -356,10 +356,10 @@ path = "src/main.rs"
 
 ### Common Issues
 
-1. **Build fails**: Check Rust version in `rust-toolchain.toml`
-2. **Formatting errors**: Run `make format` to fix
-3. **Clippy warnings**: Address linting issues in code
-4. **Test failures**: Check test output for specific errors
+1. Build fails: Check Rust version in `rust-toolchain.toml`
+2. Formatting errors: Run `make format` to fix
+3. Clippy warnings: Address linting issues in code
+4. Test failures: Check test output for specific errors
 
 ### Getting Help
 
