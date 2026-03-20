@@ -10,8 +10,8 @@ The agent-md linter enforces AI-friendly markdown standards to ensure content is
 
 ## Rule 1: No Bold Text
 
-Rule ID: `no-bold`  
-Severity: Error  
+Rule ID: `no-bold`
+Severity: Error
 Description: Bold text formatting is not allowed for AI agents.
 
 ### Invalid Examples
@@ -20,7 +20,7 @@ Description: Bold text formatting is not allowed for AI agents.
 # ❌ Invalid - Double asterisks
 This is **bold text** that will be rejected.
 
-# ❌ Invalid - Double underscores  
+# ❌ Invalid - Double underscores
 This is __also bold__ and will cause an error.
 
 # ❌ Invalid - Mixed usage
@@ -52,8 +52,8 @@ Bold text creates visual noise for AI agents and doesn't add semantic meaning th
 
 ## Rule 2: Simple Table Syntax
 
-Rule ID: `simple-tables`  
-Severity: Warning/Error  
+Rule ID: `simple-tables`
+Severity: Warning/Error
 Description: Tables should use simple syntax without complex attributes.
 
 ### Invalid Examples
@@ -115,8 +115,8 @@ Complex tables are difficult for AI agents to parse and can introduce formatting
 
 ## Rule 3: No Useless Links
 
-Rule ID: `useless-links`  
-Severity: Warning  
+Rule ID: `useless-links`
+Severity: Warning
 Description: Link text should not be identical to the URL.
 
 ### Invalid Examples
@@ -156,8 +156,8 @@ Links where the text equals the URL provide no additional context and create red
 
 ## Rule 4: No ASCII Graphs
 
-Rule ID: `no-ascii-graph`  
-Severity: Warning  
+Rule ID: `no-ascii-graph`
+Severity: Warning
 Description: Human-readable ASCII graphs should be replaced with LLM-readable formats.
 
 ### Invalid Examples
@@ -253,8 +253,8 @@ ASCII graphs are visually appealing but difficult for AI agents to parse reliabl
 
 ## Rule 5: Proper Heading Structure
 
-Rule ID: `heading-structure`  
-Severity: Warning  
+Rule ID: `heading-structure`
+Severity: Warning
 Description: Headings should follow logical hierarchy and not skip levels.
 
 ### Invalid Examples
@@ -306,8 +306,8 @@ Proper heading structure creates a logical document outline that AI agents can e
 
 ## Rule 6: Code Block Best Practices
 
-Rule ID: `code-blocks`  
-Severity: Warning  
+Rule ID: `code-blocks`
+Severity: Warning
 Description: Code blocks should specify language when possible.
 
 ### Invalid Examples
@@ -365,8 +365,8 @@ Specifying language helps AI agents understand the context and apply appropriate
 
 ## Rule 7: List Formatting
 
-Rule ID: `list-formatting`  
-Severity: Warning  
+Rule ID: `list-formatting`
+Severity: Warning
 Description: Lists should be consistent and properly formatted.
 
 ### Invalid Examples
@@ -384,7 +384,7 @@ Description: Lists should be consistent and properly formatted.
 
 # ❌ Invalid - Empty list items
 1. First item
-2. 
+2.
 3. Third item
 ```
 
@@ -416,8 +416,8 @@ Consistent list formatting improves readability and parsing reliability for AI a
 
 ## Rule 8: Single H1 Title
 
-Rule ID: `single-title`  
-Severity: Error  
+Rule ID: `single-title`
+Severity: Error
 Description: Documents should have only one top-level heading (H1).
 
 ### Invalid Examples
@@ -519,6 +519,9 @@ These rules are automatically enforced when using the `agent-md write` command. 
 ```bash
 # Validate content before writing
 agent-md lint --content "# Title\nContent with **bold** text"
+
+# Lint file with human-readable output
+agent-md lint-file README.md
 
 # Write with automatic validation
 agent-md write document.md "# Title\nValid content without bold"

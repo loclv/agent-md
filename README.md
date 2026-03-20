@@ -91,6 +91,9 @@ agent-md lint <path>
 
 agent-md lint --content "# Markdown content"
 # Validate content directly without file
+
+agent-md lint-file <path>
+# Returns: Human-readable linting output with errors, warnings, and summary
 ```
 
 ## Validation Rules
@@ -99,6 +102,9 @@ The linter enforces AI-friendly markdown:
 
 - No bold text: `**bold**` and `__bold__` are rejected (errors)
 - Simple table syntax: Complex table attributes are rejected, very wide tables generate warnings
+- No useless links: Links where text equals the URL generate warnings
+- No ASCII graphs: Box drawing characters and visual patterns generate warnings
+- Single H1 title: Multiple H1 headings are rejected (errors)
 - Automatic validation: The `write` command validates content before writing
 
 ## Running Tests
@@ -121,9 +127,12 @@ agent-md search /path/to/file.md "TODO"
 agent-md headings /path/to/file.md
 
 # Lint a file
-agent-md lint /test-md/test-lint.md
+agent-md lint README.md
+
+# Lint with human-readable output
+agent-md lint-file README.md
 
 # Validate markdown before writing
 agent-md lint --content "# Title\nContent with **bold** text"
-agent-md write /path/to/file.md "# Title\nValid content without bold"
+agent-md write document.md "# Title\nValid content without bold"
 ```

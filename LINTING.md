@@ -137,6 +137,13 @@ The agent-md tool includes custom linting rules for Markdown content:
   - Numbered List with Conditions
   - ZON format
 
+#### single-title
+
+- Type: Error
+- Description: Multiple H1 headings detected
+- Detection: Finds documents with more than one top-level heading (# Title)
+- Recommendation: Use only one H1 heading per document for clear document structure
+
 ## Adding New Dependencies
 
 When adding new dependencies:

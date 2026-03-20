@@ -11,14 +11,19 @@ The agent-md project is a Rust-based Markdown editor specifically designed for A
 ## Project Structure
 
 ```text
-ralph-md/
+agent-md/
 ├── .github/workflows/
 │   └── ci.yml                 # GitHub Actions CI/CD pipeline
 ├── .vscode/
 │   ├── settings.json          # VS Code configuration
 │   └── tasks.json             # VS Code tasks
+├── .windsurf/workflows/
+│   └── agent-md-project-guide.md  # Project skill documentation
+├── docs/
+│   └── markdown-writing-rules.md   # Comprehensive validation rules
 ├── src/
 │   └── main.rs                # Main application source code
+├── test-md/                   # Test markdown files
 ├── Cargo.toml                 # Rust project configuration
 ├── Cargo.lock                 # Dependency lock file
 ├── Makefile                   # Development commands
@@ -38,7 +43,7 @@ ralph-md/
 - Markdown Parser: Uses pulldown-cmark for parsing Markdown
 - JSON Serialization: Uses serde for JSON output
 - Validation: Built-in linting for Markdown content
-- Commands: Read, Write, Append, Insert, Delete, List, Search, Headings, Stats, ToJsonl, Lint
+- Commands: Read, Write, Append, Insert, Delete, List, Search, Headings, Stats, ToJsonl, Lint, LintFile
 
 ### 2. Configuration Files
 
@@ -95,6 +100,9 @@ agent-md to-jsonl <file>
 
 # Validate Markdown content (linting)
 agent-md lint <file> [--content]
+
+# Lint file with human-readable output
+agent-md lint-file <file>
 ```
 
 ### Development Commands
@@ -123,7 +131,7 @@ cargo clippy
 ```json
 {
   "path": "string",
-  "content": "string", 
+  "content": "string",
   "word_count": "number",
   "line_count": "number",
   "headings": [
@@ -144,7 +152,7 @@ cargo clippy
   "errors": [
     {
       "line": "number",
-      "column": "number", 
+      "column": "number",
       "message": "string",
       "rule": "string"
     }
@@ -153,7 +161,7 @@ cargo clippy
     {
       "line": "number",
       "column": "number",
-      "message": "string", 
+      "message": "string",
       "rule": "string"
     }
   ]
@@ -217,11 +225,14 @@ agent-md to-jsonl README.md > output.jsonl
 ### Validation
 
 ```bash
-# Validate file
+# Validate file (JSON output)
 agent-md lint README.md
 
 # Validate content directly
 agent-md lint "# Title\n\nContent" --content
+
+# Lint file with human-readable output
+agent-md lint-file README.md
 ```
 
 ## Standard Development Workflow
