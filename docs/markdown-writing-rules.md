@@ -30,21 +30,21 @@ Both **bold** and __bold__ are prohibited.
 ### Recommended Alternatives
 
 ```markdown
-# ✅ Valid - Use plain text
+### ✅ Valid - Use plain text
 This is important text without bold formatting.
 
-# ✅ Valid - Use italics for emphasis
+### ✅ Valid - Use italics for emphasis
 This is *italic text* which is allowed.
 
-# ✅ Valid - Use headings for emphasis
+### ✅ Valid - Use headings for emphasis
 ## Important Section
 This section contains important information.
 
-# ✅ Valid - Use code formatting for technical terms
+### ✅ Valid - Use code formatting for technical terms
 Use `monospace` for technical terms or variable names.
 ```
 
-### Rationale
+### Rationale for No Bold Rule
 
 Bold text creates visual noise for AI agents and doesn't add semantic meaning that can't be conveyed through other means like headings or code formatting.
 
@@ -80,23 +80,23 @@ Description: Tables should use simple syntax without complex attributes.
 ### Recommended Alternatives
 
 ```markdown
-# ✅ Valid - Simple table syntax
+### ✅ Valid - Simple table syntax
 | Name | Description |
 |------|-------------|
 | Item | Simple description |
 | Test | Another description |
 
-# ✅ Valid - Keep tables narrow (≤5 columns)
+### ✅ Valid - Keep tables narrow (≤5 columns)
 | Name | Type | Status | Priority | Owner |
 |------|------|--------|----------|-------|
 | Task | Bug | Open | High | Team |
 
-# ✅ Valid - Use lists for complex data
+### ✅ Valid - Use lists for complex data
 - Item 1: Simple description
 - Item 2: Another description
 - Item 3: Third description
 
-# ✅ Valid - Use structured formats for complex data
+### ✅ Valid - Use structured formats for complex data
 
 ```json
 {
@@ -107,7 +107,7 @@ Description: Tables should use simple syntax without complex attributes.
 }
 ```
 
-### Rationale
+### Rationale for Simple Tables Rule
 
 Complex tables are difficult for AI agents to parse and can introduce formatting inconsistencies. Simple tables are more reliable for machine processing.
 
@@ -135,20 +135,20 @@ Go to [www.example.com](https://example.com/) now.
 ### Recommended Alternatives
 
 ```markdown
-# ✅ Valid - Descriptive link text
+### ✅ Valid - Descriptive link text
 Visit [Example Website](https://example.com) for more info.
 
-# ✅ Valid - Action-oriented link text
+### ✅ Valid - Action-oriented link text
 [Check out our documentation](https://docs.example.com)
 
-# ✅ Valid - Contextual link text
+### ✅ Valid - Contextual link text
 See the [API reference](https://api.example.com) for implementation details.
 
-# ✅ Valid - Plain URLs (when appropriate)
+### ✅ Valid - Plain URLs (when appropriate)
 For more information: https://example.com
 ```
 
-### Rationale
+### Rationale for Useless Links Rule
 
 Links where the text equals the URL provide no additional context and create redundant information. Descriptive link text helps AI agents understand the purpose and destination of links.
 
@@ -194,12 +194,12 @@ A --- B --- C
 ### Recommended Alternatives
 
 ```markdown
-# ✅ Valid - Structured CSV
+### ✅ Valid - Structured CSV
 name,value
 Item 1,100
 Item 2,200
 
-# ✅ Valid - JSON format
+### ✅ Valid - JSON format
 
 ```json
 {
@@ -217,35 +217,37 @@ Item 2,200
 }
 ```
 
-# ✅ Valid - Mermaid Diagram
+### ✅ Valid - Mermaid Diagram
 
 ```mermaid
 flowchart LR
     Start --> Process --> End
 ```
 
-# ✅ Valid - Numbered List with Conditions
+### ✅ Valid - Numbered List with Conditions
 
 1. Start: Initialize process
 2. Process: Execute main logic
 3. End: Finalize and return
 
-# ✅ Valid - ZON format (Zone Object Notation)
+### ✅ Valid - ZON format (Zero Overhead Notation)
 
-tree:
-  branch1:
-    - leaf1
-    - leaf2
-  branch2:
-    - leaf3
+See: <https://github.com/ZON-Format/ZON>, <https://zonformat.org/>.
 
-# ✅ Valid - Simple progress indicator
+```txt
+users:@(3):id,tier
+1,premium
+3,free
+5,pro
+```
+
+### ✅ Valid - Simple progress indicator
 
 Progress: 80% complete
 
 ```
 
-### Rationale
+### Rationale for ASCII Graphs Rule
 
 ASCII graphs are visually appealing but difficult for AI agents to parse reliably. Structured formats like JSON, CSV, or Mermaid diagrams provide machine-readable alternatives.
 
@@ -278,18 +280,18 @@ Description: Headings should follow logical hierarchy and not skip levels.
 ### Recommended Alternatives
 
 ```markdown
-# ✅ Valid - Sequential heading levels
+### ✅ Valid - Sequential heading levels
 # Title
 ## Section 1
 ### Subsection 1.1
 #### Sub-subsection 1.1.1
 
-# ✅ Valid - Single H1 per document
+### ✅ Valid - Single H1 per document
 # Main Title
 ## Section 1
 ## Section 2
 
-# ✅ Valid - Consistent hierarchy
+### ✅ Valid - Consistent hierarchy
 # Document Title
 ## Overview
 ## Implementation
@@ -298,7 +300,7 @@ Description: Headings should follow logical hierarchy and not skip levels.
 ## Conclusion
 ```
 
-### Rationale
+### Rationale for Heading Structure Rule
 
 Proper heading structure creates a logical document outline that AI agents can easily navigate and understand.
 
@@ -332,7 +334,7 @@ function example() {
 ### Recommended Alternatives
 
 ```markdown
-# ✅ Valid - Specify language
+### ✅ Valid - Specify language
 
 ```javascript
 function example() {
@@ -340,24 +342,24 @@ function example() {
 }
 ```
 
-# ✅ Valid - Use appropriate language
+### ✅ Valid - Use appropriate language
 
 ```python
 def example():
     return "Hello World"
 ```
 
-# ✅ Valid - Inline code for short snippets
+### ✅ Valid - Inline code for short snippets
 
 Use `console.log()` for debugging.
 
-# ✅ Valid - Language-agnostic when appropriate
+### ✅ Valid - Language-agnostic when appropriate
 
 ```
 This is a code block without specific language
 ```
 
-### Rationale
+### Rationale for Code Blocks Rule
 
 Specifying language helps AI agents understand the context and apply appropriate parsing rules.
 
@@ -369,7 +371,7 @@ Rule ID: `list-formatting`
 Severity: Warning
 Description: Lists should be consistent and properly formatted.
 
-### Invalid Examples
+### Invalid Examples for List Formatting
 
 ```markdown
 # ❌ Invalid - Mixed list types
@@ -388,33 +390,115 @@ Description: Lists should be consistent and properly formatted.
 3. Third item
 ```
 
-### Recommended Alternatives
+### Recommended Alternatives for List Formatting
 
 ```markdown
-# ✅ Valid - Consistent ordered list
+### ✅ Valid - Consistent ordered list
 1. First item
 2. Second item
 3. Third item
 
-# ✅ Valid - Consistent unordered list
+### ✅ Valid - Consistent unordered list
 - First item
 - Second item
 - Third item
 
-# ✅ Valid - Nested lists
+### ✅ Valid - Nested lists
 1. Main item
    1.1. Sub item
    1.2. Another sub item
 2. Second main item
 ```
 
-### Rationale
+### Rationale for List Formatting Rule
 
 Consistent list formatting improves readability and parsing reliability for AI agents.
 
 ---
 
-## Rule 8: Single H1 Title
+## Rule 8: No Duplicate Headings
+
+Rule ID: `no-duplicate-headings`
+Severity: Warning
+Description: Headings with the same content should not appear multiple times in a document.
+
+### Invalid Examples
+
+```markdown
+# ❌ Invalid - Same heading content at different levels
+## Introduction
+Some content here
+
+### Introduction
+Different content but same heading text
+
+# ❌ Invalid - Same heading content at same level
+## Overview
+First overview content
+
+## Overview
+Second overview content
+
+# ❌ Invalid - Multiple identical headings
+## Usage
+How to use the tool
+
+## Usage
+More usage instructions
+
+## Usage
+Additional usage notes
+```
+
+### Recommended Alternatives
+
+```markdown
+### ✅ Valid - Unique heading content
+## Introduction
+Some content here
+
+### Getting Started
+Different content with unique heading
+
+### ✅ Valid - More specific headings
+## Overview
+First overview content
+
+## Detailed Overview
+Second overview content
+
+## Quick Reference
+Additional reference material
+
+### ✅ Valid - Numbered or qualified headings
+## Usage: Basic Operations
+How to use the tool
+
+## Usage: Advanced Features
+More usage instructions
+
+## Usage: Troubleshooting
+Additional usage notes
+
+### ✅ Valid - Hierarchical structure
+## Usage
+### Basic Operations
+How to use the tool
+
+### Advanced Features
+More usage instructions
+
+### Troubleshooting
+Additional usage notes
+```
+
+### Rationale for No Duplicate Headings Rule
+
+Duplicate headings create ambiguity for AI agents when navigating and referencing document sections. Unique heading content ensures clear navigation and unambiguous section identification, making it easier for AI agents to understand and process document structure.
+
+---
+
+## Rule 9: Single H1 Title
 
 Rule ID: `single-title`
 Severity: Error
@@ -439,7 +523,7 @@ More content here
 ### Recommended Alternatives
 
 ```markdown
-# ✅ Valid - Single H1 heading
+### ✅ Valid - Single H1 heading
 # Document Title
 ## Section 1
 Content for section 1
@@ -447,7 +531,7 @@ Content for section 1
 ## Section 2
 Content for section 2
 
-# ✅ Valid - Proper hierarchy
+### ✅ Valid - Proper hierarchy
 # Main Title
 ## Overview
 ## Details
@@ -455,7 +539,7 @@ Content for section 2
 ## Conclusion
 ```
 
-### Rationale
+### Rationale for Single H1 Title Rule
 
 Multiple H1 headings create confusion about the document's main title and structure. AI agents rely on a clear document hierarchy, and a single H1 provides an unambiguous entry point for understanding the document's purpose.
 
@@ -508,7 +592,8 @@ When using the `agent-md lint` command, validation results are returned in JSON 
 5. Maintain proper heading hierarchy without skipping levels
 6. Specify code block languages when possible
 7. Format lists consistently with proper spacing and structure
-8. Use only one H1 heading per document
+8. Avoid duplicate headings with the same content
+9. Use only one H1 heading per document
 
 ---
 
