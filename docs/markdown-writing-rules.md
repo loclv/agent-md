@@ -16,31 +16,48 @@ Description: Bold text formatting is not allowed for AI agents.
 
 ### Invalid Examples
 
-```markdown
-# ❌ Invalid - Double asterisks
+❌ Invalid - Double asterisks
+
+```text
 This is **bold text** that will be rejected.
+```
 
-# ❌ Invalid - Double underscores
+❌ Invalid - Double underscores
+
+```text
 This is __also bold__ and will cause an error.
+```
 
-# ❌ Invalid - Mixed usage
+❌ Invalid - Mixed usage
+
+```text
 Both **bold** and __bold__ are prohibited.
 ```
 
 ### Recommended Alternatives
 
-```markdown
-### ✅ Valid - Use plain text
+✅ Valid - Use plain text
+
+```text
 This is important text without bold formatting.
+```
 
-### ✅ Valid - Use italics for emphasis
+✅ Valid - Use italics for emphasis
+
+```text
 This is *italic text* which is allowed.
+```
 
-### ✅ Valid - Use headings for emphasis
+✅ Valid - Use headings for emphasis
+
+```text
 ## Important Section
 This section contains important information.
+```
 
-### ✅ Valid - Use code formatting for technical terms
+✅ Valid - Use code formatting for technical terms
+
+```text
 Use `monospace` for technical terms or variable names.
 ```
 
@@ -56,47 +73,62 @@ Rule ID: `simple-tables`
 Severity: Warning/Error
 Description: Tables should use simple syntax without complex attributes.
 
-### Invalid Examples
+### Rule 2 Invalid Examples
 
-```markdown
-# ❌ Invalid - Complex table attributes
+❌ Invalid - Complex table attributes
+
+```text
 | Header 1 | Header 2 |
 |----------|----------|
 | Cell 1   | Cell 2   |
 | colspan="2" | Cell 3 |
+```
 
-# ❌ Invalid - Inline formatting in cells
+❌ Invalid - Inline formatting in cells
+
+```text
 | Name | Description |
 |------|-------------|
 | Item | This has **bold** text |
 | Test | This has *italic* text |
+```
 
-# ❌ Invalid - Very wide tables (warning)
+❌ Invalid - Very wide tables (warning)
+
+```text
 | Col1 | Col2 | Col3 | Col4 | Col5 | Col6 | Col7 | Col8 |
 |------|------|------|------|------|------|------|------|
 | Data | Data | Data | Data | Data | Data | Data | Data |
 ```
 
-### Recommended Alternatives
+### Rule 2 Recommended Alternatives
 
-```markdown
-### ✅ Valid - Simple table syntax
+✅ Valid - Simple table syntax
+
+```text
 | Name | Description |
 |------|-------------|
 | Item | Simple description |
 | Test | Another description |
+```
 
-### ✅ Valid - Keep tables narrow (≤5 columns)
+✅ Valid - Keep tables narrow (≤5 columns)
+
+```text
 | Name | Type | Status | Priority | Owner |
 |------|------|--------|----------|-------|
 | Task | Bug | Open | High | Team |
+```
 
-### ✅ Valid - Use lists for complex data
+✅ Valid - Use lists for complex data
+
+```text
 - Item 1: Simple description
 - Item 2: Another description
 - Item 3: Third description
+```
 
-### ✅ Valid - Use structured formats for complex data
+✅ Valid - Use structured formats for complex data
 
 ```json
 {
@@ -119,9 +151,9 @@ Rule ID: `useless-links`
 Severity: Warning
 Description: Link text should not be identical to the URL.
 
-### Invalid Examples
+### Rule 3 Invalid Examples
 
-```markdown
+```text
 # ❌ Invalid - Link text equals URL
 Visit [https://example.com](https://example.com) for more info.
 
@@ -132,19 +164,29 @@ Check out [example.com](https://www.example.com) today.
 Go to [www.example.com](https://example.com/) now.
 ```
 
-### Recommended Alternatives
+### Rule 3 Recommended Alternatives
 
-```markdown
-### ✅ Valid - Descriptive link text
+✅ Valid - Descriptive link text
+
+```text
 Visit [Example Website](https://example.com) for more info.
+```
 
-### ✅ Valid - Action-oriented link text
+✅ Valid - Action-oriented link text
+
+```text
 [Check out our documentation](https://docs.example.com)
+```
 
-### ✅ Valid - Contextual link text
+✅ Valid - Contextual link text
+
+```text
 See the [API reference](https://api.example.com) for implementation details.
+```
 
-### ✅ Valid - Plain URLs (when appropriate)
+✅ Valid - Plain URLs (when appropriate)
+
+```text
 For more information: https://example.com
 ```
 
@@ -160,9 +202,9 @@ Rule ID: `no-ascii-graph`
 Severity: Warning
 Description: Human-readable ASCII graphs should be replaced with LLM-readable formats.
 
-### Invalid Examples
+### Rule 4 Invalid Examples
 
-```markdown
+```text
 # ❌ Invalid - Box drawing characters
 ┌─────────┬─────────┐
 │ Name    | Value   │
@@ -191,15 +233,17 @@ A --- B --- C
   D --- E
 ```
 
-### Recommended Alternatives
+### Rule 4 Recommended Alternatives
 
-```markdown
-### ✅ Valid - Structured CSV
+✅ Valid - Structured CSV
+
+```text
 name,value
 Item 1,100
 Item 2,200
+```
 
-### ✅ Valid - JSON format
+✅ Valid - JSON format
 
 ```json
 {
@@ -217,20 +261,22 @@ Item 2,200
 }
 ```
 
-### ✅ Valid - Mermaid Diagram
+✅ Valid - Mermaid Diagram
 
 ```mermaid
 flowchart LR
     Start --> Process --> End
 ```
 
-### ✅ Valid - Numbered List with Conditions
+✅ Valid - Numbered List with Conditions
 
+```text
 1. Start: Initialize process
 2. Process: Execute main logic
 3. End: Finalize and return
+```
 
-### ✅ Valid - ZON format (Zero Overhead Notation)
+✅ Valid - ZON format (Zero Overhead Notation)
 
 See: <https://github.com/ZON-Format/ZON>, <https://zonformat.org/>.
 
@@ -241,10 +287,10 @@ users:@(3):id,tier
 5,pro
 ```
 
-### ✅ Valid - Simple progress indicator
+✅ Valid - Simple progress indicator
 
+```text
 Progress: 80% complete
-
 ```
 
 ### Rationale for ASCII Graphs Rule
@@ -259,39 +305,51 @@ Rule ID: `heading-structure`
 Severity: Warning
 Description: Headings should follow logical hierarchy and not skip levels.
 
-### Invalid Examples
+### Rule 5 Invalid Examples
 
-```markdown
-# ❌ Invalid - Skipping heading levels
+❌ Invalid - Skipping heading levels
+
+```text
 # Title
 ### Subsection (skips H2)
+```
 
-# ❌ Invalid - Multiple H1 headings
+❌ Invalid - Multiple H1 headings
+
+```text
 # First Title
 # Second Title
+```
 
-# ❌ Invalid - Inconsistent heading style
+❌ Invalid - Inconsistent heading style
+
+```text
 ## Heading 1
 ### Heading 2
 #### Heading 3
 ###### Heading 4 (skips H5)
 ```
 
-### Recommended Alternatives
+✅ Valid - Sequential heading levels
 
-```markdown
-### ✅ Valid - Sequential heading levels
+```text
 # Title
 ## Section 1
 ### Subsection 1.1
 #### Sub-subsection 1.1.1
+```
 
-### ✅ Valid - Single H1 per document
+✅ Valid - Single H1 per document
+
+```text
 # Main Title
 ## Section 1
 ## Section 2
+```
 
-### ✅ Valid - Consistent hierarchy
+✅ Valid - Consistent hierarchy
+
+```text
 # Document Title
 ## Overview
 ## Implementation
@@ -312,29 +370,27 @@ Rule ID: `code-blocks`
 Severity: Warning
 Description: Code blocks should specify language when possible.
 
-### Invalid Examples
+### Rule 6 Invalid Examples
 
-```markdown
-# ❌ Invalid - Unspecified language
+❌ Invalid - Unspecified language
 
-```
-
+```text
+"```"
 function example() {
     return "Hello World";
 }
-
+"```"
 ```
 
-# ❌ Invalid - Inline code for multiline content
-`function example() {
+❌ Invalid - Inline code for multiline content
+
+```text
+function example() {
     return "Hello World";
-}`
+}
 ```
 
-### Recommended Alternatives
-
-```markdown
-### ✅ Valid - Specify language
+✅ Valid - Specify language
 
 ```javascript
 function example() {
@@ -342,20 +398,20 @@ function example() {
 }
 ```
 
-### ✅ Valid - Use appropriate language
+✅ Valid - Use appropriate language
 
 ```python
 def example():
     return "Hello World"
 ```
 
-### ✅ Valid - Inline code for short snippets
+✅ Valid - Inline code for short snippets
 
 Use `console.log()` for debugging.
 
-### ✅ Valid - Language-agnostic when appropriate
+✅ Valid - When no language is specified, use `text`
 
-```
+```text
 This is a code block without specific language
 ```
 
@@ -371,39 +427,53 @@ Rule ID: `list-formatting`
 Severity: Warning
 Description: Lists should be consistent and properly formatted.
 
-### Invalid Examples for List Formatting
+### Rule 7 Invalid Examples for List Formatting
 
-```markdown
-# ❌ Invalid - Mixed list types
+❌ Invalid - Mixed list types
+
+```text
 1. First item
 - Second item
 2. Third item
+```
 
-# ❌ Invalid - Inconsistent spacing
+❌ Invalid - Inconsistent spacing
+
+```text
 1. First item
    2. Second item
 3. Third item
+```
 
-# ❌ Invalid - Empty list items
+❌ Invalid - Empty list items
+
+```text
 1. First item
 2.
 3. Third item
 ```
 
-### Recommended Alternatives for List Formatting
+### Rule 7 Recommended Alternatives for List Formatting
 
-```markdown
-### ✅ Valid - Consistent ordered list
+✅ Valid - Consistent ordered list
+
+```text
 1. First item
 2. Second item
 3. Third item
+```
 
-### ✅ Valid - Consistent unordered list
+✅ Valid - Consistent unordered list
+
+```text
 - First item
 - Second item
 - Third item
+```
 
-### ✅ Valid - Nested lists
+✅ Valid - Nested lists
+
+```text
 1. Main item
    1.1. Sub item
    1.2. Another sub item
@@ -422,24 +492,32 @@ Rule ID: `no-duplicate-headings`
 Severity: Warning
 Description: Headings with the same content should not appear multiple times in a document.
 
-### Invalid Examples
+### Rule 8 Invalid Examples
 
-```markdown
-# ❌ Invalid - Same heading content at different levels
+❌ Invalid - Same heading content at different levels
+
+```text
 ## Introduction
 Some content here
 
 ### Introduction
 Different content but same heading text
 
-# ❌ Invalid - Same heading content at same level
+```
+
+❌ Invalid - Same heading content at same level
+
+```text
 ## Overview
 First overview content
 
 ## Overview
 Second overview content
+```
 
-# ❌ Invalid - Multiple identical headings
+❌ Invalid - Multiple identical headings
+
+```text
 ## Usage
 How to use the tool
 
@@ -450,17 +528,19 @@ More usage instructions
 Additional usage notes
 ```
 
-### Recommended Alternatives
+✅ Valid - Unique heading content
 
-```markdown
-### ✅ Valid - Unique heading content
+```text
 ## Introduction
 Some content here
 
 ### Getting Started
 Different content with unique heading
+```
 
-### ✅ Valid - More specific headings
+✅ Valid - More specific headings
+
+```text
 ## Overview
 First overview content
 
@@ -469,8 +549,11 @@ Second overview content
 
 ## Quick Reference
 Additional reference material
+```
 
-### ✅ Valid - Numbered or qualified headings
+✅ Valid - Numbered or qualified headings
+
+```text
 ## Usage: Basic Operations
 How to use the tool
 
@@ -479,8 +562,11 @@ More usage instructions
 
 ## Usage: Troubleshooting
 Additional usage notes
+```
 
-### ✅ Valid - Hierarchical structure
+✅ Valid - Hierarchical structure
+
+```text
 ## Usage
 ### Basic Operations
 How to use the tool
@@ -504,26 +590,29 @@ Rule ID: `single-title`
 Severity: Error
 Description: Documents should have only one top-level heading (H1).
 
-### Invalid Examples
+### Rule 9 Invalid Examples
 
-```markdown
-# ❌ Invalid - Multiple H1 headings
+❌ Invalid - Multiple H1 headings
+
+```text
 # First Title
 Some content here
 
 # Second Title
 More content here
+```
 
-# ❌ Invalid - H1 headings mixed with other levels
+❌ Invalid - H1 headings mixed with other levels
+
+```text
 # Main Title
 ## Section
 # Another Main Title
 ```
 
-### Recommended Alternatives
+✅ Valid - Single H1 heading
 
-```markdown
-### ✅ Valid - Single H1 heading
+```text
 # Document Title
 ## Section 1
 Content for section 1
@@ -531,7 +620,11 @@ Content for section 1
 ## Section 2
 Content for section 2
 
-### ✅ Valid - Proper hierarchy
+```
+
+✅ Valid - Proper hierarchy
+
+```text
 # Main Title
 ## Overview
 ## Details
