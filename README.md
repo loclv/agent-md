@@ -6,7 +6,9 @@ A CLI markdown editor written in Rust designed for LLMs to easily read and use.
 
 I've seen many markdown documents written by LLM/AI Agents that cost tokens, and when another agent/LLM reads that markdown file, it also costs tokens. This is because LLMs learn from humans, and the way humans write markdown is designed for human readability. LLMs, on the other hand, don't need bold text, special character graphs, dashes, and unnecessary spaces.
 
-### The Problem
+LLM/Agents need to read and write specific sections of markdown files, they don't need to read all the content of the file, just the path. For example, when it needs to read a specific section (e.g., `## Development`), it should be able to read only that section.
+
+### The Problems
 
 - Token waste: Human-readable markdown uses formatting that adds unnecessary tokens for AI consumption
 - Inefficient parsing: LLMs pay extra attention to visual formatting like `**bold**`, `__underline__`, and ASCII art
@@ -51,9 +53,28 @@ agent-md read <path>
 # Extract specific field
 agent-md read <path> --field <field_name>
 # Available fields: path, content, word_count, line_count, headings
+
+# Read specific section by heading path (no need to read entire file)
+agent-md read <path> --content <section_path>
+# Example: agent-md read README.md --content "## Development"
+# Nested sections: agent-md read README.md --content "## Development > Build"
 ```
 
 ### Write a file
+
+```bash
+agent-md write <path> <content>
+# Returns: {success, message, document}
+```
+
+### Write to a specific section
+
+```bash
+agent-md write-section <path> --section <heading_path> --content <content>
+# Replaces existing section content or creates new section
+# Example: agent-md write-section README.md --section "## Development" --content "New content"
+# Nested sections: agent-md write-section README.md --section "## Development > Build" --content "New content"
+```
 
 ```bash
 agent-md write <path> <content>
@@ -183,12 +204,14 @@ See `docs/llm-agent-rule.md` for the complete integration guideline and best pra
 CONTENT=$(agent-md read <path> --field content)
 
 # Read specific sections (no need to read entire file)
-SECTION_CONTENT=$(agent-md read <path> -c "Section Name" -f content)
-# example:
-SECTION_CONTENT=$(agent-md read README.md -c="Development" -f content)
+agent-md read <path> --content "## Section Name"
+# Nested sections: agent-md read <path> --content "## Development > Build"
 
 # Always write files with agent-md (validates first)
 agent-md write <path> "<content>"
+
+# Write to specific section
+agent-md write-section <path> --section "## Section" --content "<content>"
 
 # Search within files
 agent-md search <path> "<query>"
@@ -232,6 +255,7 @@ Read "Development" section - no need LLM to read entire file:
 
 ```bash
 agent-md read README.md -c="Development"
+# Nested sections: agent-md read README.md -c="Development > Build"
 ```
 
 ## Example Usage for LLMs

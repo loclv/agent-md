@@ -928,6 +928,14 @@ enum Commands {
         #[arg(help = "Content to write")]
         content: String,
     },
+    WriteSection {
+        #[arg(help = "Markdown file path")]
+        path: String,
+        #[arg(help = "Section heading path (e.g., '## Development' or '## Development > Build')")]
+        section: String,
+        #[arg(help = "Content to write to the section")]
+        content: String,
+    },
     Append {
         #[arg(help = "Markdown file path")]
         path: String,
@@ -992,8 +1000,17 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Read { path, field, content } => cmd_read(&path, field.as_deref(), content.as_deref()),
+        Commands::Read {
+            path,
+            field,
+            content,
+        } => cmd_read(&path, field.as_deref(), content.as_deref()),
         Commands::Write { path, content } => cmd_write(&path, &content),
+        Commands::WriteSection {
+            path,
+            section,
+            content,
+        } => cmd_write_section(&path, &section, &content),
         Commands::Append { path, content } => cmd_append(&path, &content),
         Commands::Insert {
             path,
@@ -1011,33 +1028,58 @@ fn main() {
     }
 }
 
-fn extract_section_content(content: &str, section_name: &str) -> Option<String> {
+fn extract_section_content(content: &str, section_path: &str) -> Option<String> {
+    let path_parts: Vec<&str> = section_path.split('>').map(|s| s.trim()).collect();
+    if path_parts.is_empty() {
+        return None;
+    }
+
     let lines: Vec<&str> = content.lines().collect();
     let mut section_content = Vec::new();
     let mut in_target_section = false;
     let mut target_level = 0;
     let mut found_section = false;
+    let mut current_depth = 0;
 
-    for (_i, line) in lines.iter().enumerate() {
+    for line in lines.iter() {
         if let Some(level) = extract_heading_level(line) {
             let heading_text = line.trim_start_matches('#').trim();
 
-            if !in_target_section && heading_text == section_name {
-                in_target_section = true;
-                target_level = level;
-                found_section = true;
-                section_content.push(*line);
-                continue;
-            } else if in_target_section {
-                if level <= target_level {
-                    // We've reached a heading at the same or higher level, end the section
-                    break;
-                } else {
-                    // This is a subheading within our target section
-                    section_content.push(*line);
+            if !in_target_section {
+                if heading_text == path_parts[0] {
+                    if path_parts.len() == 1 {
+                        in_target_section = true;
+                        target_level = level;
+                        found_section = true;
+                        section_content.push(*line);
+                        continue;
+                    } else {
+                        current_depth = 1;
+                        in_target_section = true;
+                        target_level = level;
+                        found_section = true;
+                        section_content.push(*line);
+                        continue;
+                    }
                 }
+            } else if heading_text == path_parts[current_depth] {
+                if level <= target_level {
+                    break;
+                }
+                current_depth += 1;
+                if current_depth >= path_parts.len() {
+                    section_content.push(*line);
+                } else {
+                    continue;
+                }
+            } else if level <= target_level {
+                break;
             }
-        } else if in_target_section {
+
+            if in_target_section && current_depth < path_parts.len() && level > target_level {
+                section_content.push(*line);
+            }
+        } else if in_target_section && current_depth >= path_parts.len() {
             section_content.push(*line);
         }
     }
@@ -1047,6 +1089,68 @@ fn extract_section_content(content: &str, section_name: &str) -> Option<String> 
     } else {
         None
     }
+}
+
+fn find_section_range(content: &str, section_path: &str) -> Option<(usize, usize)> {
+    let path_parts: Vec<&str> = section_path.split('>').map(|s| s.trim()).collect();
+    if path_parts.is_empty() {
+        return None;
+    }
+
+    let lines: Vec<&str> = content.lines().collect();
+    let mut in_target_section = false;
+    let mut target_level = 0;
+    let mut start_line = 0;
+    let mut current_depth = 0;
+
+    for (i, line) in lines.iter().enumerate() {
+        if let Some(level) = extract_heading_level(line) {
+            let heading_text = line.trim_start_matches('#').trim();
+
+            if !in_target_section {
+                if heading_text == path_parts[0] {
+                    if path_parts.len() == 1 {
+                        start_line = i;
+                        return Some((start_line, lines.len()));
+                    } else {
+                        current_depth = 1;
+                        in_target_section = true;
+                        target_level = level;
+                        start_line = i;
+                        continue;
+                    }
+                }
+            } else if heading_text == path_parts[current_depth] {
+                if level <= target_level {
+                    return Some((start_line, i));
+                }
+                current_depth += 1;
+                if current_depth >= path_parts.len() {
+                    let end_line = find_section_end(&lines, i + 1, level);
+                    return Some((start_line, end_line));
+                }
+            } else if level <= target_level {
+                return Some((start_line, i));
+            }
+        }
+    }
+
+    if in_target_section {
+        Some((start_line, lines.len()))
+    } else {
+        None
+    }
+}
+
+fn find_section_end(lines: &[&str], start: usize, parent_level: u32) -> usize {
+    for (i, line) in lines.iter().enumerate().skip(start) {
+        if let Some(level) = extract_heading_level(line) {
+            if level <= parent_level {
+                return i;
+            }
+        }
+    }
+    lines.len()
 }
 
 fn unescape_content(s: &str) -> String {
@@ -1184,6 +1288,196 @@ fn cmd_write(path: &str, content: &str) {
             );
         }
     }
+}
+
+fn cmd_write_section(path: &str, section_path: &str, new_content: &str) {
+    let new_content = unescape_content(new_content);
+    let validation = validate_markdown(&new_content);
+
+    if !validation.valid {
+        println!(
+            "{}",
+            serde_json::to_string(&EditResult {
+                success: false,
+                message: format!(
+                    "Content validation failed: {} errors found",
+                    validation.errors.len()
+                ),
+                document: None,
+            })
+            .unwrap()
+        );
+        println!("{}", serde_json::to_string(&validation).unwrap());
+        return;
+    }
+
+    match fs::read_to_string(path) {
+        Ok(existing) => {
+            let result = if let Some((start, end)) = find_section_range(&existing, section_path) {
+                replace_section_content(&existing, start, end, section_path, &new_content)
+            } else {
+                insert_section_content(&existing, section_path, &new_content)
+            };
+
+            match result {
+                Ok(updated) => match fs::write(path, &updated) {
+                    Ok(_) => {
+                        let mut doc = parse_markdown(&updated);
+                        doc.path = path.to_string();
+                        println!(
+                            "{}",
+                            serde_json::to_string(&EditResult {
+                                success: true,
+                                message: format!("Section '{}' written successfully", section_path),
+                                document: Some(doc),
+                            })
+                            .unwrap()
+                        );
+                    }
+                    Err(e) => {
+                        println!(
+                            "{}",
+                            serde_json::to_string(&EditResult {
+                                success: false,
+                                message: format!("Failed to write file: {}", e),
+                                document: None,
+                            })
+                            .unwrap()
+                        );
+                    }
+                },
+                Err(e) => {
+                    println!(
+                        "{}",
+                        serde_json::to_string(&EditResult {
+                            success: false,
+                            message: e,
+                            document: None,
+                        })
+                        .unwrap()
+                    );
+                }
+            }
+        }
+        Err(e) => {
+            println!(
+                "{}",
+                serde_json::to_string(&EditResult {
+                    success: false,
+                    message: format!("Failed to read file: {}", e),
+                    document: None,
+                })
+                .unwrap()
+            );
+        }
+    }
+}
+
+fn replace_section_content(
+    content: &str,
+    start: usize,
+    end: usize,
+    section_path: &str,
+    new_content: &str,
+) -> Result<String, String> {
+    let lines: Vec<&str> = content.lines().collect();
+    let path_parts: Vec<&str> = section_path.split('>').map(|s| s.trim()).collect();
+    let target_heading = path_parts.last().unwrap();
+    let heading_level =
+        extract_heading_level(target_heading.trim_start_matches('#').trim()).unwrap_or(2);
+    let hashes = "#".repeat(heading_level as usize);
+    let new_section = format!(
+        "{} {}\n{}",
+        hashes,
+        target_heading.trim_start_matches('#').trim(),
+        new_content
+    );
+
+    let mut result_lines: Vec<String> = lines.iter().take(start).map(|s| s.to_string()).collect();
+    result_lines.push(new_section);
+    result_lines.extend(lines.iter().skip(end).map(|s| s.to_string()));
+
+    Ok(result_lines.join("\n"))
+}
+
+fn insert_section_content(
+    content: &str,
+    section_path: &str,
+    new_content: &str,
+) -> Result<String, String> {
+    let path_parts: Vec<&str> = section_path.split('>').map(|s| s.trim()).collect();
+
+    if path_parts.len() == 1 {
+        let target_heading = path_parts[0];
+        let heading_level = extract_heading_level(target_heading).unwrap_or(2);
+        let hashes = "#".repeat(heading_level as usize);
+        let new_section = format!(
+            "{} {}\n{}",
+            hashes,
+            target_heading.trim_start_matches('#').trim(),
+            new_content
+        );
+
+        let mut lines: Vec<&str> = content.lines().collect();
+        if !content.ends_with('\n') && !lines.is_empty() {
+            let last_idx = lines.len() - 1;
+            if !lines[last_idx].is_empty() {
+                lines[last_idx] = &content[content.len()..];
+            }
+        }
+        if !content.is_empty() && !content.ends_with('\n') {
+            return Err("File must end with newline before inserting section".to_string());
+        }
+        let mut result = content.to_string();
+        result.push_str(&new_section);
+        result.push('\n');
+        return Ok(result);
+    }
+
+    let top_level_heading = path_parts[0];
+    let mut lines: Vec<&str> = content.lines().collect();
+    let mut insert_pos = lines.len();
+    let mut in_parent = false;
+    let mut parent_level = 0;
+
+    for (i, line) in lines.iter().enumerate() {
+        if let Some(level) = extract_heading_level(line) {
+            let heading_text = line.trim_start_matches('#').trim();
+            if heading_text == top_level_heading {
+                in_parent = true;
+                parent_level = level;
+                insert_pos = i + 1;
+                continue;
+            }
+            if in_parent && level <= parent_level {
+                insert_pos = i;
+                break;
+            }
+        }
+    }
+
+    let mut current_level = 1;
+    let mut section_text = String::new();
+    for part in &path_parts {
+        let heading_text = part.trim_start_matches('#').trim();
+        let level = extract_heading_level(part).unwrap_or(current_level);
+        let hashes = "#".repeat(level as usize);
+        section_text.push_str(&format!("{} {}\n", hashes, heading_text));
+        current_level = level + 1;
+    }
+    section_text.push_str(new_content);
+    section_text.push('\n');
+
+    lines.insert(insert_pos, "");
+    let mut result: Vec<String> = lines
+        .iter()
+        .take(insert_pos)
+        .map(|s| s.to_string())
+        .collect();
+    result.push(section_text);
+    result.extend(lines.iter().skip(insert_pos + 1).map(|s| s.to_string()));
+
+    Ok(result.join("\n"))
 }
 
 fn cmd_append(path: &str, content: &str) {
