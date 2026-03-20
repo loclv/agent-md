@@ -48,7 +48,7 @@ All commands return JSON for easy parsing.
 agent-md read <path>
 # Returns: {path, content, word_count, line_count, headings}
 
-# Extract specific field without jq
+# Extract specific field
 agent-md read <path> --field <field_name>
 # Available fields: path, content, word_count, line_count, headings
 ```
@@ -179,9 +179,13 @@ See `docs/llm-agent-rule.md` for the complete integration guideline and best pra
 ### Core Usage Pattern
 
 ```bash
-# Always read files with agent-md (returns JSON)
-DATA=$(agent-md read <path>)
-CONTENT=$(echo "$DATA" | jq -r '.content')
+# Read file content
+CONTENT=$(agent-md read <path> --field content)
+
+# Read specific sections (no need to read entire file)
+SECTION_CONTENT=$(agent-md read <path> -c "Section Name" -f content)
+# example:
+SECTION_CONTENT=$(agent-md read README.md -c="Development" -f content)
 
 # Always write files with agent-md (validates first)
 agent-md write <path> "<content>"
@@ -200,9 +204,8 @@ RULE: When you need to read, write, or modify markdown files, use `agent-md` com
 ### Example Workflow
 
 ```bash
-# 1. Read existing file
-DOC=$(agent-md read README.md)
-echo "$DOC" | jq '.headings'  # Get structure
+# 1. Get document structure
+agent-md read README.md --field headings
 
 # 2. Search for specific content
 agent-md search README.md "TODO"
@@ -216,7 +219,7 @@ agent-md write README.md "# New Title\nValid content"
 
 ## Read File and Extract Fields
 
-1. **Use --field option (recommended):**
+Use --field option (recommended):
 
 ```bash
 agent-md read README.md --field path      # Get file path
@@ -225,7 +228,11 @@ agent-md read README.md --field headings  # Get headings
 agent-md read README.md -f word_count     # Short form for word count
 ```
 
-The issue occurs because JSON content contains unescaped control characters. The `--field` option is the recommended approach as it avoids jq parsing entirely and provides direct access to specific properties.
+Read "Development" section - no need LLM to read entire file:
+
+```bash
+agent-md read README.md -c="Development"
+```
 
 ## Example Usage for LLMs
 
@@ -251,4 +258,32 @@ agent-md lint-file README.md
 # Validate markdown before writing
 agent-md lint --content "# Title\nContent with **bold** text"
 agent-md write document.md "# Title\nValid content without bold"
+```
+
+## Development
+
+Development setup and guidelines for contributing to agent-md.
+
+### Prerequisites
+
+- Rust 1.94.0 or later
+- Git
+
+### Building
+
+```bash
+cargo build --release
+```
+
+### Testing
+
+```bash
+make test
+```
+
+### Code Quality
+
+```bash
+make lint
+make format
 ```

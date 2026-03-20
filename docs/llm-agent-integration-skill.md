@@ -13,11 +13,10 @@ ALWAYS use agent-md commands instead of direct file operations when working with
 ### Reading Files
 
 ```bash
-DATA=$(agent-md read <path>)
-CONTENT=$(echo "$DATA" | jq -r '.content')
-WORD_COUNT=$(echo "$DATA" | jq '.word_count')
-HEADINGS=$(echo "$DATA" | jq '.headings')
-LINE_COUNT=$(echo "$DATA" | jq '.line_count')
+CONTENT=$(agent-md read <path> --field content)
+WORD_COUNT=$(agent-md read <path> -f word_count)
+HEADINGS=$(agent-md read <path> -f headings)
+LINE_COUNT=$(agent-md read <path> -f line_count)
 ```
 
 ### Writing Files
@@ -63,18 +62,16 @@ agent-md lint-file <path>
 
 ```bash
 # Read and analyze existing document
-DOC=$(agent-md read README.md)
-echo "Document has $(echo "$DOC" | jq '.word_count') words"
+echo "Document has $(agent-md read README.md -f word_count) words"
 echo "Document structure:"
-echo "$DOC" | jq '.headings'
+agent-md read README.md -f headings
 ```
 
 ### Content Search
 
 ```bash
 # Find specific sections or content
-SEARCH_RESULT=$(agent-md search README.md "installation")
-echo "Found $(echo "$SEARCH_RESULT" | jq '.total') matches"
+agent-md search README.md "installation"
 ```
 
 ### Content Validation
@@ -82,15 +79,10 @@ echo "Found $(echo "$SEARCH_RESULT" | jq '.total') matches"
 ```bash
 # Validate new content before writing
 NEW_CONTENT="# New Section\nContent here"
-VALIDATION=$(agent-md lint --content "$NEW_CONTENT")
+agent-md lint --content "$NEW_CONTENT"
 
-if echo "$VALIDATION" | jq -e '.valid' > /dev/null; then
-    echo "Content is valid, proceeding with write"
-    agent-md write document.md "$NEW_CONTENT"
-else
-    echo "Validation failed:"
-    echo "$VALIDATION" | jq '.errors'
-fi
+# If valid, write the content
+agent-md write document.md "$NEW_CONTENT"
 ```
 
 ### Document Updates
@@ -107,7 +99,7 @@ agent-md append README.md "## Additional Notes\nMore content"
 
 ### Always Use JSON Output
 
-- Parse JSON responses with jq or equivalent
+- Use --field (-f) to extract specific fields from JSON responses
 - Never rely on plain text output for programmatic use
 - Handle validation errors from JSON responses
 
@@ -116,9 +108,8 @@ agent-md append README.md "## Additional Notes\nMore content"
 ```bash
 # Good: Validate first
 CONTENT="# Title\nSome content"
-if agent-md lint --content "$CONTENT" | jq -e '.valid' > /dev/null; then
-    agent-md write file.md "$CONTENT"
-fi
+agent-md lint --content "$CONTENT"
+agent-md write file.md "$CONTENT"
 
 # Bad: Write without validation
 echo "$CONTENT" > file.md
@@ -128,8 +119,7 @@ echo "$CONTENT" > file.md
 
 ```bash
 # Good: Use structured JSON data
-DOC=$(agent-md read file.md)
-HEADINGS=$(echo "$DOC" | jq '.headings[] | .text')
+HEADINGS=$(agent-md read file.md -f headings)
 
 # Bad: Parse plain text
 grep "^#" file.md
@@ -139,10 +129,10 @@ grep "^#" file.md
 
 ```bash
 # Always check command success
-RESULT=$(agent-md read file.md 2>/dev/null)
+CONTENT=$(agent-md read file.md -f content 2>/dev/null)
 if [ $? -eq 0 ]; then
     # Process successful result
-    echo "$RESULT" | jq '.content'
+    echo "$CONTENT"
 else
     # Handle error case
     echo "Failed to read file"
@@ -177,16 +167,9 @@ agent-md search <path> "<query>"
 #!/bin/bash
 # Example: Update all TODO items in markdown files
 
-for file in $(agent-md list . | jq -r '.[]'); do
+for file in $(agent-md list .); do
     # Search for TODOs
-    todos=$(agent-md search "$file" "TODO")
-
-    if echo "$todos" | jq -e '.total > 0' > /dev/null; then
-        echo "Found TODOs in $file:"
-        echo "$todos" | jq '.matches[] | .content'
-
-        # Process each TODO...
-    fi
+    agent-md search "$file" "TODO"
 done
 ```
 
@@ -194,22 +177,13 @@ done
 
 ```bash
 # 1. Extract structure
-structure=$(agent-md headings document.md)
+agent-md headings document.md
 
 # 2. Validate content
-validation=$(agent-md lint document.md)
+agent-md lint document.md
 
 # 3. Convert to structured format
-jsonl=$(agent-md to-jsonl document.md)
-
-# 4. Process based on validation
-if echo "$validation" | jq -e '.valid' > /dev/null; then
-    echo "Document is valid, processing..."
-    # Continue with processing
-else
-    echo "Document has issues:"
-    echo "$validation" | jq '.errors'
-fi
+agent-md to-jsonl document.md
 ```
 
 ## Error Handling
@@ -254,19 +228,9 @@ execute_agent_md() {
 When working with multiple markdown files, maintain context using the structured data:
 
 ```bash
-# Build document index
-declare -A doc_cache
-for file in $(agent-md list . | jq -r '.[]'); do
-    doc_cache["$file"]=$(agent-md read "$file")
-done
-
-# Search across all documents
-for file in "${!doc_cache[@]}"; do
-    content=$(echo "${doc_cache[$file]}" | jq -r '.content')
-    if [[ "$content" == *"$search_term"* ]]; then
-        echo "Found in $file"
-        agent-md search "$file" "$search_term"
-    fi
+# Search across all markdown files
+for file in $(agent-md list .); do
+    agent-md search "$file" "$search_term"
 done
 ```
 

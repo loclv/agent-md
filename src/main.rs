@@ -832,6 +832,12 @@ enum Commands {
             short = 'f'
         )]
         field: Option<String>,
+        #[arg(
+            help = "Extract specific section content by heading name",
+            long,
+            short = 'c'
+        )]
+        content: Option<String>,
     },
     Write {
         #[arg(help = "Markdown file path")]
@@ -903,7 +909,7 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Read { path, field } => cmd_read(&path, field.as_deref()),
+        Commands::Read { path, field, content } => cmd_read(&path, field.as_deref(), content.as_deref()),
         Commands::Write { path, content } => cmd_write(&path, &content),
         Commands::Append { path, content } => cmd_append(&path, &content),
         Commands::Insert {
@@ -922,10 +928,69 @@ fn main() {
     }
 }
 
-fn cmd_read(path: &str, field: Option<&str>) {
+fn extract_section_content(content: &str, section_name: &str) -> Option<String> {
+    let lines: Vec<&str> = content.lines().collect();
+    let mut section_content = Vec::new();
+    let mut in_target_section = false;
+    let mut target_level = 0;
+    let mut found_section = false;
+
+    for (_i, line) in lines.iter().enumerate() {
+        if let Some(level) = extract_heading_level(line) {
+            let heading_text = line.trim_start_matches('#').trim();
+
+            if !in_target_section && heading_text == section_name {
+                in_target_section = true;
+                target_level = level;
+                found_section = true;
+                section_content.push(*line);
+                continue;
+            } else if in_target_section {
+                if level <= target_level {
+                    // We've reached a heading at the same or higher level, end the section
+                    break;
+                } else {
+                    // This is a subheading within our target section
+                    section_content.push(*line);
+                }
+            }
+        } else if in_target_section {
+            section_content.push(*line);
+        }
+    }
+
+    if found_section {
+        Some(section_content.join("\n"))
+    } else {
+        None
+    }
+}
+
+fn cmd_read(path: &str, field: Option<&str>, content_filter: Option<&str>) {
     match fs::read_to_string(path) {
         Ok(content) => {
-            let mut doc = parse_markdown(&content);
+            // Handle content filtering first
+            let filtered_content = if let Some(section_name) = content_filter {
+                match extract_section_content(&content, section_name) {
+                    Some(section) => section,
+                    None => {
+                        println!(
+                            "{}",
+                            serde_json::to_string(&EditResult {
+                                success: false,
+                                message: format!("Section '{}' not found", section_name),
+                                document: None
+                            })
+                            .unwrap()
+                        );
+                        return;
+                    }
+                }
+            } else {
+                content
+            };
+
+            let mut doc = parse_markdown(&filtered_content);
             doc.path = path.to_string();
 
             let output = if let Some(field_name) = field {

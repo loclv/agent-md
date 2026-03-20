@@ -16,14 +16,18 @@ When working with markdown files, always use the agent-md CLI tool instead of di
 ### Read Files
 
 ```bash
-DATA=$(agent-md read <path>)
-CONTENT=$(echo "$DATA" | jq -r '.content')
+agent-md read <path> --field content   # Get content
+# example:
+agent-md read README.md -f content
 
-# Or extract specific fields without jq
-agent-md read <path> --field path # Get file path
-agent-md read <path> --field content # Get content
-agent-md read <path> --field headings # Get headings
-agent-md read <path> -f word_count # Short form for word count
+agent-md read <path> --field headings  # Get headings
+# example:
+agent-md read README.md -f headings
+
+agent-md read <path> -f word_count     # Short form for word count
+# example:
+agent-md read README.md -f word_count
+
 ```
 
 ### Write Files
@@ -42,56 +46,17 @@ agent-md search <path> "<query>"
 
 ```bash
 agent-md lint --content "<content>"
+# example:
+agent-md lint --content "# Hello\n\nThis is a test"
 ```
 
 ## Integration Pattern
 
 ```bash
-DOC=$(agent-md read README.md)
+agent-md read README.md -f headings
 agent-md search README.md "TODO"
-if agent-md lint --content "$CONTENT" | jq -e '.valid' > /dev/null; then
-    agent-md write file.md "$CONTENT"
-fi
-```
-
-## Troubleshooting jq Errors
-
-When parsing JSON output with jq, you may encounter control character errors:
-
-```bash
-# This may fail with parsing error
-DOC=$(agent-md read README.md)
-echo "$DOC" | jq '.headings'
-```
-
-**Use these solutions:**
-
-1. **Use --field option (recommended):**
-
-```bash
-agent-md read README.md --field path # Get file path
-agent-md read README.md --field content # Get content
-agent-md read README.md --field headings # Get headings
-agent-md read README.md -f word_count # Short form for word count
-```
-
-- **Raw output for specific fields:**
-
-```bash
-agent-md read README.md | jq --raw-output '.headings'
-```
-
-- **Dedicated commands:**
-
-```bash
-agent-md headings README.md
-```
-
-- **Store and access:**
-
-```bash
-DOC=$(agent-md read README.md)
-echo "$DOC" | jq '.headings'
+agent-md lint --content "$CONTENT"
+agent-md write file.md "$CONTENT"
 ```
 
 ## Key Benefits
