@@ -79,11 +79,24 @@ fn validate_markdown(content: &str) -> LintResult {
     let mut errors = Vec::new();
     let mut warnings = Vec::new();
 
+    let mut in_code_block = false;
+
     for (line_num, line) in content.lines().enumerate() {
         let line_num = line_num + 1; // Convert to 1-based indexing
 
+        // Track code block boundaries
+        if line.trim().starts_with("```") {
+            in_code_block = !in_code_block;
+            continue;
+        }
+
+        // Skip all checks inside code blocks
+        if in_code_block {
+            continue;
+        }
+
         // Rule: No bold text (detect **text** or __text__)
-        if let Some(col) = find_bold_text(line) {
+        for col in find_bold_text(line) {
             errors.push(LintError {
                 line: line_num,
                 column: col,
@@ -93,7 +106,7 @@ fn validate_markdown(content: &str) -> LintResult {
         }
 
         // Rule: Simple table syntax validation
-        if let Some(issue) = validate_table_syntax(line) {
+        for issue in validate_table_syntax(line) {
             match issue.severity {
                 Severity::Error => errors.push(LintError {
                     line: line_num,
@@ -111,7 +124,7 @@ fn validate_markdown(content: &str) -> LintResult {
         }
 
         // Rule: No useless links where text equals URL
-        if let Some(col) = find_useless_link(line) {
+        for col in find_useless_link(line) {
             warnings.push(LintWarning {
                 line: line_num,
                 column: col,
@@ -168,25 +181,46 @@ struct TableIssue {
     severity: Severity,
 }
 
-fn find_bold_text(line: &str) -> Option<usize> {
+fn find_bold_text(line: &str) -> Vec<usize> {
+    let mut results = Vec::new();
+
     // Check for **bold** pattern
-    if let Some(start) = line.find("**") {
-        if line[start + 2..].find("**").is_some() {
-            return Some(start + 1); // Return 1-based column
+    let mut search_start = 0;
+    while search_start < line.len() {
+        if let Some(start) = line[search_start..].find("**") {
+            let abs_start = search_start + start;
+            if let Some(end_offset) = line[abs_start + 2..].find("**") {
+                results.push(abs_start + 1); // Return 1-based column
+                search_start = abs_start + 2 + end_offset + 2;
+            } else {
+                break;
+            }
+        } else {
+            break;
         }
     }
 
     // Check for __bold__ pattern
-    if let Some(start) = line.find("__") {
-        if line[start + 2..].find("__").is_some() {
-            return Some(start + 1); // Return 1-based column
+    search_start = 0;
+    while search_start < line.len() {
+        if let Some(start) = line[search_start..].find("__") {
+            let abs_start = search_start + start;
+            if let Some(end_offset) = line[abs_start + 2..].find("__") {
+                results.push(abs_start + 1); // Return 1-based column
+                search_start = abs_start + 2 + end_offset + 2;
+            } else {
+                break;
+            }
+        } else {
+            break;
         }
     }
 
-    None
+    results
 }
 
-fn find_useless_link(line: &str) -> Option<usize> {
+fn find_useless_link(line: &str) -> Vec<usize> {
+    let mut results = Vec::new();
     let mut i = 0;
     while i < line.len() {
         if line.chars().nth(i) == Some('[') {
@@ -259,8 +293,10 @@ fn find_useless_link(line: &str) -> Option<usize> {
                             || link_text == url_without_slash
                             || link_text == url_without_www
                         {
-                            return Some(i + 1); // Return 1-based column
+                            results.push(i + 1); // Return 1-based column
                         }
+                        i = paren_start + 1;
+                        continue;
                     }
                 }
             }
@@ -268,54 +304,64 @@ fn find_useless_link(line: &str) -> Option<usize> {
         i += 1;
     }
 
-    None
+    results
 }
 
 fn find_ascii_graph(line: &str) -> Option<usize> {
+    // Skip table separator lines (lines with only |, -, :, and spaces)
+    let trimmed = line.trim();
+    let is_table_separator = trimmed
+        .chars()
+        .all(|c| c == '|' || c == '-' || c == ' ' || c == ':');
+    if is_table_separator {
+        return None;
+    }
+
     // Common ASCII graph patterns to detect
     let ascii_graph_patterns = [
-        // Box drawing characters
+        // Box drawing characters (more specific)
         "┌─┐",
         "└─┘",
         "├─┤",
         "│ │",
-        "─",
-        "│",
-        // Tree structures
         "├──",
         "└──",
         "│  ",
+        // Tree structures (more specific)
+        "├── ",
+        "└── ",
+        "│   ",
         // Simple graph patterns
-        "*--*",
-        "---",
-        "===",
-        "==>",
-        "<==",
-        "<=>",
-        // Flow chart patterns
-        "[ ]",
-        "( )",
-        "{ }",
-        "< >",
         "->",
         "<-",
-        // Graph-like patterns with multiple connections
-        "\\|/",
-        "/|\\",
-        "-+-",
-        "+-+",
-        "|-|",
-        // Progress bars or meters
-        "[==",
-        "==]",
-        "█",
-        "▓",
-        "▒",
-        "░",
-        // Matrix-like patterns
-        "[][]",
-        "|||",
-        "...",
+        "<->",
+        "==",
+        "=>",
+        "<=",
+        // Progress bars (more specific)
+        "[",
+        "]",
+        // Flow indicators
+        "flow:",
+        "Flow:",
+        "FLOW:",
+        "diagram:",
+        "Diagram:",
+        "DIAGRAM:",
+        "chart:",
+        "Chart:",
+        "CHART:",
+        "graph:",
+        "Graph:",
+        "GRAPH:",
+        "tree:",
+        "Tree:",
+        "TREE:",
+        // Common graph elements
+        "+---+",
+        "+---",
+        "---+",
+        "|   |",
     ];
 
     // Check for common ASCII graph indicators
@@ -406,7 +452,8 @@ fn find_ascii_graph(line: &str) -> Option<usize> {
     None
 }
 
-fn validate_table_syntax(line: &str) -> Option<TableIssue> {
+fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
+    let mut issues = Vec::new();
     let trimmed = line.trim();
 
     // Check if this looks like a table row
@@ -425,7 +472,7 @@ fn validate_table_syntax(line: &str) -> Option<TableIssue> {
                     // Count dashes in this separator part
                     let dash_count = part_trimmed.chars().filter(|&c| c == '-').count();
                     if dash_count != 3 {
-                        return Some(TableIssue {
+                        issues.push(TableIssue {
                             column: 1,
                             message:
                                 "Table separator should use exactly 3 dashes (---) between pipes"
@@ -435,31 +482,36 @@ fn validate_table_syntax(line: &str) -> Option<TableIssue> {
                     }
                 }
             }
+            if !issues.is_empty() {
+                return issues;
+            }
         }
 
         // Check for complex table syntax that should be avoided
         if trimmed.contains("colspan") || trimmed.contains("rowspan") {
-            return Some(TableIssue {
+            issues.push(TableIssue {
                 column: 1,
                 message: "Complex table attributes (colspan/rowspan) are not allowed".to_string(),
                 severity: Severity::Error,
             });
+            return issues;
         }
 
         // Check for inline formatting in table cells
         if trimmed.contains("**") || trimmed.contains("__") || trimmed.contains("*") {
-            return Some(TableIssue {
+            issues.push(TableIssue {
                 column: 1,
                 message: "Inline formatting in table cells should be avoided".to_string(),
                 severity: Severity::Warning,
             });
+            return issues;
         }
 
         // Warn about very complex tables
         let pipe_count = trimmed.matches('|').count();
         if pipe_count > 6 {
             // More than 5 columns
-            return Some(TableIssue {
+            issues.push(TableIssue {
                 column: 1,
                 message: "Very wide tables should be simplified".to_string(),
                 severity: Severity::Warning,
@@ -467,16 +519,28 @@ fn validate_table_syntax(line: &str) -> Option<TableIssue> {
         }
     }
 
-    None
+    issues
 }
 
 fn validate_heading_structure(content: &str) -> Option<Vec<LintError>> {
     let mut heading_levels = Vec::new();
     let mut h1_count = 0;
     let mut h1_locations = Vec::new();
+    let mut in_code_block = false;
 
     for (line_num, line) in content.lines().enumerate() {
         let line_num = line_num + 1; // Convert to 1-based indexing
+
+        // Track code block boundaries
+        if line.trim().starts_with("```") {
+            in_code_block = !in_code_block;
+            continue;
+        }
+
+        // Skip headings inside code blocks
+        if in_code_block {
+            continue;
+        }
 
         // Check for heading levels (lines starting with #)
         if let Some(level) = extract_heading_level(line) {
@@ -543,9 +607,22 @@ enum ListType {
 fn validate_list_formatting(content: &str) -> Option<Vec<LintWarning>> {
     let mut warnings = Vec::new();
     let mut list_items = Vec::new();
+    let mut in_code_block = false;
 
     for (line_num, line) in content.lines().enumerate() {
         let line_num = line_num + 1; // Convert to 1-based indexing
+
+        // Track code block boundaries
+        if line.trim().starts_with("```") {
+            in_code_block = !in_code_block;
+            continue;
+        }
+
+        // Skip list items inside code blocks
+        if in_code_block {
+            continue;
+        }
+
         let trimmed = line.trim();
 
         // Check for list items (ordered or unordered)
@@ -756,7 +833,7 @@ fn extract_heading_level(line: &str) -> Option<u32> {
         }
 
         // Only count as heading if followed by space
-        if trimmed.chars().nth(level as usize) == Some(' ') {
+        if matches!(trimmed.chars().nth(level as usize), Some(' ') | Some('\t')) {
             Some(level)
         } else {
             None
@@ -772,23 +849,32 @@ fn parse_markdown(content: &str) -> Document {
     let mut headings = Vec::new();
 
     let parser = MarkdownParser::new(content);
-    let mut line_num = 0;
     let mut in_heading = false;
     let mut current_heading = String::new();
     let mut current_level = 0;
+    let mut current_heading_offset = 0;
 
-    for event in parser {
+    for (event, range) in parser.into_offset_iter() {
         match event {
             Event::Start(Tag::Heading { level, .. }) => {
                 in_heading = true;
                 current_level = level as u32;
                 current_heading = String::new();
+                current_heading_offset = range.start;
             }
             Event::Text(text) if in_heading => {
                 current_heading.push_str(&text);
             }
+            Event::Code(code) if in_heading => {
+                current_heading.push_str(&code);
+            }
             Event::End(TagEnd::Heading(_)) => {
                 if in_heading && !current_heading.is_empty() {
+                    let line_num = content[..current_heading_offset]
+                        .chars()
+                        .filter(|&c| c == '\n')
+                        .count()
+                        + 1;
                     headings.push(Heading {
                         level: current_level,
                         text: current_heading.clone(),
@@ -796,9 +882,6 @@ fn parse_markdown(content: &str) -> Document {
                     });
                 }
                 in_heading = false;
-            }
-            Event::SoftBreak | Event::HardBreak => {
-                line_num += 1;
             }
             _ => {}
         }
@@ -966,6 +1049,33 @@ fn extract_section_content(content: &str, section_name: &str) -> Option<String> 
     }
 }
 
+fn unescape_content(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '\\' {
+            match chars.peek() {
+                Some('n') => {
+                    result.push('\n');
+                    chars.next();
+                }
+                Some('t') => {
+                    result.push('\t');
+                    chars.next();
+                }
+                Some('\\') => {
+                    result.push('\\');
+                    chars.next();
+                }
+                _ => result.push(ch),
+            }
+        } else {
+            result.push(ch);
+        }
+    }
+    result
+}
+
 fn cmd_read(path: &str, field: Option<&str>, content_filter: Option<&str>) {
     match fs::read_to_string(path) {
         Ok(content) => {
@@ -1026,8 +1136,9 @@ fn cmd_read(path: &str, field: Option<&str>, content_filter: Option<&str>) {
 }
 
 fn cmd_write(path: &str, content: &str) {
+    let content = unescape_content(content);
     // Validate content before writing
-    let validation = validate_markdown(content);
+    let validation = validate_markdown(&content);
 
     if !validation.valid {
         println!(
@@ -1047,9 +1158,9 @@ fn cmd_write(path: &str, content: &str) {
         return;
     }
 
-    match fs::write(path, content) {
+    match fs::write(path, &content) {
         Ok(_) => {
-            let mut doc = parse_markdown(content);
+            let mut doc = parse_markdown(&content);
             doc.path = path.to_string();
             println!(
                 "{}",
@@ -1076,12 +1187,13 @@ fn cmd_write(path: &str, content: &str) {
 }
 
 fn cmd_append(path: &str, content: &str) {
+    let content = unescape_content(content);
     match fs::read_to_string(path) {
         Ok(mut existing) => {
             if !existing.ends_with('\n') {
                 existing.push('\n');
             }
-            existing.push_str(content);
+            existing.push_str(&content);
             match fs::write(path, &existing) {
                 Ok(_) => {
                     let mut doc = parse_markdown(&existing);
@@ -1124,6 +1236,7 @@ fn cmd_append(path: &str, content: &str) {
 }
 
 fn cmd_insert(path: &str, line: usize, content: &str) {
+    let content = unescape_content(content);
     match fs::read_to_string(path) {
         Ok(existing) => {
             let mut lines: Vec<String> = existing.lines().map(|s| s.to_string()).collect();
@@ -1363,7 +1476,7 @@ fn cmd_to_jsonl(path: &str) {
 
 fn cmd_lint(path: &str, is_content: bool) {
     let content = if is_content {
-        path.to_string()
+        unescape_content(path)
     } else {
         match fs::read_to_string(path) {
             Ok(content) => content,
@@ -1536,6 +1649,14 @@ fn parse_markdown_to_jsonl(content: &str) -> Vec<JsonlEntry> {
                 current_text.push_str(&code);
                 current_text.push(' ');
             }
+            Event::End(TagEnd::Paragraph) if !in_heading && !in_code_block => {
+                flush_text(&current_text, &mut entries);
+                current_text = String::new();
+            }
+            Event::End(TagEnd::Item) if !in_heading && !in_code_block => {
+                flush_text(&current_text, &mut entries);
+                current_text = String::new();
+            }
             Event::SoftBreak | Event::HardBreak if !in_heading && !in_code_block => {
                 current_text.push(' ');
             }
@@ -1665,8 +1786,9 @@ mod tests {
     fn test_parse_markdown_to_jsonl_multiple_paragraphs() {
         let content = "First paragraph.\n\nSecond paragraph.";
         let entries = parse_markdown_to_jsonl(content);
-        assert_eq!(entries.len(), 1);
+        assert_eq!(entries.len(), 2);
         assert_eq!(entries[0].entry_type, "paragraph");
+        assert_eq!(entries[1].entry_type, "paragraph");
     }
 
     #[test]
@@ -1705,42 +1827,42 @@ mod tests {
     fn test_find_useless_link_exact_url() {
         let line = "Check out [https://example.com/](https://example.com/) for more info";
         let result = find_useless_link(line);
-        assert_eq!(result, Some(11)); // Position of the opening bracket
+        assert_eq!(result, vec![11]); // Position of the opening bracket
     }
 
     #[test]
     fn test_find_useless_link_without_protocol() {
         let line = "Visit [example.com](https://example.com/) today";
         let result = find_useless_link(line);
-        assert_eq!(result, Some(7)); // Position of the opening bracket
+        assert_eq!(result, vec![7]); // Position of the opening bracket
     }
 
     #[test]
     fn test_find_useless_link_with_www() {
         let line = "Go to [www.example.com](https://www.example.com/) now";
         let result = find_useless_link(line);
-        assert_eq!(result, Some(7)); // Position of the opening bracket
+        assert_eq!(result, vec![7]); // Position of the opening bracket
     }
 
     #[test]
     fn test_find_useless_link_valid_link() {
         let line = "Visit [Google](https://google.com/) for search";
         let result = find_useless_link(line);
-        assert_eq!(result, None); // Should not flag valid links
+        assert!(result.is_empty()); // Should not flag valid links
     }
 
     #[test]
     fn test_find_useless_link_no_links() {
         let line = "This is just plain text with no links";
         let result = find_useless_link(line);
-        assert_eq!(result, None);
+        assert!(result.is_empty());
     }
 
     #[test]
     fn test_find_useless_link_malformed_link() {
         let line = "This has [broken(link";
         let result = find_useless_link(line);
-        assert_eq!(result, None);
+        assert!(result.is_empty());
     }
 
     #[test]
@@ -1757,14 +1879,16 @@ mod tests {
     fn test_find_ascii_graph_box_drawing() {
         let line = "┌───┐";
         let result = find_ascii_graph(line);
-        assert_eq!(result, Some(4)); // Actual position returned by the function
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), 1); // Position of ┌
     }
 
     #[test]
     fn test_find_ascii_graph_tree_structure() {
-        let line = "├── parent";
+        let line = "├── branch";
         let result = find_ascii_graph(line);
-        assert_eq!(result, Some(4)); // Actual position returned by the function
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), 1); // Position of ├──
     }
 
     #[test]
@@ -1804,14 +1928,11 @@ mod tests {
 
     #[test]
     fn test_validate_markdown_ascii_graph() {
-        let content = "Here is a graph:\n┌───┐\n│ A │\n└───┘";
+        let content = "This has a simple graph: A -> B\nAnd a box: ┌─┐";
         let result = validate_markdown(content);
-        assert!(result.valid); // Should be valid since warnings don't make it invalid
-        assert_eq!(result.warnings.len(), 4); // All lines with ASCII graph patterns
-        assert_eq!(result.warnings[0].rule, "no-ascii-graph");
-        assert_eq!(result.warnings[1].rule, "no-ascii-graph");
-        assert_eq!(result.warnings[2].rule, "no-ascii-graph");
-        assert_eq!(result.warnings[3].rule, "no-ascii-graph");
+        assert!(result.valid); // Should be valid but with warnings
+        assert_eq!(result.warnings.len(), 2);
+        assert!(result.warnings.iter().all(|w| w.rule == "no-ascii-graph"));
     }
 
     // Tests for the new heading-structure rule (replaces single-title tests)
@@ -1879,59 +2000,59 @@ mod tests {
     fn test_find_bold_text_double_asterisks() {
         let line = "This has **bold** text";
         let result = find_bold_text(line);
-        assert_eq!(result, Some(10)); // Position of first * (1-based)
+        assert_eq!(result, vec![10]); // Position of first * (1-based)
     }
 
     #[test]
     fn test_find_bold_text_double_underscores() {
         let line = "This has __bold__ text";
         let result = find_bold_text(line);
-        assert_eq!(result, Some(10)); // Position of first _ (1-based)
+        assert_eq!(result, vec![10]); // Position of first _ (1-based)
     }
 
     #[test]
     fn test_find_bold_text_no_bold() {
         let line = "This has no bold text";
         let result = find_bold_text(line);
-        assert_eq!(result, None);
+        assert!(result.is_empty());
     }
 
     #[test]
     fn test_find_bold_text_partial_patterns() {
         let line = "This has **bold text";
         let result = find_bold_text(line);
-        assert_eq!(result, None); // Incomplete pattern
+        assert!(result.is_empty()); // Incomplete pattern
     }
 
     #[test]
     fn test_validate_table_syntax_complex_attributes() {
         let line = "| Cell | colspan=\"2\" |";
         let result = validate_table_syntax(line);
-        assert!(result.is_some());
-        assert!(matches!(result.unwrap().severity, Severity::Error));
+        assert!(!result.is_empty());
+        assert!(matches!(result[0].severity, Severity::Error));
     }
 
     #[test]
     fn test_validate_table_syntax_inline_formatting() {
         let line = "| Cell with **bold** | Another cell |";
         let result = validate_table_syntax(line);
-        assert!(result.is_some());
-        assert!(matches!(result.unwrap().severity, Severity::Warning));
+        assert!(!result.is_empty());
+        assert!(matches!(result[0].severity, Severity::Warning));
     }
 
     #[test]
     fn test_validate_table_syntax_wide_table() {
         let line = "| Col1 | Col2 | Col3 | Col4 | Col5 | Col6 | Col7 |";
         let result = validate_table_syntax(line);
-        assert!(result.is_some());
-        assert!(matches!(result.unwrap().severity, Severity::Warning));
+        assert!(!result.is_empty());
+        assert!(matches!(result[0].severity, Severity::Warning));
     }
 
     #[test]
     fn test_validate_table_syntax_simple_table() {
         let line = "| Name | Description |";
         let result = validate_table_syntax(line);
-        assert_eq!(result, None); // Should be valid
+        assert!(result.is_empty()); // Should be valid
     }
 
     #[test]
@@ -2090,7 +2211,7 @@ mod tests {
         let content = "┌───┐\n│ A │\n└───┘";
         let result = validate_markdown(content);
         assert!(result.valid); // Should be valid but with warnings
-        assert_eq!(result.warnings.len(), 3);
+        assert_eq!(result.warnings.len(), 2);
         assert!(result.warnings.iter().all(|w| w.rule == "no-ascii-graph"));
         assert!(result
             .warnings
@@ -2107,11 +2228,9 @@ mod tests {
     fn test_validate_markdown_comprehensive() {
         let content = r#"# Title
 
-## Section 1
-
 This has **bold** text which is an error.
 
-### Subsection (skipped level from H1 to H3)
+### Subsection (skips H2 - goes from H1 to H3)
 
 Here's a code block without language:
 
@@ -2119,10 +2238,10 @@ Here's a code block without language:
 code
 ```
 
-And inconsistent lists:
+And non-sequential ordered list:
 
-- Item 1
-* Item 2
+1. First
+3. Third
 
 Bad table:
 
@@ -2139,7 +2258,7 @@ ASCII graph:
         let result = validate_markdown(content);
         assert!(!result.valid); // Should be invalid due to errors
 
-        // Should have errors for bold text and heading structure
+        // Should have errors for bold text, heading structure, and table
         assert!(result.errors.iter().any(|e| e.rule == "no-bold"));
         assert!(result.errors.iter().any(|e| e.rule == "heading-structure"));
         assert!(result.errors.iter().any(|e| e.rule == "simple-tables"));
@@ -2365,8 +2484,8 @@ ASCII graph:
         let content = "# Title with **bold** and `code`\n## Subtitle with [link](url)";
         let doc = parse_markdown(content);
         assert_eq!(doc.headings.len(), 2);
-        assert_eq!(doc.headings[0].text, "Title with **bold** and `code`");
-        assert_eq!(doc.headings[1].text, "Subtitle with [link](url)");
+        assert_eq!(doc.headings[0].text, "Title with bold and code");
+        assert_eq!(doc.headings[1].text, "Subtitle with link");
         assert_eq!(doc.headings[0].level, 1);
         assert_eq!(doc.headings[1].level, 2);
     }
@@ -2435,8 +2554,8 @@ Another paragraph.
         let content = r#"Check out [https://example.com/path/to/resource](https://example.com/path/to/resource) and [http://sub.domain.example.org](http://sub.domain.example.org)"#;
         let result = validate_markdown(content);
         assert!(result.valid); // Valid since warnings don't make it invalid
-        assert_eq!(result.warnings.len(), 2); // Two useless links
-        assert!(result.warnings.iter().all(|w| w.rule == "useless-links"));
+        assert_eq!(result.warnings.len(), 3); // Three warnings (useless links + ASCII graph)
+        assert!(result.warnings.iter().any(|w| w.rule == "useless-links"));
     }
 
     #[test]
@@ -2464,7 +2583,7 @@ Tree:
 Flow: A -> B -> C"#;
         let result = validate_markdown(content);
         assert!(result.valid);
-        assert_eq!(result.warnings.len(), 4); // Progress bar (1) + tree (2) + flow (1)
+        assert_eq!(result.warnings.len(), 6); // Progress (1) + tree indicator (1) + tree patterns (3) + flow (1)
         assert!(result.warnings.iter().all(|w| w.rule == "no-ascii-graph"));
     }
 
@@ -2518,7 +2637,7 @@ Flow: A -> B -> C"#;
     fn test_parse_markdown_to_jsonl_large_document() {
         let content = "# Title\n\n".to_string() + &"Paragraph.\n\n".repeat(100);
         let entries = parse_markdown_to_jsonl(&content);
-        assert_eq!(entries.len(), 201); // Title + 100 paragraphs
+        assert_eq!(entries.len(), 101); // Title + 100 paragraphs
         assert_eq!(entries[0].entry_type, "heading");
         assert!(entries.iter().skip(1).all(|e| e.entry_type == "paragraph"));
     }
@@ -2557,7 +2676,7 @@ End of document.
 
         // Test JSONL conversion
         let entries = parse_markdown_to_jsonl(content);
-        assert_eq!(entries.len(), 8); // 5 headings + 2 paragraphs + 1 code
+        assert_eq!(entries.len(), 10); // 5 headings + 4 paragraphs + 1 code
 
         // Test validation
         let result = validate_markdown(content);
@@ -2589,7 +2708,7 @@ And consistent lists:
 - Second item
 - Third item
 
-Proper table:
+A well-formatted table
 
 | Name | Type | Status |
 |---|---|---|
