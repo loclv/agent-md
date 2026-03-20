@@ -93,21 +93,21 @@ Description: Tables should use simple syntax without complex attributes.
 | Test | This has *italic* text |
 ```
 
-❌ Invalid - Very wide tables (warning)
-
-```text
-| Col1 | Col2 | Col3 | Col4 | Col5 | Col6 | Col7 | Col8 |
-|------|------|------|------|------|------|------|------|
-| Data | Data | Data | Data | Data | Data | Data | Data |
-```
-
-### Rule 2 Recommended Alternatives
-
-✅ Valid - Simple table syntax
+❌ Invalid - Too many dashes for table separator (should be exactly 3)
 
 ```text
 | Name | Description |
 |------|-------------|
+| Test | text        |
+```
+
+### Rule 2 Recommended Alternatives
+
+✅ Valid - Simple table syntax with 3 dash separators
+
+```text
+| Name | Description |
+|---|---|
 | Item | Simple description |
 | Test | Another description |
 ```
