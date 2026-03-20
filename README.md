@@ -98,14 +98,31 @@ agent-md lint-file <path>
 
 ## Validation Rules
 
-The linter enforces AI-friendly markdown:
+The linter enforces AI-friendly markdown standards.
+
+### Error Rules (block content)
 
 - No bold text: `**bold**` and `__bold__` are rejected (errors)
-- Simple table syntax: Complex table attributes are rejected, very wide tables generate warnings
+
+- Heading structure: Multiple H1 headings and skipped heading levels are rejected (errors)
+
+- Table syntax: Complex table attributes and incorrect separator format are rejected (errors)
+
+### Warning Rules (style guidelines)
+
+- Simple table syntax: Very wide tables and inline formatting in cells generate warnings
+
 - No useless links: Links where text equals the URL generate warnings
+
 - No ASCII graphs: Box drawing characters and visual patterns generate warnings
-- Single H1 title: Multiple H1 headings are rejected (errors)
-- Automatic validation: The `write` command validates content before writing
+
+- Code block best practices: Code blocks without language specification generate warnings
+
+- List formatting: Inconsistent list markers and numbering generate warnings
+
+### Automatic validation
+
+The `write` command validates content before writing to ensure AI-friendly markdown.
 
 ## Running Tests
 
