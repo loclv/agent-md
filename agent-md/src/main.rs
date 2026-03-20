@@ -59,7 +59,7 @@ pub struct LintResult {
     pub warnings: Vec<LintWarning>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct LintError {
     pub line: usize,
     pub column: usize,
@@ -133,6 +133,11 @@ fn validate_markdown(content: &str) -> LintResult {
         }
     }
 
+    // Rule: Single H1 title validation
+    if let Some(h1_errors) = validate_single_h1(content) {
+        errors.extend(h1_errors);
+    }
+
     LintResult {
         valid: errors.is_empty(),
         errors,
@@ -140,13 +145,13 @@ fn validate_markdown(content: &str) -> LintResult {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Severity {
     Error,
     Warning,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct TableIssue {
     column: usize,
     message: String,
@@ -427,6 +432,35 @@ fn validate_table_syntax(line: &str) -> Option<TableIssue> {
     }
 
     None
+}
+
+fn validate_single_h1(content: &str) -> Option<Vec<LintError>> {
+    let mut h1_locations = Vec::new();
+
+    for (line_num, line) in content.lines().enumerate() {
+        let line_num = line_num + 1; // Convert to 1-based indexing
+        
+        // Check for H1 headings (lines starting with # )
+        if line.starts_with("# ") {
+            h1_locations.push(line_num);
+        }
+    }
+
+    // If we have more than one H1, return errors for all but the first
+    if h1_locations.len() > 1 {
+        let mut errors = Vec::new();
+        for &location in &h1_locations[1..] { // Skip the first H1
+            errors.push(LintError {
+                line: location,
+                column: 1,
+                message: "Multiple H1 headings found. Documents should have only one top-level heading".to_string(),
+                rule: "single-title".to_string(),
+            });
+        }
+        Some(errors)
+    } else {
+        None
+    }
 }
 
 fn parse_markdown(content: &str) -> Document {
@@ -1324,5 +1358,174 @@ mod tests {
         assert_eq!(result.warnings[1].rule, "no-ascii-graph");
         assert_eq!(result.warnings[2].rule, "no-ascii-graph");
         assert_eq!(result.warnings[3].rule, "no-ascii-graph");
+    }
+
+    // Tests for the new single-title rule
+    #[test]
+    fn test_validate_single_h1_single_heading() {
+        let content = "# Single Title\n\nSome content here";
+        let result = validate_single_h1(content);
+        assert_eq!(result, None); // Should return None for valid content
+    }
+
+    #[test]
+    fn test_validate_single_h1_multiple_headings() {
+        let content = "# First Title\n\nContent\n\n# Second Title\n\nMore content";
+        let result = validate_single_h1(content);
+        assert!(result.is_some()); // Should return Some with errors
+        let errors = result.unwrap();
+        assert_eq!(errors.len(), 1); // Should have exactly 1 error (for the second H1)
+        assert_eq!(errors[0].line, 5); // Second H1 is on line 5
+        assert_eq!(errors[0].column, 1);
+        assert_eq!(errors[0].rule, "single-title");
+        assert!(errors[0].message.contains("Multiple H1 headings"));
+    }
+
+    #[test]
+    fn test_validate_single_h1_three_headings() {
+        let content = "# First\n\nContent\n\n# Second\n\nContent\n\n# Third\n\nContent";
+        let result = validate_single_h1(content);
+        assert!(result.is_some());
+        let errors = result.unwrap();
+        assert_eq!(errors.len(), 2); // Should have 2 errors (for second and third H1)
+        assert_eq!(errors[0].line, 5); // Second H1
+        assert_eq!(errors[1].line, 9); // Third H1
+        assert_eq!(errors[0].rule, "single-title");
+        assert_eq!(errors[1].rule, "single-title");
+    }
+
+    #[test]
+    fn test_validate_single_h1_no_headings() {
+        let content = "Just some plain text\n\nWithout any headings";
+        let result = validate_single_h1(content);
+        assert_eq!(result, None); // Should return None for content without H1
+    }
+
+    #[test]
+    fn test_validate_single_h1_other_heading_levels() {
+        let content = "## Section 1\n\nContent\n\n### Subsection\n\nMore content";
+        let result = validate_single_h1(content);
+        assert_eq!(result, None); // Should return None for content without H1
+    }
+
+    #[test]
+    fn test_validate_single_h1_mixed_headings() {
+        let content = "# Main Title\n\n## Section 1\n\nContent\n\n### Subsection\n\nMore content\n\n## Section 2";
+        let result = validate_single_h1(content);
+        assert_eq!(result, None); // Should return None - only one H1
+    }
+
+    #[test]
+    fn test_validate_single_h1_false_positives() {
+        let content = "This is # not a heading\n\n## This is a heading\n\n# This is H1\n\nAnother # not heading";
+        let result = validate_single_h1(content);
+        assert_eq!(result, None); // Should return None since there's only one actual H1
+    }
+
+    #[test]
+    fn test_validate_markdown_single_h1_integration() {
+        let content = "# Title\n\nContent\n\n# Second Title";
+        let result = validate_markdown(content);
+        assert!(!result.valid); // Should be invalid due to single-title error
+        assert_eq!(result.errors.len(), 1);
+        assert_eq!(result.errors[0].rule, "single-title");
+        assert_eq!(result.errors[0].line, 5);
+    }
+
+    #[test]
+    fn test_validate_markdown_single_h1_valid() {
+        let content = "# Title\n\n## Section 1\n\nContent\n\n## Section 2";
+        let result = validate_markdown(content);
+        assert!(result.valid); // Should be valid
+        assert_eq!(result.errors.len(), 0);
+    }
+
+    // Additional tests for existing validation functions
+    #[test]
+    fn test_find_bold_text_double_asterisks() {
+        let line = "This has **bold** text";
+        let result = find_bold_text(line);
+        assert_eq!(result, Some(10)); // Position of first * (1-based)
+    }
+
+    #[test]
+    fn test_find_bold_text_double_underscores() {
+        let line = "This has __bold__ text";
+        let result = find_bold_text(line);
+        assert_eq!(result, Some(10)); // Position of first _ (1-based)
+    }
+
+    #[test]
+    fn test_find_bold_text_no_bold() {
+        let line = "This has no bold text";
+        let result = find_bold_text(line);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_find_bold_text_partial_patterns() {
+        let line = "This has **bold text";
+        let result = find_bold_text(line);
+        assert_eq!(result, None); // Incomplete pattern
+    }
+
+    #[test]
+    fn test_validate_table_syntax_complex_attributes() {
+        let line = "| Cell | colspan=\"2\" |";
+        let result = validate_table_syntax(line);
+        assert!(result.is_some());
+        assert!(matches!(result.unwrap().severity, Severity::Error));
+    }
+
+    #[test]
+    fn test_validate_table_syntax_inline_formatting() {
+        let line = "| Cell with **bold** | Another cell |";
+        let result = validate_table_syntax(line);
+        assert!(result.is_some());
+        assert!(matches!(result.unwrap().severity, Severity::Warning));
+    }
+
+    #[test]
+    fn test_validate_table_syntax_wide_table() {
+        let line = "| Col1 | Col2 | Col3 | Col4 | Col5 | Col6 | Col7 |";
+        let result = validate_table_syntax(line);
+        assert!(result.is_some());
+        assert!(matches!(result.unwrap().severity, Severity::Warning));
+    }
+
+    #[test]
+    fn test_validate_table_syntax_simple_table() {
+        let line = "| Name | Description |";
+        let result = validate_table_syntax(line);
+        assert_eq!(result, None); // Should be valid
+    }
+
+    #[test]
+    fn test_validate_markdown_bold_error() {
+        let content = "This has **bold** text";
+        let result = validate_markdown(content);
+        assert!(!result.valid); // Should be invalid due to bold error
+        assert_eq!(result.errors.len(), 1);
+        assert_eq!(result.errors[0].rule, "no-bold");
+    }
+
+    #[test]
+    fn test_validate_markdown_multiple_errors() {
+        let content = "This has **bold** text\n\n| Cell with **bold** | Another |";
+        let result = validate_markdown(content);
+        assert!(!result.valid); // Should be invalid due to bold errors
+        assert_eq!(result.errors.len(), 2); // Two bold errors (one in text, one in table)
+        assert!(result.errors.iter().any(|e| e.rule == "no-bold"));
+        assert_eq!(result.warnings.len(), 1); // One table formatting warning
+        assert!(result.warnings.iter().any(|w| w.rule == "simple-tables"));
+    }
+
+    #[test]
+    fn test_validate_markdown_empty_content() {
+        let content = "";
+        let result = validate_markdown(content);
+        assert!(result.valid); // Empty content should be valid
+        assert_eq!(result.errors.len(), 0);
+        assert_eq!(result.warnings.len(), 0);
     }
 }

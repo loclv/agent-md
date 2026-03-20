@@ -224,6 +224,27 @@ agent-md lint README.md
 agent-md lint "# Title\n\nContent" --content
 ```
 
+## Standard Development Workflow
+
+### Task Execution Process
+
+Follow these steps for any development task:
+
+1. Receive the request - Understand the requirements and scope
+2. Break down complex requests - If the request is complex, break it down into smaller tasks and write each task to a separate file named `tasks.md`
+3. Execute each small task - Work through tasks systematically, marking each as finished in `tasks.md` when completed
+4. Validate completion - Once all tasks are completed:
+   - Write unit tests
+   - Run the linter
+   - Run the formatter
+
+This structured approach ensures:
+
+- Clear task tracking and progress visibility
+- Systematic completion of complex requirements
+- Quality assurance through testing and code quality checks
+- Consistent development process across the project
+
 ## Development Workflow
 
 ### 1. Setup Development Environment
