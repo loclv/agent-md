@@ -1,0 +1,965 @@
+use clap::{Parser, Subcommand};
+use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Parser as MarkdownParser, Tag, TagEnd};
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::io::{self, Write};
+use std::path::PathBuf;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct JsonlEntry {
+    #[serde(rename = "type")]
+    pub entry_type: String,
+    pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub level: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Document {
+    pub path: String,
+    pub content: String,
+    pub word_count: usize,
+    pub line_count: usize,
+    pub headings: Vec<Heading>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Heading {
+    pub level: u32,
+    pub text: String,
+    pub line: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EditResult {
+    pub success: bool,
+    pub message: String,
+    pub document: Option<Document>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SearchResult {
+    pub query: String,
+    pub matches: Vec<Match>,
+    pub total: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Match {
+    pub line: usize,
+    pub content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LintResult {
+    pub valid: bool,
+    pub errors: Vec<LintError>,
+    pub warnings: Vec<LintWarning>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LintError {
+    pub line: usize,
+    pub column: usize,
+    pub message: String,
+    pub rule: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LintWarning {
+    pub line: usize,
+    pub column: usize,
+    pub message: String,
+    pub rule: String,
+}
+
+fn validate_markdown(content: &str) -> LintResult {
+    let mut errors = Vec::new();
+    let mut warnings = Vec::new();
+
+    for (line_num, line) in content.lines().enumerate() {
+        let line_num = line_num + 1; // Convert to 1-based indexing
+        
+        // Rule: No bold text (detect **text** or __text__)
+        if let Some(col) = find_bold_text(line) {
+            errors.push(LintError {
+                line: line_num,
+                column: col,
+                message: "Bold text is not allowed for AI agents".to_string(),
+                rule: "no-bold".to_string(),
+            });
+        }
+
+        // Rule: Simple table syntax validation
+        if let Some(issue) = validate_table_syntax(line) {
+            match issue.severity {
+                Severity::Error => errors.push(LintError {
+                    line: line_num,
+                    column: issue.column,
+                    message: issue.message,
+                    rule: "simple-tables".to_string(),
+                }),
+                Severity::Warning => warnings.push(LintWarning {
+                    line: line_num,
+                    column: issue.column,
+                    message: issue.message,
+                    rule: "simple-tables".to_string(),
+                }),
+            }
+        }
+    }
+
+    LintResult {
+        valid: errors.is_empty(),
+        errors,
+        warnings,
+    }
+}
+
+#[derive(Debug)]
+enum Severity {
+    Error,
+    Warning,
+}
+
+#[derive(Debug)]
+struct TableIssue {
+    column: usize,
+    message: String,
+    severity: Severity,
+}
+
+fn find_bold_text(line: &str) -> Option<usize> {
+    // Check for **bold** pattern
+    if let Some(start) = line.find("**") {
+        if line[start + 2..].find("**").is_some() {
+            return Some(start + 1); // Return 1-based column
+        }
+    }
+    
+    // Check for __bold__ pattern
+    if let Some(start) = line.find("__") {
+        if line[start + 2..].find("__").is_some() {
+            return Some(start + 1); // Return 1-based column
+        }
+    }
+    
+    None
+}
+
+fn validate_table_syntax(line: &str) -> Option<TableIssue> {
+    let trimmed = line.trim();
+    
+    // Check if this looks like a table row
+    if trimmed.contains('|') {
+        // Check for complex table syntax that should be avoided
+        if trimmed.contains("colspan") || trimmed.contains("rowspan") {
+            return Some(TableIssue {
+                column: 1,
+                message: "Complex table attributes (colspan/rowspan) are not allowed".to_string(),
+                severity: Severity::Error,
+            });
+        }
+        
+        // Check for inline formatting in table cells
+        if trimmed.contains("**") || trimmed.contains("__") || trimmed.contains("*") {
+            return Some(TableIssue {
+                column: 1,
+                message: "Inline formatting in table cells should be avoided".to_string(),
+                severity: Severity::Warning,
+            });
+        }
+        
+        // Warn about very complex tables
+        let pipe_count = trimmed.matches('|').count();
+        if pipe_count > 6 { // More than 5 columns
+            return Some(TableIssue {
+                column: 1,
+                message: "Very wide tables should be simplified".to_string(),
+                severity: Severity::Warning,
+            });
+        }
+    }
+    
+    None
+}
+
+fn parse_markdown(content: &str) -> Document {
+    let word_count = content.split_whitespace().count();
+    let line_count = content.lines().count();
+    let mut headings = Vec::new();
+
+    let parser = MarkdownParser::new(content);
+    let mut line_num = 0;
+    let mut in_heading = false;
+    let mut current_heading = String::new();
+    let mut current_level = 0;
+
+    for event in parser {
+        match event {
+            Event::Start(Tag::Heading { level, .. }) => {
+                in_heading = true;
+                current_level = level as u32;
+                current_heading = String::new();
+            }
+            Event::Text(text) if in_heading => {
+                current_heading.push_str(&text);
+            }
+            Event::End(TagEnd::Heading(_)) => {
+                if in_heading && !current_heading.is_empty() {
+                    headings.push(Heading {
+                        level: current_level,
+                        text: current_heading.clone(),
+                        line: line_num,
+                    });
+                }
+                in_heading = false;
+            }
+            Event::SoftBreak | Event::HardBreak => {
+                line_num += 1;
+            }
+            _ => {}
+        }
+    }
+
+    Document {
+        path: String::new(),
+        content: content.to_string(),
+        word_count,
+        line_count,
+        headings,
+    }
+}
+
+#[derive(Parser)]
+#[command(name = "ralph-md")]
+#[command(about = "Markdown editor for AI agents", long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    Read {
+        #[arg(help = "Markdown file path")]
+        path: String,
+    },
+    Write {
+        #[arg(help = "Markdown file path")]
+        path: String,
+        #[arg(help = "Content to write")]
+        content: String,
+    },
+    Append {
+        #[arg(help = "Markdown file path")]
+        path: String,
+        #[arg(help = "Content to append")]
+        content: String,
+    },
+    Insert {
+        #[arg(help = "Markdown file path")]
+        path: String,
+        #[arg(help = "Line number to insert at")]
+        line: usize,
+        #[arg(help = "Content to insert")]
+        content: String,
+    },
+    Delete {
+        #[arg(help = "Markdown file path")]
+        path: String,
+        #[arg(help = "Line number to delete")]
+        line: usize,
+        #[arg(help = "Number of lines to delete", default_value = "1")]
+        count: usize,
+    },
+    List {
+        #[arg(help = "Directory to list", default_value = ".")]
+        path: String,
+    },
+    Search {
+        #[arg(help = "Markdown file path")]
+        path: String,
+        #[arg(help = "Search query")]
+        query: String,
+    },
+    Headings {
+        #[arg(help = "Markdown file path")]
+        path: String,
+    },
+    Stats {
+        #[arg(help = "Markdown file path")]
+        path: String,
+    },
+    ToJsonl {
+        #[arg(help = "Markdown file path")]
+        path: String,
+    },
+    Lint {
+        #[arg(help = "Markdown file path or content to validate")]
+        path: String,
+        #[arg(help = "Validate content directly instead of file", long, default_value = "false")]
+        content: bool,
+    },
+}
+
+fn main() {
+    let cli = Cli::parse();
+
+    match cli.command {
+        Commands::Read { path } => cmd_read(&path),
+        Commands::Write { path, content } => cmd_write(&path, &content),
+        Commands::Append { path, content } => cmd_append(&path, &content),
+        Commands::Insert {
+            path,
+            line,
+            content,
+        } => cmd_insert(&path, line, &content),
+        Commands::Delete { path, line, count } => cmd_delete(&path, line, count),
+        Commands::List { path } => cmd_list(&path),
+        Commands::Search { path, query } => cmd_search(&path, &query),
+        Commands::Headings { path } => cmd_headings(&path),
+        Commands::Stats { path } => cmd_stats(&path),
+        Commands::ToJsonl { path } => cmd_to_jsonl(&path),
+        Commands::Lint { path, content } => cmd_lint(&path, content),
+    }
+}
+
+fn cmd_read(path: &str) {
+    match fs::read_to_string(path) {
+        Ok(content) => {
+            let mut doc = parse_markdown(&content);
+            doc.path = path.to_string();
+            println!("{}", serde_json::to_string(&doc).unwrap());
+        }
+        Err(e) => {
+            println!(
+                "{}",
+                serde_json::to_string(&EditResult {
+                    success: false,
+                    message: format!("Failed to read file: {}", e),
+                    document: None
+                })
+                .unwrap()
+            );
+        }
+    }
+}
+
+fn cmd_write(path: &str, content: &str) {
+    // Validate content before writing
+    let validation = validate_markdown(content);
+    
+    if !validation.valid {
+        println!(
+            "{}",
+            serde_json::to_string(&EditResult {
+                success: false,
+                message: format!("Content validation failed: {} errors found", validation.errors.len()),
+                document: None,
+            })
+            .unwrap()
+        );
+        // Also output validation details
+        println!("{}", serde_json::to_string(&validation).unwrap());
+        return;
+    }
+
+    match fs::write(path, content) {
+        Ok(_) => {
+            let mut doc = parse_markdown(content);
+            doc.path = path.to_string();
+            println!(
+                "{}",
+                serde_json::to_string(&EditResult {
+                    success: true,
+                    message: "File written successfully".to_string(),
+                    document: Some(doc),
+                })
+                .unwrap()
+            );
+        }
+        Err(e) => {
+            println!(
+                "{}",
+                serde_json::to_string(&EditResult {
+                    success: false,
+                    message: format!("Failed to write file: {}", e),
+                    document: None
+                })
+                .unwrap()
+            );
+        }
+    }
+}
+
+fn cmd_append(path: &str, content: &str) {
+    match fs::read_to_string(path) {
+        Ok(mut existing) => {
+            if !existing.ends_with('\n') {
+                existing.push('\n');
+            }
+            existing.push_str(content);
+            match fs::write(path, &existing) {
+                Ok(_) => {
+                    let mut doc = parse_markdown(&existing);
+                    doc.path = path.to_string();
+                    println!(
+                        "{}",
+                        serde_json::to_string(&EditResult {
+                            success: true,
+                            message: "Content appended successfully".to_string(),
+                            document: Some(doc),
+                        })
+                        .unwrap()
+                    );
+                }
+                Err(e) => {
+                    println!(
+                        "{}",
+                        serde_json::to_string(&EditResult {
+                            success: false,
+                            message: format!("Failed to write file: {}", e),
+                            document: None
+                        })
+                        .unwrap()
+                    );
+                }
+            }
+        }
+        Err(e) => {
+            println!(
+                "{}",
+                serde_json::to_string(&EditResult {
+                    success: false,
+                    message: format!("Failed to read file: {}", e),
+                    document: None
+                })
+                .unwrap()
+            );
+        }
+    }
+}
+
+fn cmd_insert(path: &str, line: usize, content: &str) {
+    match fs::read_to_string(path) {
+        Ok(existing) => {
+            let mut lines: Vec<String> = existing.lines().map(|s| s.to_string()).collect();
+            let insert_at = line.saturating_sub(1).min(lines.len());
+            let new_lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
+            lines.splice(insert_at..insert_at, new_lines);
+            let result = lines.join("\n");
+            match fs::write(path, &result) {
+                Ok(_) => {
+                    let mut doc = parse_markdown(&result);
+                    doc.path = path.to_string();
+                    println!(
+                        "{}",
+                        serde_json::to_string(&EditResult {
+                            success: true,
+                            message: format!("Inserted at line {}", line),
+                            document: Some(doc),
+                        })
+                        .unwrap()
+                    );
+                }
+                Err(e) => {
+                    println!(
+                        "{}",
+                        serde_json::to_string(&EditResult {
+                            success: false,
+                            message: format!("Failed to write file: {}", e),
+                            document: None
+                        })
+                        .unwrap()
+                    );
+                }
+            }
+        }
+        Err(e) => {
+            println!(
+                "{}",
+                serde_json::to_string(&EditResult {
+                    success: false,
+                    message: format!("Failed to read file: {}", e),
+                    document: None
+                })
+                .unwrap()
+            );
+        }
+    }
+}
+
+fn cmd_delete(path: &str, line: usize, count: usize) {
+    match fs::read_to_string(path) {
+        Ok(existing) => {
+            let mut lines: Vec<String> = existing.lines().map(|s| s.to_string()).collect();
+            let delete_at = line.saturating_sub(1).min(lines.len());
+            let delete_end = (delete_at + count).min(lines.len());
+            lines.splice(delete_at..delete_end, std::iter::empty());
+            let result = lines.join("\n");
+            match fs::write(path, &result) {
+                Ok(_) => {
+                    let mut doc = parse_markdown(&result);
+                    doc.path = path.to_string();
+                    println!(
+                        "{}",
+                        serde_json::to_string(&EditResult {
+                            success: true,
+                            message: format!("Deleted {} lines from line {}", count, line),
+                            document: Some(doc),
+                        })
+                        .unwrap()
+                    );
+                }
+                Err(e) => {
+                    println!(
+                        "{}",
+                        serde_json::to_string(&EditResult {
+                            success: false,
+                            message: format!("Failed to write file: {}", e),
+                            document: None
+                        })
+                        .unwrap()
+                    );
+                }
+            }
+        }
+        Err(e) => {
+            println!(
+                "{}",
+                serde_json::to_string(&EditResult {
+                    success: false,
+                    message: format!("Failed to read file: {}", e),
+                    document: None
+                })
+                .unwrap()
+            );
+        }
+    }
+}
+
+fn cmd_list(path: &str) {
+    let path = PathBuf::from(path);
+    match fs::read_dir(&path) {
+        Ok(entries) => {
+            let mut files: Vec<String> = Vec::new();
+            for entry in entries.flatten() {
+                if let Some(ext) = entry.path().extension() {
+                    if ext == "md" || ext == "markdown" {
+                        files.push(entry.path().to_string_lossy().to_string());
+                    }
+                }
+            }
+            files.sort();
+            println!("{}", serde_json::to_string(&files).unwrap());
+        }
+        Err(e) => {
+            println!(
+                "{}",
+                serde_json::to_string(&EditResult {
+                    success: false,
+                    message: format!("Failed to list directory: {}", e),
+                    document: None
+                })
+                .unwrap()
+            );
+        }
+    }
+}
+
+fn cmd_search(path: &str, query: &str) {
+    match fs::read_to_string(path) {
+        Ok(content) => {
+            let query_lower = query.to_lowercase();
+            let mut matches = Vec::new();
+            for (i, line) in content.lines().enumerate() {
+                if line.to_lowercase().contains(&query_lower) {
+                    matches.push(Match {
+                        line: i + 1,
+                        content: line.to_string(),
+                    });
+                }
+            }
+            println!(
+                "{}",
+                serde_json::to_string(&SearchResult {
+                    query: query.to_string(),
+                    total: matches.len(),
+                    matches,
+                })
+                .unwrap()
+            );
+        }
+        Err(e) => {
+            println!(
+                "{}",
+                serde_json::to_string(&EditResult {
+                    success: false,
+                    message: format!("Failed to read file: {}", e),
+                    document: None
+                })
+                .unwrap()
+            );
+        }
+    }
+}
+
+fn cmd_headings(path: &str) {
+    match fs::read_to_string(path) {
+        Ok(content) => {
+            let doc = parse_markdown(&content);
+            println!("{}", serde_json::to_string(&doc.headings).unwrap());
+        }
+        Err(e) => {
+            println!(
+                "{}",
+                serde_json::to_string(&EditResult {
+                    success: false,
+                    message: format!("Failed to read file: {}", e),
+                    document: None
+                })
+                .unwrap()
+            );
+        }
+    }
+}
+
+fn cmd_stats(path: &str) {
+    match fs::read_to_string(path) {
+        Ok(content) => {
+            let mut doc = parse_markdown(&content);
+            doc.path = path.to_string();
+            println!(
+                "{}",
+                serde_json::to_string(&serde_json::json!({
+                    "path": doc.path,
+                    "word_count": doc.word_count,
+                    "line_count": doc.line_count,
+                    "heading_count": doc.headings.len(),
+                }))
+                .unwrap()
+            );
+        }
+        Err(e) => {
+            println!(
+                "{}",
+                serde_json::to_string(&EditResult {
+                    success: false,
+                    message: format!("Failed to read file: {}", e),
+                    document: None
+                })
+                .unwrap()
+            );
+        }
+    }
+}
+
+fn cmd_to_jsonl(path: &str) {
+    match fs::read_to_string(path) {
+        Ok(content) => {
+            let entries = parse_markdown_to_jsonl(&content);
+            let stdout = io::stdout();
+            let mut handle = stdout.lock();
+            for entry in entries {
+                writeln!(handle, "{}", serde_json::to_string(&entry).unwrap()).unwrap();
+            }
+        }
+        Err(e) => {
+            println!(
+                "{}",
+                serde_json::to_string(&EditResult {
+                    success: false,
+                    message: format!("Failed to read file: {}", e),
+                    document: None
+                })
+                .unwrap()
+            );
+        }
+    }
+}
+
+fn cmd_lint(path: &str, is_content: bool) {
+    let content = if is_content {
+        path.to_string()
+    } else {
+        match fs::read_to_string(path) {
+            Ok(content) => content,
+            Err(e) => {
+                println!(
+                    "{}",
+                    serde_json::to_string(&LintResult {
+                        valid: false,
+                        errors: vec![LintError {
+                            line: 0,
+                            column: 0,
+                            message: format!("Failed to read file: {}", e),
+                            rule: "file-read".to_string(),
+                        }],
+                        warnings: vec![],
+                    })
+                    .unwrap()
+                );
+                return;
+            }
+        }
+    };
+
+    let result = validate_markdown(&content);
+    println!("{}", serde_json::to_string(&result).unwrap());
+}
+
+fn parse_markdown_to_jsonl(content: &str) -> Vec<JsonlEntry> {
+    let parser = MarkdownParser::new(content);
+    let mut entries = Vec::new();
+    let mut current_text = String::new();
+    let mut current_heading_level: Option<u32> = None;
+    let mut current_heading_text = String::new();
+    let mut in_heading = false;
+    let mut in_code_block = false;
+    let mut code_language = String::new();
+    let mut code_content = String::new();
+
+    let flush_text = |text: &str, entries: &mut Vec<JsonlEntry>| {
+        if !text.trim().is_empty() {
+            entries.push(JsonlEntry {
+                entry_type: "paragraph".to_string(),
+                content: text.trim().to_string(),
+                level: None,
+                language: None,
+            });
+        }
+    };
+
+    for event in parser {
+        match event {
+            Event::Start(Tag::Heading { level, .. }) => {
+                flush_text(&current_text, &mut entries);
+                current_text = String::new();
+                in_heading = true;
+                current_heading_level = Some(match level {
+                    HeadingLevel::H1 => 1,
+                    HeadingLevel::H2 => 2,
+                    HeadingLevel::H3 => 3,
+                    HeadingLevel::H4 => 4,
+                    HeadingLevel::H5 => 5,
+                    HeadingLevel::H6 => 6,
+                });
+                current_heading_text = String::new();
+            }
+            Event::Text(text) if in_heading => {
+                current_heading_text.push_str(&text);
+            }
+            Event::End(TagEnd::Heading(_)) => {
+                if !current_heading_text.is_empty() {
+                    entries.push(JsonlEntry {
+                        entry_type: "heading".to_string(),
+                        content: current_heading_text.clone(),
+                        level: current_heading_level,
+                        language: None,
+                    });
+                }
+                in_heading = false;
+                current_heading_level = None;
+            }
+            Event::Start(Tag::CodeBlock(kind)) => {
+                flush_text(&current_text, &mut entries);
+                current_text = String::new();
+                in_code_block = true;
+                code_content = String::new();
+                code_language = match kind {
+                    CodeBlockKind::Fenced(lang) => lang.to_string(),
+                    CodeBlockKind::Indented => String::new(),
+                };
+            }
+            Event::End(TagEnd::CodeBlock) => {
+                entries.push(JsonlEntry {
+                    entry_type: "code".to_string(),
+                    content: code_content.clone(),
+                    level: None,
+                    language: if code_language.is_empty() {
+                        None
+                    } else {
+                        Some(code_language.clone())
+                    },
+                });
+                in_code_block = false;
+            }
+            Event::Text(text) if in_code_block => {
+                code_content.push_str(&text);
+            }
+            Event::Text(text) if !in_heading && !in_code_block => {
+                current_text.push_str(&text);
+                current_text.push(' ');
+            }
+            Event::Code(code) if !in_heading && !in_code_block => {
+                current_text.push_str(&code);
+                current_text.push(' ');
+            }
+            Event::SoftBreak | Event::HardBreak if !in_heading && !in_code_block => {
+                current_text.push(' ');
+            }
+            _ => {}
+        }
+    }
+
+    flush_text(&current_text, &mut entries);
+    entries
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_markdown_basic() {
+        let content = "# Hello\n\nThis is a test.";
+        let doc = parse_markdown(content);
+        assert_eq!(doc.word_count, 6);
+        assert_eq!(doc.line_count, 3);
+        assert_eq!(doc.headings.len(), 1);
+        assert_eq!(doc.headings[0].level, 1);
+        assert_eq!(doc.headings[0].text, "Hello");
+    }
+
+    #[test]
+    fn test_parse_markdown_multiple_headings() {
+        let content = "# Title\n\n## Section 1\n\nContent here.\n\n### Subsection\n\n## Section 2";
+        let doc = parse_markdown(content);
+        assert_eq!(doc.headings.len(), 4);
+        assert_eq!(doc.headings[0].text, "Title");
+        assert_eq!(doc.headings[1].text, "Section 1");
+        assert_eq!(doc.headings[2].text, "Subsection");
+        assert_eq!(doc.headings[3].text, "Section 2");
+        assert_eq!(doc.headings[0].level, 1);
+        assert_eq!(doc.headings[1].level, 2);
+        assert_eq!(doc.headings[2].level, 3);
+        assert_eq!(doc.headings[3].level, 2);
+    }
+
+    #[test]
+    fn test_parse_markdown_no_headings() {
+        let content = "Just some plain text without any headings.";
+        let doc = parse_markdown(content);
+        assert_eq!(doc.headings.len(), 0);
+        assert_eq!(doc.word_count, 7);
+    }
+
+    #[test]
+    fn test_parse_markdown_word_count() {
+        let content = "One two three\nfour five six";
+        let doc = parse_markdown(content);
+        assert_eq!(doc.word_count, 6);
+    }
+
+    #[test]
+    fn test_parse_markdown_to_jsonl_heading() {
+        let content = "# Test Heading";
+        let entries = parse_markdown_to_jsonl(content);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].entry_type, "heading");
+        assert_eq!(entries[0].content, "Test Heading");
+        assert_eq!(entries[0].level, Some(1));
+    }
+
+    #[test]
+    fn test_parse_markdown_to_jsonl_paragraph() {
+        let content = "This is a paragraph.";
+        let entries = parse_markdown_to_jsonl(content);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].entry_type, "paragraph");
+        assert_eq!(entries[0].content, "This is a paragraph.");
+    }
+
+    #[test]
+    fn test_parse_markdown_to_jsonl_code_block() {
+        let content = "```rust\nfn main() {}\n```";
+        let entries = parse_markdown_to_jsonl(content);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].entry_type, "code");
+        assert_eq!(entries[0].content, "fn main() {}\n");
+        assert_eq!(entries[0].language, Some("rust".to_string()));
+    }
+
+    #[test]
+    fn test_parse_markdown_to_jsonl_mixed() {
+        let content =
+            "# Title\n\nSome paragraph text.\n\n```python\nprint('hello')\n```\n\n## Next Section";
+        let entries = parse_markdown_to_jsonl(content);
+        assert_eq!(entries.len(), 4);
+        assert_eq!(entries[0].entry_type, "heading");
+        assert_eq!(entries[0].content, "Title");
+        assert_eq!(entries[1].entry_type, "paragraph");
+        assert_eq!(entries[2].entry_type, "code");
+        assert_eq!(entries[2].language, Some("python".to_string()));
+        assert_eq!(entries[3].entry_type, "heading");
+        assert_eq!(entries[3].content, "Next Section");
+    }
+
+    #[test]
+    fn test_parse_markdown_to_jsonl_code_block_no_language() {
+        let content = "```\nsome code\n```";
+        let entries = parse_markdown_to_jsonl(content);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].entry_type, "code");
+        assert_eq!(entries[0].language, None);
+    }
+
+    #[test]
+    fn test_parse_markdown_to_jsonl_inline_code() {
+        let content = "This has `inline code` in it.";
+        let entries = parse_markdown_to_jsonl(content);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].entry_type, "paragraph");
+        assert!(entries[0].content.contains("inline code"));
+    }
+
+    #[test]
+    fn test_parse_markdown_to_jsonl_empty() {
+        let content = "";
+        let entries = parse_markdown_to_jsonl(content);
+        assert_eq!(entries.len(), 0);
+    }
+
+    #[test]
+    fn test_parse_markdown_to_jsonl_multiple_paragraphs() {
+        let content = "First paragraph.\n\nSecond paragraph.";
+        let entries = parse_markdown_to_jsonl(content);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].entry_type, "paragraph");
+    }
+
+    #[test]
+    fn test_jsonl_entry_serialization() {
+        let entry = JsonlEntry {
+            entry_type: "heading".to_string(),
+            content: "Test".to_string(),
+            level: Some(1),
+            language: None,
+        };
+        let json = serde_json::to_string(&entry).unwrap();
+        assert!(json.contains("\"type\":\"heading\""));
+        assert!(json.contains("\"content\":\"Test\""));
+        assert!(json.contains("\"level\":1"));
+    }
+
+    #[test]
+    fn test_document_serialization() {
+        let doc = Document {
+            path: "/test/path.md".to_string(),
+            content: "# Hello".to_string(),
+            word_count: 1,
+            line_count: 1,
+            headings: vec![Heading {
+                level: 1,
+                text: "Hello".to_string(),
+                line: 0,
+            }],
+        };
+        let json = serde_json::to_string(&doc).unwrap();
+        assert!(json.contains("\"/test/path.md\""));
+        assert!(json.contains("\"headings\""));
+    }
+}
