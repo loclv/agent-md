@@ -584,6 +584,10 @@ enum Commands {
         )]
         content: bool,
     },
+    LintFile {
+        #[arg(help = "Markdown file path to lint")]
+        path: String,
+    },
 }
 
 fn main() {
@@ -605,6 +609,7 @@ fn main() {
         Commands::Stats { path } => cmd_stats(&path),
         Commands::ToJsonl { path } => cmd_to_jsonl(&path),
         Commands::Lint { path, content } => cmd_lint(&path, content),
+        Commands::LintFile { path } => cmd_lint_file(&path),
     }
 }
 
@@ -993,6 +998,56 @@ fn cmd_lint(path: &str, is_content: bool) {
 
     let result = validate_markdown(&content);
     println!("{}", serde_json::to_string(&result).unwrap());
+}
+
+fn cmd_lint_file(path: &str) {
+    match fs::read_to_string(path) {
+        Ok(content) => {
+            let result = validate_markdown(&content);
+            
+            // Print file path
+            println!("Linting file: {}", path);
+            println!();
+            
+            // Print errors first
+            if !result.errors.is_empty() {
+                println!("ERRORS:");
+                for error in &result.errors {
+                    println!("ERROR (line {}, column {}): {} [{}]", 
+                             error.line, error.column, error.message, error.rule);
+                }
+                println!();
+            }
+            
+            // Print warnings
+            if !result.warnings.is_empty() {
+                println!("WARNINGS:");
+                for warning in &result.warnings {
+                    println!("WARNING (line {}, column {}): {} [{}]", 
+                             warning.line, warning.column, warning.message, warning.rule);
+                }
+                println!();
+            }
+            
+            // Print summary
+            let total_issues = result.errors.len() + result.warnings.len();
+            if total_issues == 0 {
+                println!("✓ No issues found. File is valid.");
+            } else {
+                println!("Summary: {} errors, {} warnings ({} total issues)", 
+                         result.errors.len(), result.warnings.len(), total_issues);
+                if !result.valid {
+                    println!("✗ File is invalid due to errors.");
+                } else {
+                    println!("✓ File is valid but has warnings.");
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("ERROR: Failed to read file '{}': {}", path, e);
+            std::process::exit(1);
+        }
+    }
 }
 
 fn parse_markdown_to_jsonl(content: &str) -> Vec<JsonlEntry> {
