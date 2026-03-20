@@ -6,24 +6,24 @@ This project includes a comprehensive linting setup to maintain code quality and
 
 ### 1. Rustfmt
 
-- **Purpose**: Code formatting and style consistency
-- **Configuration**: `rustfmt.toml`
-- **Usage**:
+- Purpose: Code formatting and style consistency
+- Configuration: `rustfmt.toml`
+- Usage:
 
   ```bash
-  cargo fmt              # Format code
-  cargo fmt --check      # Check if code is formatted
+  cargo fmt # Format code
+  cargo fmt --check # Check if code is formatted
   ```
 
 ### 2. Clippy
 
-- **Purpose**: Rust linter for catching common mistakes and improving code
-- **Configuration**: `clippy.toml`
-- **Usage**:
+- Purpose: Rust linter for catching common mistakes and improving code
+- Configuration: `clippy.toml`
+- Usage:
 
   ```bash
-  cargo clippy                           # Run clippy
-  cargo clippy --all-targets --all-features -- -D warnings  # Strict mode
+  cargo clippy # Run clippy
+  cargo clippy --all-targets --all-features -- -D warnings # Strict mode
   ```
 
 ### 3. Make Commands
@@ -31,20 +31,20 @@ This project includes a comprehensive linting setup to maintain code quality and
 The project includes a Makefile for convenient commands:
 
 ```bash
-make help          # Show all available commands
-make lint          # Run all linting checks (clippy + format check)
-make format        # Format code with rustfmt
-make check-format  # Check if code is formatted
-make clippy        # Run clippy lints
-make test          # Run tests
-make ci            # Full CI pipeline (test + lint + audit)
+make help # Show all available commands
+make lint # Run all linting checks (clippy + format check)
+make format # Format code with rustfmt
+make check-format # Check if code is formatted
+make clippy # Run clippy lints
+make test # Run tests
+make ci # Full CI pipeline (test + lint + audit)
 ```
 
 ### 4. VS Code Integration
 
-- **Tasks**: `.vscode/tasks.json` provides tasks for VS Code
-- **Settings**: `.vscode/settings.json` configures rust-analyzer and formatting
-- **Usage**: Run tasks via Command Palette (Ctrl+Shift+P) → "Tasks: Run Task"
+- Tasks: `.vscode/tasks.json` provides tasks for VS Code
+- Settings: `.vscode/settings.json` configures rust-analyzer and formatting
+- Usage: Run tasks via Command Palette (Ctrl+Shift+P) → "Tasks: Run Task"
 
 ### 5. Pre-commit Hooks (Optional)
 
@@ -67,11 +67,11 @@ pre-commit install
 
 ## Development Workflow
 
-1. **Write code**: Make your changes
-2. **Format**: `make format` or `cargo fmt`
-3. **Lint**: `make clippy` or `cargo clippy`
-4. **Test**: `make test` or `cargo test`
-5. **Full check**: `make lint` (runs both formatting check and clippy)
+1. Write code: Make your changes
+2. Format: `make format` or `cargo fmt`
+3. Lint: `make clippy` or `cargo clippy`
+4. Test: `make test` or `cargo test`
+5. Full check: `make lint` (runs both formatting check and clippy)
 
 ## CI/CD Pipeline
 
@@ -106,30 +106,30 @@ The agent-md tool includes custom linting rules for Markdown content:
 
 #### no-bold
 
-- **Type**: Error
-- **Description**: Bold text is not allowed for AI agents
-- **Detection**: Detects `**text**` or `__text__` patterns
+- Type: Error
+- Description: Bold text is not allowed for AI agents
+- Detection: Detects `**text**` or `__text__` patterns
 
 #### simple-tables
 
-- **Type**: Error/Warning
-- **Description**: Enforces simple table syntax
-- **Detection**:
+- Type: Error/Warning
+- Description: Enforces simple table syntax
+- Detection:
   - Error: Complex table attributes (colspan/rowspan)
   - Warning: Inline formatting in table cells, very wide tables (>5 columns)
 
 #### useless-links
 
-- **Type**: Warning
-- **Description**: Link text should not be the same as the URL
-- **Detection**: Finds links where the display text equals the URL (with common prefixes stripped)
+- Type: Warning
+- Description: Link text should not be the same as the URL
+- Detection: Finds links where the display text equals the URL (with common prefixes stripped)
 
 #### no-ascii-graph
 
-- **Type**: Warning
-- **Description**: Human-Readable ASCII Graph detected
-- **Detection**: Identifies ASCII art, box drawing characters, tree structures, flow charts, and high-density special character patterns
-- **Recommendation**: Use LLM-readable formats instead:
+- Type: Warning
+- Description: Human-Readable ASCII Graph detected
+- Detection: Identifies ASCII art, box drawing characters, tree structures, flow charts, and high-density special character patterns
+- Recommendation: Use LLM-readable formats instead:
   - Structured CSV
   - JSON
   - TOON format
@@ -150,9 +150,9 @@ When adding new dependencies:
 
 ### Common Issues
 
-1. **"Unstable features" warnings**: Some rustfmt options require nightly Rust
-2. **Clippy configuration errors**: Check `clippy.toml` for valid field names
-3. **Formatting conflicts**: Use `cargo fmt` to auto-fix most issues
+1. "Unstable features" warnings: Some rustfmt options require nightly Rust
+2. Clippy configuration errors: Check `clippy.toml` for valid field names
+3. Formatting conflicts: Use `cargo fmt` to auto-fix most issues
 
 ### Getting Help
 
