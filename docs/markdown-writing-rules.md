@@ -116,7 +116,7 @@ Description: Tables should use simple syntax without complex attributes.
 
 ```text
 | Name | Type | Status | Priority | Owner |
-|------|------|--------|----------|-------|
+|---|---|---|---|---|
 | Task | Bug | Open | High | Team |
 ```
 
@@ -569,12 +569,15 @@ Additional usage notes
 ```text
 ## Usage
 ### Basic Operations
+
 How to use the tool
 
 ### Advanced Features
+
 More usage instructions
 
 ### Troubleshooting
+
 Additional usage notes
 ```
 

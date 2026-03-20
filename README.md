@@ -4,10 +4,24 @@ A CLI markdown editor written in Rust designed for LLMs to easily read and use.
 
 ## Installation
 
+Build from source:
+
+- Install Rust first if not already installed
+- Then build the release version:
+
 ```bash
 cargo build --release
 # Binary at target/release/agent-md
 ```
+
+- Add to PATH (optional):
+
+```bash
+# agent-md command
+export PATH="/Users/username/w/agent-md/target/release:$PATH"
+```
+
+Now you can use the `agent-md` command from anywhere.
 
 ## Commands (LLM-friendly JSON output)
 
