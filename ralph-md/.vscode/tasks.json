@@ -1,0 +1,110 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "cargo: build",
+            "type": "cargo",
+            "command": "build",
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "cargo: test",
+            "type": "cargo",
+            "command": "test",
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "cargo: clippy",
+            "type": "cargo",
+            "command": "clippy",
+            "args": [
+                "--all-targets",
+                "--all-features",
+                "--",
+                "-D",
+                "warnings"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "cargo: fmt",
+            "type": "cargo",
+            "command": "fmt",
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "cargo: fmt check",
+            "type": "cargo",
+            "command": "fmt",
+            "args": [
+                "--check"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "cargo: run",
+            "type": "cargo",
+            "command": "run",
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "cargo: clean",
+            "type": "cargo",
+            "command": "clean",
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "cargo: audit",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "audit"
+            ],
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "lint: all",
+            "dependsOn": [
+                "cargo: fmt check",
+                "cargo: clippy"
+            ],
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "ci: full",
+            "dependsOn": [
+                "cargo: test",
+                "cargo: fmt check",
+                "cargo: clippy",
+                "cargo: audit"
+            ],
+            "problemMatcher": [],
+            "group": "build"
+        }
+    ]
+}

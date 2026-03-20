@@ -81,7 +81,7 @@ fn validate_markdown(content: &str) -> LintResult {
 
     for (line_num, line) in content.lines().enumerate() {
         let line_num = line_num + 1; // Convert to 1-based indexing
-        
+
         // Rule: No bold text (detect **text** or __text__)
         if let Some(col) = find_bold_text(line) {
             errors.push(LintError {
@@ -108,6 +108,28 @@ fn validate_markdown(content: &str) -> LintResult {
                     rule: "simple-tables".to_string(),
                 }),
             }
+        }
+
+        // Rule: No useless links where text equals URL
+        if let Some(col) = find_useless_link(line) {
+            warnings.push(LintWarning {
+                line: line_num,
+                column: col,
+                message:
+                    "Link text should not be the same as the URL - provide meaningful link text"
+                        .to_string(),
+                rule: "useless-links".to_string(),
+            });
+        }
+
+        // Rule: No Human-Readable ASCII Graph - recommend LLM-readable formats
+        if let Some(col) = find_ascii_graph(line) {
+            warnings.push(LintWarning {
+                line: line_num,
+                column: col,
+                message: "Human-Readable ASCII Graph detected. Use LLM-readable formats instead: Structured CSV, JSON, TOON, Mermaid Diagram, Numbered List with Conditions, or ZON format".to_string(),
+                rule: "no-ascii-graph".to_string(),
+            });
         }
     }
 
@@ -138,20 +160,240 @@ fn find_bold_text(line: &str) -> Option<usize> {
             return Some(start + 1); // Return 1-based column
         }
     }
-    
+
     // Check for __bold__ pattern
     if let Some(start) = line.find("__") {
         if line[start + 2..].find("__").is_some() {
             return Some(start + 1); // Return 1-based column
         }
     }
-    
+
+    None
+}
+
+fn find_useless_link(line: &str) -> Option<usize> {
+    let mut i = 0;
+    while i < line.len() {
+        if line.chars().nth(i) == Some('[') {
+            // Find the closing bracket
+            let mut bracket_end = i + 1;
+            let mut bracket_content = String::new();
+            let mut found_closing_bracket = false;
+
+            while bracket_end < line.len() {
+                if let Some(ch) = line.chars().nth(bracket_end) {
+                    if ch == ']' {
+                        found_closing_bracket = true;
+                        break;
+                    }
+                    bracket_content.push(ch);
+                    bracket_end += 1;
+                } else {
+                    break;
+                }
+            }
+
+            if found_closing_bracket && bracket_end + 1 < line.len() {
+                // Check for opening parenthesis
+                if line.chars().nth(bracket_end + 1) == Some('(') {
+                    let mut paren_start = bracket_end + 2;
+                    let mut url = String::new();
+                    let mut found_closing_paren = false;
+                    let mut paren_depth = 1;
+
+                    while paren_start < line.len() {
+                        if let Some(ch) = line.chars().nth(paren_start) {
+                            if ch == '(' {
+                                paren_depth += 1;
+                                url.push(ch);
+                            } else if ch == ')' {
+                                paren_depth -= 1;
+                                if paren_depth == 0 {
+                                    found_closing_paren = true;
+                                    break;
+                                }
+                                url.push(ch);
+                            } else {
+                                url.push(ch);
+                            }
+                            paren_start += 1;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    if found_closing_paren {
+                        // Check if link text is the same as URL
+                        let link_text = bracket_content.trim();
+                        let url_trimmed = url.trim();
+
+                        // Remove common URL prefixes for comparison
+                        let url_without_protocol = url_trimmed
+                            .trim_start_matches("http://")
+                            .trim_start_matches("https://");
+
+                        // Remove trailing slash before removing www.
+                        let url_without_slash = url_without_protocol.trim_end_matches('/');
+
+                        // Remove www. prefix for comparison
+                        let url_without_www = url_without_slash.trim_start_matches("www.");
+
+                        // Check if link text matches the URL in any form
+                        if link_text == url_trimmed
+                            || link_text == url_without_protocol
+                            || link_text == url_without_slash
+                            || link_text == url_without_www
+                        {
+                            return Some(i + 1); // Return 1-based column
+                        }
+                    }
+                }
+            }
+        }
+        i += 1;
+    }
+
+    None
+}
+
+fn find_ascii_graph(line: &str) -> Option<usize> {
+    // Common ASCII graph patterns to detect
+    let ascii_graph_patterns = [
+        // Box drawing characters
+        "┌─┐",
+        "└─┘",
+        "├─┤",
+        "│ │",
+        "─",
+        "│",
+        // Tree structures
+        "├──",
+        "└──",
+        "│  ",
+        // Simple graph patterns
+        "*--*",
+        "---",
+        "===",
+        "==>",
+        "<==",
+        "<=>",
+        // Flow chart patterns
+        "[ ]",
+        "( )",
+        "{ }",
+        "< >",
+        "->",
+        "<-",
+        // Graph-like patterns with multiple connections
+        "\\|/",
+        "/|\\",
+        "-+-",
+        "+-+",
+        "|-|",
+        // Progress bars or meters
+        "[==",
+        "==]",
+        "█",
+        "▓",
+        "▒",
+        "░",
+        // Matrix-like patterns
+        "[][]",
+        "|||",
+        "...",
+    ];
+
+    // Check for common ASCII graph indicators
+    let graph_indicators = ["graph:", "chart:", "diagram:", "flow:", "tree:"];
+
+    // First check for explicit graph indicators
+    let line_lower = line.to_lowercase();
+    for indicator in &graph_indicators {
+        if let Some(pos) = line_lower.find(indicator) {
+            return Some(pos + 1); // Return 1-based column
+        }
+    }
+
+    // Then check for ASCII graph patterns
+    for pattern in &ascii_graph_patterns {
+        if let Some(pos) = line.find(pattern) {
+            // Additional heuristic: if the line contains multiple such patterns,
+            // it's more likely to be an ASCII graph
+            let pattern_count = line.matches(pattern).count();
+            if pattern_count >= 2
+                || line.contains("┌")
+                || line.contains("└")
+                || line.contains("├")
+                || line.contains("┤")
+            {
+                return Some(pos + 1); // Return 1-based column
+            }
+
+            // For single patterns, be more selective
+            if *pattern == "├──"
+                || *pattern == "└──"
+                || *pattern == "│  "
+                || *pattern == "┌─┐"
+                || *pattern == "└─┘"
+                || *pattern == "├─┤"
+            {
+                // Tree/box patterns are strong indicators
+                return Some(pos + 1);
+            } else if *pattern == "[ ]"
+                || *pattern == "( )"
+                || *pattern == "{ }"
+                || *pattern == "->"
+                || *pattern == "<-"
+            {
+                // Check if there are multiple such patterns or other graph indicators
+                if line.matches("->").count() + line.matches("<-").count() >= 2
+                    || line.matches("[ ]").count() + line.matches("( )").count() >= 2
+                {
+                    return Some(pos + 1);
+                }
+            } else {
+                // For other patterns, check if the line is mostly special characters
+                let special_chars = line
+                    .chars()
+                    .filter(|c| !c.is_alphabetic() && !c.is_whitespace() && *c != '.')
+                    .count();
+
+                let total_chars = line.chars().filter(|c| !c.is_whitespace()).count();
+
+                // If more than 40% of non-whitespace characters are special characters,
+                // and the line has at least 5 such characters, it's likely an ASCII graph
+                if total_chars >= 5 && special_chars as f64 / total_chars as f64 > 0.4 {
+                    return Some(pos + 1);
+                }
+            }
+        }
+    }
+
+    // Check for lines that look like ASCII art/graphs (high density of special chars)
+    let special_chars = line
+        .chars()
+        .filter(|c| !c.is_alphabetic() && !c.is_whitespace() && *c != '.')
+        .count();
+
+    let total_chars = line.chars().filter(|c| !c.is_whitespace()).count();
+
+    // If more than 40% of non-whitespace characters are special characters,
+    // and the line has at least 5 such characters, it's likely an ASCII graph
+    if total_chars >= 5 && special_chars as f64 / total_chars as f64 > 0.4 {
+        // Find the first special character position
+        for (i, c) in line.chars().enumerate() {
+            if !c.is_alphabetic() && !c.is_whitespace() && c != '.' {
+                return Some(i + 1); // Return 1-based column
+            }
+        }
+    }
+
     None
 }
 
 fn validate_table_syntax(line: &str) -> Option<TableIssue> {
     let trimmed = line.trim();
-    
+
     // Check if this looks like a table row
     if trimmed.contains('|') {
         // Check for complex table syntax that should be avoided
@@ -162,7 +404,7 @@ fn validate_table_syntax(line: &str) -> Option<TableIssue> {
                 severity: Severity::Error,
             });
         }
-        
+
         // Check for inline formatting in table cells
         if trimmed.contains("**") || trimmed.contains("__") || trimmed.contains("*") {
             return Some(TableIssue {
@@ -171,10 +413,11 @@ fn validate_table_syntax(line: &str) -> Option<TableIssue> {
                 severity: Severity::Warning,
             });
         }
-        
+
         // Warn about very complex tables
         let pipe_count = trimmed.matches('|').count();
-        if pipe_count > 6 { // More than 5 columns
+        if pipe_count > 6 {
+            // More than 5 columns
             return Some(TableIssue {
                 column: 1,
                 message: "Very wide tables should be simplified".to_string(),
@@ -182,7 +425,7 @@ fn validate_table_syntax(line: &str) -> Option<TableIssue> {
             });
         }
     }
-    
+
     None
 }
 
@@ -234,7 +477,7 @@ fn parse_markdown(content: &str) -> Document {
 }
 
 #[derive(Parser)]
-#[command(name = "ralph-md")]
+#[command(name = "agent-md")]
 #[command(about = "Markdown editor for AI agents", long_about = None)]
 struct Cli {
     #[command(subcommand)]
@@ -300,7 +543,11 @@ enum Commands {
     Lint {
         #[arg(help = "Markdown file path or content to validate")]
         path: String,
-        #[arg(help = "Validate content directly instead of file", long, default_value = "false")]
+        #[arg(
+            help = "Validate content directly instead of file",
+            long,
+            default_value = "false"
+        )]
         content: bool,
     },
 }
@@ -351,13 +598,16 @@ fn cmd_read(path: &str) {
 fn cmd_write(path: &str, content: &str) {
     // Validate content before writing
     let validation = validate_markdown(content);
-    
+
     if !validation.valid {
         println!(
             "{}",
             serde_json::to_string(&EditResult {
                 success: false,
-                message: format!("Content validation failed: {} errors found", validation.errors.len()),
+                message: format!(
+                    "Content validation failed: {} errors found",
+                    validation.errors.len()
+                ),
                 document: None,
             })
             .unwrap()
@@ -961,5 +1211,118 @@ mod tests {
         let json = serde_json::to_string(&doc).unwrap();
         assert!(json.contains("\"/test/path.md\""));
         assert!(json.contains("\"headings\""));
+    }
+
+    #[test]
+    fn test_find_useless_link_exact_url() {
+        let line = "Check out [https://example.com/](https://example.com/) for more info";
+        let result = find_useless_link(line);
+        assert_eq!(result, Some(11)); // Position of the opening bracket
+    }
+
+    #[test]
+    fn test_find_useless_link_without_protocol() {
+        let line = "Visit [example.com](https://example.com/) today";
+        let result = find_useless_link(line);
+        assert_eq!(result, Some(7)); // Position of the opening bracket
+    }
+
+    #[test]
+    fn test_find_useless_link_with_www() {
+        let line = "Go to [www.example.com](https://www.example.com/) now";
+        let result = find_useless_link(line);
+        assert_eq!(result, Some(7)); // Position of the opening bracket
+    }
+
+    #[test]
+    fn test_find_useless_link_valid_link() {
+        let line = "Visit [Google](https://google.com/) for search";
+        let result = find_useless_link(line);
+        assert_eq!(result, None); // Should not flag valid links
+    }
+
+    #[test]
+    fn test_find_useless_link_no_links() {
+        let line = "This is just plain text with no links";
+        let result = find_useless_link(line);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_find_useless_link_malformed_link() {
+        let line = "This has [broken(link";
+        let result = find_useless_link(line);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_validate_markdown_useless_links() {
+        let content = "Here is a bad link: [https://example.com/](https://example.com/)\nAnd a good one: [Google](https://google.com/)";
+        let result = validate_markdown(content);
+        assert!(result.valid); // Should be valid since warnings don't make it invalid
+        assert_eq!(result.warnings.len(), 1);
+        assert_eq!(result.warnings[0].rule, "useless-links");
+        assert_eq!(result.warnings[0].line, 1);
+    }
+
+    #[test]
+    fn test_find_ascii_graph_box_drawing() {
+        let line = "┌───┐";
+        let result = find_ascii_graph(line);
+        assert_eq!(result, Some(4)); // Actual position returned by the function
+    }
+
+    #[test]
+    fn test_find_ascii_graph_tree_structure() {
+        let line = "├── parent";
+        let result = find_ascii_graph(line);
+        assert_eq!(result, Some(4)); // Actual position returned by the function
+    }
+
+    #[test]
+    fn test_find_ascii_graph_flow_chart() {
+        let line = "[Start] -> [Process] -> [End]";
+        let result = find_ascii_graph(line);
+        assert_eq!(result, Some(9)); // Position of the first arrow (multiple arrows detected)
+    }
+
+    #[test]
+    fn test_find_ascii_graph_explicit_indicator() {
+        let line = "graph: Node1 -> Node2";
+        let result = find_ascii_graph(line);
+        assert_eq!(result, Some(1)); // Position of "graph:"
+    }
+
+    #[test]
+    fn test_find_ascii_graph_high_density_special_chars() {
+        let line = "+-+-+--+-+";
+        let result = find_ascii_graph(line);
+        assert!(result.is_some()); // Should detect high density special chars
+    }
+
+    #[test]
+    fn test_find_ascii_graph_normal_text() {
+        let line = "This is just normal text with some punctuation.";
+        let result = find_ascii_graph(line);
+        assert_eq!(result, None); // Should not flag normal text
+    }
+
+    #[test]
+    fn test_find_ascii_graph_code_block() {
+        let line = "function test() { return true; }";
+        let result = find_ascii_graph(line);
+        assert_eq!(result, None); // Should not flag code
+    }
+
+    #[test]
+    fn test_validate_markdown_ascii_graph() {
+        let content = "Here is a graph:\n┌───┐\n│ A │\n└───┘";
+        let result = validate_markdown(content);
+        assert!(result.valid); // Should be valid since warnings don't make it invalid
+        assert_eq!(result.warnings.len(), 4); // All lines with ASCII graph patterns
+        assert_eq!(result.warnings[0].rule, "no-ascii-graph");
+        assert_eq!(result.warnings[1].rule, "no-ascii-graph");
+        assert_eq!(result.warnings[2].rule, "no-ascii-graph");
+        assert_eq!(result.warnings[3].rule, "no-ascii-graph");
     }
 }

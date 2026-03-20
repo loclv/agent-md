@@ -1,0 +1,26 @@
+# Clippy configuration file
+# https://rust-lang.github.io/rust-clippy/master/index.html
+
+# Lint configuration
+cognitive-complexity-threshold = 30
+too-many-arguments-threshold = 16
+type-complexity-threshold = 256
+single-char-binding-names-threshold = 4
+trivial-copy-size-limit = 64
+pass-by-value-size-limit = 256
+too-many-lines-threshold = 1024
+array-size-threshold = 512_000
+max-struct-bools = 3
+max-fn-params-bools = 3
+
+# Allow certain pedantic lints
+allow-expect-in-tests = true
+allow-unwrap-in-tests = true
+allow-dbg-in-tests = true
+allow-print-in-tests = true
+
+# Documentation
+missing-docs-in-crate-items = true
+
+# Enforce formatting
+doc-valid-idents = ["KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "DirectX", "OpenGL", "OpenAL", "OpenGLES", "OpenCL", "OpenMP", "OpenGL", "OpenVR", "OpenXR", "WebGL", "WebGPU", "WebGL2", "DNS", "TLS", "HTTP", "HTTPS", "TCP", "UDP", "ASCII", "CPU", "GPU", "JSON", "JWT", "OAuth", "OIDC", "RAM", "ROM", "EEPROM", "GPIO", "SPI", "I2C", "UART", "USB", "PCI", "PCIe", "IDE", "SATA", "NVMe", "SSD", "HDD", "FS", "NTFS", "FAT", "ext4", "Btrfs", "ZFS", "APFS", "HFS+", "exFAT"]
