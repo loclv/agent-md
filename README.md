@@ -97,9 +97,9 @@ agent-md lint --content "# Markdown content"
 
 The linter enforces AI-friendly markdown:
 
-- **No bold text**: `**bold**` and `__bold__` are rejected (errors)
-- **Simple table syntax**: Complex table attributes are rejected, very wide tables generate warnings
-- **Automatic validation**: The `write` command validates content before writing
+- No bold text: `**bold**` and `__bold__` are rejected (errors)
+- Simple table syntax: Complex table attributes are rejected, very wide tables generate warnings
+- Automatic validation: The `write` command validates content before writing
 
 ## Running Tests
 

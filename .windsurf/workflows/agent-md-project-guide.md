@@ -233,10 +233,17 @@ Follow these steps for any development task:
 1. Receive the request - Understand the requirements and scope
 2. Break down complex requests - If the request is complex, break it down into smaller tasks and write each task to a separate file named `tasks.md`
 3. Execute each small task - Work through tasks systematically, marking each as finished in `tasks.md` when completed
-4. Validate completion - Once all tasks are completed:
+4. Validate completion - Once all tasks are completed
+
    - Write unit tests
    - Run the linter
    - Run the formatter
+
+### Markdown Writing Rules
+
+When writing Markdown files, follow these rules:
+
+- No bold text: `**bold**` and `__bold__` are not allowed, DO NOT USE IT
 
 This structured approach ensures:
 
