@@ -290,28 +290,4 @@ agent-md write document.md "# Title\nValid content without bold"
 
 ## Development
 
-Development setup and guidelines for contributing to agent-md.
-
-### Prerequisites
-
-- Rust 1.94.0 or later
-- Git
-
-### Building
-
-```bash
-cargo build --release
-```
-
-### Testing
-
-```bash
-make test
-```
-
-### Code Quality
-
-```bash
-make lint
-make format
-```
+See `docs/DEV.md` for complete development setup and guidelines.
