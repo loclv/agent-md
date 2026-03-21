@@ -7,20 +7,28 @@ agent-md lint README.md
 
 ## Tại sao công cụ này tồn tại
 
-Tôi đã thấy nhiều tài liệu markdown được viết bởi LLM/AI Agents làm tốn tokens, và khi một agent/LLM khác đọc tài liệu markdown đó, nó cũng tốn tokens. Điều này là vì LLM học từ con người, và cách con người viết markdown được thiết kế để dễ đọc cho con người. LLM thì không cần văn bản in đậm, đồ họa ký tự đặc biệt, gạch ngang, và khoảng trắng không cần thiết.
+Nhiều file markdown hiện nay được viết bởi LLM hoặc AI agents đang lãng phí rất nhiều token. Khi một LLM khác đọc lại những file này, nó tiếp tục tốn thêm token không cần thiết. Thậm chí file này được đọc đi đọc lại mỗi lần chat.
 
-LLM/Agents cần đọc và viết các phần cụ thể của tệp markdown, chúng không cần đọc toàn bộ nội dung của tệp, chỉ cần đường dẫn. Ví dụ, khi cần đọc một phần cụ thể (ví dụ: `## Development`), nó chỉ nên đọc phần đó.
+Nguyên nhân là markdown được thiết kế để con người dễ đọc, nên thường chứa các yếu tố như in đậm, ký tự trang trí, khoảng trắng... Những thứ này hữu ích cho người, nhưng không cần thiết với LLM.
 
-### Các vấn đề
+Thực tế, LLM/agents không cần đọc toàn bộ file. Chúng chỉ cần truy cập đúng phần nội dung cần thiết (ví dụ: ## Development) thay vì xử lý cả tài liệu.
 
-- Lãng phí token: Markdown dễ đọc cho con người sử dụng định dạng làm thêm tokens không cần thiết cho AI
-- Phân tích không hiệu quả: LLM chú ý thêm đến định dạng trực quan như `*bold*` và ASCII art
-- Cấu trúc dư thừa: Các quy ước thân thiện với con người như bảng phức tạp và yếu tố trang trí không thêm giá trị cho AI agents
-- Chi phí tăng lên: Mỗi agent đọc tài liệu đều trả cùng một khoản token tax cho định dạng hướng đến con người
+## Vấn đề
 
-### Giải pháp
+- Lãng phí token: Các định dạng như in đậm, bảng, ký tự trang trí làm tăng số token mà không giúp ích cho AI
+- Đọc không hiệu quả: LLM vẫn phải xử lý cả các yếu tố trình bày như *bold*, ASCII art…
+- Cấu trúc dư thừa: Nhiều thành phần chỉ hữu ích cho người (bảng phức tạp, layout đẹp) nhưng không cần cho AI
+- Tăng chi phí: Mỗi lần LLM đọc lại tài liệu đều phải “trả phí” cho những phần định dạng này
 
-`agent-md` thực thi các tiêu chuẩn markdown thân thiện với AI giúp loại bỏ lãng phí token trong khi duy trì khả năng đọc cho cả con người và máy.
+## Giải pháp
+
+agent-md đưa ra một cách viết markdown tối giản, thân thiện với AI, giúp:
+
+- Giảm token không cần thiết
+- Giữ nội dung rõ ràng, dễ truy cập theo từng phần
+- Vẫn đảm bảo con người có thể đọc được khi cần
+
+Mục tiêu là: viết một lần, tối ưu cho cả người và AI, nhưng không lãng phí tài nguyên.
 
 ## Cài đặt
 

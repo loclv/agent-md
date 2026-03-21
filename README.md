@@ -1,5 +1,9 @@
 # `agent-md` - A CLI that helps you write LLM-friendly markdown
 
+<div align="center">
+  <img src="logo.svg" alt="agent-md logo" width="128" height="128">
+</div>
+
 ```bash
 agent-md lint README.md
 # {"valid":false,"errors":[{"line":7,"column":1,"message":"Use at most 2 spaces for indentation in regular text. Code blocks are exempt from this rule.","rule":"space-indentation"},{"line":28,"column":1,"message":"Use at most 2 spaces for indentation in regular text. Code blocks are exempt from this rule.","rule":"space-indentation"},{"line":34,"column":1,"message":"Human-readable ASCII graph detected. Use LLM-readable formats instead: Structured CSV, JSON, Mermaid Diagram, Numbered List with Conditions, ZON format, or simple progress indicators","rule":"no-ascii-graph"},{"line":36,"column":1,"message":"Human-readable ASCII graph detected. Use LLM-readable formats instead: Structured CSV, JSON, Mermaid Diagram, Numbered List with Conditions, ZON format, or simple progress indicators","rule":"no-ascii-graph"}],"warnings":[]}

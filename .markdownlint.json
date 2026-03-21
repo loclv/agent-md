@@ -1,5 +1,6 @@
 {
   "MD013": false,
+  "no-inline-html": false,
   "no-duplicate-headings": false,
   "table-column-style": false,
   "no-hard-tabs": false
