@@ -125,7 +125,7 @@ fn validate_markdown(content: &str) -> LintResult {
 
         // Rule: No useless links where text equals URL
         for col in find_useless_link(line) {
-            warnings.push(LintWarning {
+            errors.push(LintError {
                 line: line_num,
                 column: col,
                 message:
@@ -137,7 +137,7 @@ fn validate_markdown(content: &str) -> LintResult {
 
         // Rule: No ASCII Graphs - Human-readable ASCII graphs should be replaced with LLM-readable formats
         if let Some(col) = find_ascii_graph(line) {
-            warnings.push(LintWarning {
+            errors.push(LintError {
                 line: line_num,
                 column: col,
                 message: "Human-readable ASCII graph detected. Use LLM-readable formats instead: Structured CSV, JSON, Mermaid Diagram, Numbered List with Conditions, ZON format, or simple progress indicators".to_string(),
@@ -147,7 +147,7 @@ fn validate_markdown(content: &str) -> LintResult {
 
         // Rule: Limited Space Indentation
         if let Some(col) = validate_space_indentation(line) {
-            warnings.push(LintWarning {
+            errors.push(LintError {
                 line: line_num,
                 column: col,
                 message: "Use at most 2 spaces for indentation in regular text. Code blocks are exempt from this rule.".to_string(),
@@ -163,12 +163,12 @@ fn validate_markdown(content: &str) -> LintResult {
 
     // Rule: Code block best practices validation
     if let Some(code_block_issues) = validate_code_blocks(content) {
-        warnings.extend(code_block_issues);
+        errors.extend(code_block_issues);
     }
 
     // Rule: List formatting validation
     if let Some(list_issues) = validate_list_formatting(content) {
-        warnings.extend(list_issues);
+        errors.extend(list_issues);
     }
 
     LintResult {
@@ -194,33 +194,83 @@ struct TableIssue {
 fn find_bold_text(line: &str) -> Vec<usize> {
     let mut results = Vec::new();
 
-    // Check for **bold** pattern
+    // Find all inline code blocks and exclude them
+    let mut code_ranges = Vec::new();
+    let chars: Vec<char> = line.chars().collect();
+    let mut in_code = false;
+    let mut code_start = 0;
+
+    // Find all inline code blocks
+    for (i, &ch) in chars.iter().enumerate() {
+        if ch == '`' && (i == 0 || chars[i-1] != '\\') {
+            if !in_code {
+                in_code = true;
+                code_start = i;
+            } else {
+                in_code = false;
+                code_ranges.push((code_start, i)); // inclusive range
+            }
+        }
+    }
+
+    // If unclosed code block, treat from start to end as code
+    if in_code {
+        code_ranges.push((code_start, line.len() - 1));
+    }
+
+    // Check for **bold** pattern, skipping code ranges
     let mut search_start = 0;
     while search_start < line.len() {
         if let Some(start) = line[search_start..].find("**") {
             let abs_start = search_start + start;
-            if let Some(end_offset) = line[abs_start + 2..].find("**") {
-                results.push(abs_start + 1); // Return 1-based column
-                search_start = abs_start + 2 + end_offset + 2;
-            } else {
-                break;
+
+            // Check if this bold is inside any code range
+            let in_code_range = code_ranges.iter().any(|&(start, end)| abs_start >= start && abs_start <= end);
+
+            if !in_code_range {
+                if let Some(end_offset) = line[abs_start + 2..].find("**") {
+                    let abs_end = abs_start + 2 + end_offset;
+
+                    // Check if the end is also outside code ranges
+                    let end_in_code_range = code_ranges.iter().any(|&(start, end)| abs_end >= start && abs_end <= end);
+
+                    if !end_in_code_range {
+                        results.push(abs_start + 1); // Return 1-based column
+                        search_start = abs_end + 2;
+                        continue;
+                    }
+                }
             }
+            search_start = abs_start + 2;
         } else {
             break;
         }
     }
 
-    // Check for __bold__ pattern
+    // Check for __bold__ pattern, skipping code ranges
     search_start = 0;
     while search_start < line.len() {
         if let Some(start) = line[search_start..].find("__") {
             let abs_start = search_start + start;
-            if let Some(end_offset) = line[abs_start + 2..].find("__") {
-                results.push(abs_start + 1); // Return 1-based column
-                search_start = abs_start + 2 + end_offset + 2;
-            } else {
-                break;
+
+            // Check if this bold is inside any code range
+            let in_code_range = code_ranges.iter().any(|&(start, end)| abs_start >= start && abs_start <= end);
+
+            if !in_code_range {
+                if let Some(end_offset) = line[abs_start + 2..].find("__") {
+                    let abs_end = abs_start + 2 + end_offset;
+
+                    // Check if the end is also outside code ranges
+                    let end_in_code_range = code_ranges.iter().any(|&(start, end)| abs_end >= start && abs_end <= end);
+
+                    if !end_in_code_range {
+                        results.push(abs_start + 1); // Return 1-based column
+                        search_start = abs_end + 2;
+                        continue;
+                    }
+                }
             }
+            search_start = abs_start + 2;
         } else {
             break;
         }
@@ -512,7 +562,7 @@ fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
             issues.push(TableIssue {
                 column: 1,
                 message: "Inline formatting in table cells should be avoided".to_string(),
-                severity: Severity::Warning,
+                severity: Severity::Error,
             });
             return issues;
         }
@@ -524,7 +574,7 @@ fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
             issues.push(TableIssue {
                 column: 1,
                 message: "Very wide tables should be simplified".to_string(),
-                severity: Severity::Warning,
+                severity: Severity::Error,
             });
         }
     }
@@ -614,8 +664,8 @@ enum ListType {
     Unordered,
 }
 
-fn validate_list_formatting(content: &str) -> Option<Vec<LintWarning>> {
-    let mut warnings = Vec::new();
+fn validate_list_formatting(content: &str) -> Option<Vec<LintError>> {
+    let mut errors = Vec::new();
     let mut list_items = Vec::new();
     let mut in_code_block = false;
 
@@ -673,7 +723,7 @@ fn validate_list_formatting(content: &str) -> Option<Vec<LintWarning>> {
             } else {
                 // Check for consistency within the same list
                 if current_list_type != Some(*list_type) {
-                    warnings.push(LintWarning {
+                    errors.push(LintError {
                         line: *line_num,
                         column: 1,
                         message: "Inconsistent list formatting detected. Use consistent list markers within the same list".to_string(),
@@ -687,7 +737,7 @@ fn validate_list_formatting(content: &str) -> Option<Vec<LintWarning>> {
                     if let Some(expected_num) = expected_next_number {
                         let expected_marker = format!("{}.", expected_num);
                         if *marker != expected_marker {
-                            warnings.push(LintWarning {
+                            errors.push(LintError {
                                 line: *line_num,
                                 column: 1,
                                 message:
@@ -708,10 +758,10 @@ fn validate_list_formatting(content: &str) -> Option<Vec<LintWarning>> {
         }
     }
 
-    if warnings.is_empty() {
+    if errors.is_empty() {
         None
     } else {
-        Some(warnings)
+        Some(errors)
     }
 }
 
@@ -757,8 +807,8 @@ fn detect_list_item(line: &str) -> Option<(ListType, String)> {
     None
 }
 
-fn validate_code_blocks(content: &str) -> Option<Vec<LintWarning>> {
-    let mut warnings = Vec::new();
+fn validate_code_blocks(content: &str) -> Option<Vec<LintError>> {
+    let mut errors = Vec::new();
     let mut in_code_block = false;
     let mut code_block_start_line = 0;
 
@@ -811,7 +861,7 @@ fn validate_code_blocks(content: &str) -> Option<Vec<LintWarning>> {
                     };
 
                     if !start_has_language {
-                        warnings.push(LintWarning {
+                        errors.push(LintError {
                             line: code_block_start_line,
                             column: 1,
                             message: "Code block should specify language for better parsing. Use 'text' if no specific language applies".to_string(),
@@ -823,10 +873,10 @@ fn validate_code_blocks(content: &str) -> Option<Vec<LintWarning>> {
         }
     }
 
-    if warnings.is_empty() {
+    if errors.is_empty() {
         None
     } else {
-        Some(warnings)
+        Some(errors)
     }
 }
 

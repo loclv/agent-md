@@ -12,7 +12,7 @@ The agent-md linter enforces AI-friendly markdown standards to ensure content is
 
 Rule ID: `no-bold`
 Severity: Error
-Description: Bold text formatting is not allowed for AI agents.
+Description: Bold text formatting is not allowed for AI agents, except in code blocks.
 
 ### Invalid Examples
 
@@ -61,16 +61,40 @@ This section contains important information.
 Use `monospace` for technical terms or variable names.
 ```
 
+✅ Valid - Bold text is allowed inside code blocks
+
+```javascript
+function example() {
+    // This **bold** text is allowed in code blocks
+    console.log("**This bold text is also allowed**");
+    return __bold__;
+}
+```
+
+```text
+This is a code block with **bold** text that is allowed.
+```
+
+✅ Valid - Bold text is also allowed in inline code
+
+```text
+Use `**bold**` and `__bold__` in inline code for emphasis.
+```
+
+`**bold**` and `__bold__` are allowed in both inline code (` `) and fenced code blocks (``` ```).
+
 ### Rationale for No Bold Rule
 
 Bold text creates visual noise for AI agents and doesn't add semantic meaning that can't be conveyed through other means like headings or code formatting.
+
+*Code blocks are exempt* because they preserve original syntax and formatting for programming languages, documentation, and other contexts where bold characters may have specific meaning or be part of the code syntax itself.
 
 ---
 
 ## Rule 2: Simple Table Syntax
 
 Rule ID: `simple-tables`
-Severity: Warning/Error
+Severity: Error
 Description: Tables should use simple syntax without complex attributes.
 
 ### Rule 2 Invalid Examples
@@ -148,7 +172,7 @@ Complex tables are difficult for AI agents to parse and can introduce formatting
 ## Rule 3: No Useless Links
 
 Rule ID: `useless-links`
-Severity: Warning
+Severity: Error
 Description: Link text should not be identical to the URL.
 
 ### Rule 3 Invalid Examples
@@ -199,7 +223,7 @@ Links where the text equals the URL provide no additional context and create red
 ## Rule 4: No ASCII Graphs
 
 Rule ID: `no-ascii-graph`
-Severity: Warning
+Severity: Error
 Description: Human-readable ASCII graphs should be replaced with LLM-readable formats.
 
 ### Rule 4 Invalid Examples
@@ -302,7 +326,7 @@ ASCII graphs are visually appealing but difficult for AI agents to parse reliabl
 ## Rule 5: Proper Heading Structure
 
 Rule ID: `heading-structure`
-Severity: Warning
+Severity: Error
 Description: Headings should follow logical hierarchy and not skip levels.
 
 ### Rule 5 Invalid Examples
@@ -367,7 +391,7 @@ Proper heading structure creates a logical document outline that AI agents can e
 ## Rule 6: Code Block Best Practices
 
 Rule ID: `code-blocks`
-Severity: Warning
+Severity: Error
 Description: Code blocks should specify language when possible.
 
 ### Rule 6 Invalid Examples
@@ -424,7 +448,7 @@ Specifying language helps AI agents understand the context and apply appropriate
 ## Rule 7: List Formatting
 
 Rule ID: `list-formatting`
-Severity: Warning
+Severity: Error
 Description: Lists should be consistent and properly formatted.
 
 ### Rule 7 Invalid Examples for List Formatting
@@ -644,7 +668,7 @@ Multiple H1 headings create confusion about the document's main title and struct
 ## Rule 10: Limited Space Indentation
 
 Rule ID: `space-indentation`
-Severity: Warning
+Severity: Error
 Description: Use at most 2 spaces for indentation in regular text. Code blocks are exempt from this rule.
 
 ### Rule 10 Invalid Examples

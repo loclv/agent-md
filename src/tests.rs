@@ -246,6 +246,60 @@ mod tests {
         assert_eq!(result[1], 18); // First _
     }
 
+    #[test]
+    fn test_validate_markdown_bold_allowed_in_code_blocks() {
+        let content = r#"# Document Title
+
+This has **bold** text which should be an error.
+
+This has `**bold**` in inline code which should be allowed.
+
+```javascript
+function test() {
+    // This **bold** text should be allowed in fenced code blocks
+    console.log("**bold** in code block");
+    return __bold__;
+}
+```
+
+This **bold** text should be another error.
+"#;
+        let result = validate_markdown(content);
+        assert!(!result.valid); // Should have errors
+
+        // Should have exactly 2 bold errors (lines 3 and 15, but not lines 5 or 7-11)
+        let bold_errors: Vec<&LintError> = result.errors.iter()
+            .filter(|e| e.rule == "no-bold")
+            .collect();
+        assert_eq!(bold_errors.len(), 2);
+        assert_eq!(bold_errors[0].line, 3); // First bold text
+        assert_eq!(bold_errors[1].line, 15); // Second bold text
+    }
+
+    #[test]
+    fn test_validate_markdown_bold_allowed_in_inline_code() {
+        let content = r#"# Test Document
+
+Regular **bold** text should be an error.
+
+Inline code with `**bold**` should be allowed.
+
+More inline code with `__bold__` should also be allowed.
+
+Regular text with **bold** again should be an error.
+"#;
+        let result = validate_markdown(content);
+        assert!(!result.valid); // Should have errors
+
+        // Should have exactly 2 bold errors (lines 3 and 9, but not lines 5 and 7)
+        let bold_errors: Vec<&LintError> = result.errors.iter()
+            .filter(|e| e.rule == "no-bold")
+            .collect();
+        assert_eq!(bold_errors.len(), 2);
+        assert_eq!(bold_errors[0].line, 3); // First bold text
+        assert_eq!(bold_errors[1].line, 9); // Second bold text
+    }
+
     // Tests for useless link detection
     #[test]
     fn test_find_useless_link_exact_url() {
@@ -710,16 +764,16 @@ no language code block
 "#;
         let result = validate_markdown(content);
         assert!(!result.valid); // Should have errors
-        
+
         // Should have bold errors (2 instances)
         let bold_errors: Vec<&LintError> = result.errors.iter()
             .filter(|e| e.rule == "no-bold")
             .collect();
         assert_eq!(bold_errors.len(), 2);
-        
+
         // Should have various warnings
         assert!(result.warnings.len() > 0);
-        
+
         // Check for specific warning types
         let warning_rules: Vec<String> = result.warnings.iter().map(|w| w.rule.clone()).collect();
         assert!(warning_rules.contains(&"useless-links".to_string()));
@@ -745,12 +799,12 @@ Regular paragraph.
         let result = validate_markdown(content);
         assert!(result.valid); // Should be valid (no errors, only warnings)
         assert_eq!(result.warnings.len(), 3);
-        
+
         // Check that all warnings are for space-indentation rule
         for warning in &result.warnings {
             assert_eq!(warning.rule, "space-indentation");
         }
-        
+
         // Check specific line numbers
         let warning_lines: Vec<usize> = result.warnings.iter().map(|w| w.line).collect();
         assert!(warning_lines.contains(&5));  // "    Paragraph with 4 spaces"
@@ -803,7 +857,7 @@ function example() {
 
 Empty line with spaces:
 
-    
+
 Line with only spaces should be ignored.
 "#;
         let result = validate_markdown(content);
@@ -811,11 +865,11 @@ Line with only spaces should be ignored.
         let space_warnings: Vec<&LintWarning> = result.warnings.iter()
             .filter(|w| w.rule == "space-indentation")
             .collect();
-        
+
         // Lines with 4+ spaces should trigger warnings, except for properly formatted
         // list items which are exempt even with indentation
         assert_eq!(space_warnings.len(), 5);
-        
+
         let warning_lines: Vec<usize> = space_warnings.iter().map(|w| w.line).collect();
         assert!(warning_lines.contains(&3));  // "    Mixed with list item:"
         // Line 4 is exempt (properly formatted ordered list item)
@@ -859,18 +913,18 @@ fn main() {
 Final paragraph.
 "#;
         let result = validate_markdown(content);
-        
+
         // Should have exactly 2 space indentation warnings
         let space_warnings: Vec<&LintWarning> = result.warnings.iter()
             .filter(|w| w.rule == "space-indentation")
             .collect();
         assert_eq!(space_warnings.len(), 2);
-        
+
         // Check the warning lines
         let warning_lines: Vec<usize> = space_warnings.iter().map(|w| w.line).collect();
         assert!(warning_lines.contains(&7));  // "    This paragraph has 4 spaces"
         assert!(warning_lines.contains(&28)); // "    Another paragraph with 4 spaces"
-        
+
         // Verify warning message
         for warning in space_warnings {
             assert_eq!(warning.message, "Use at most 2 spaces for indentation in regular text. Code blocks are exempt from this rule.");
@@ -889,7 +943,7 @@ Final paragraph.
 "#;
         let result = validate_markdown(content);
         assert!(result.valid); // Should be valid (warnings only)
-        
+
         let useless_link_warnings: Vec<&LintWarning> = result.warnings.iter()
             .filter(|w| w.rule == "useless-links")
             .collect();
@@ -901,7 +955,7 @@ Final paragraph.
         let content = "[https://example.com/path](https://example.com/path)";
         let result = validate_markdown(content);
         assert!(result.valid); // Should be valid (warnings only)
-        
+
         let useless_link_warnings: Vec<&LintWarning> = result.warnings.iter()
             .filter(|w| w.rule == "useless-links")
             .collect();
@@ -919,7 +973,7 @@ Normal text with -> arrow but not graph indicator
 "#;
         let result = validate_markdown(content);
         assert!(result.valid); // Should be valid (warnings only)
-        
+
         let ascii_warnings: Vec<&LintWarning> = result.warnings.iter()
             .filter(|w| w.rule == "no-ascii-graph")
             .collect();
@@ -1189,7 +1243,7 @@ End of document.
         let start = std::time::Instant::now();
         let result = validate_markdown(&content);
         let duration = start.elapsed();
-        
+
         assert!(result.valid); // Should be valid
         assert!(duration.as_millis() < 1000); // Should complete within 1 second
     }

@@ -11,7 +11,7 @@ LLM/Agents need to read and write specific sections of markdown files, they don'
 ### The Problems
 
 - Token waste: Human-readable markdown uses formatting that adds unnecessary tokens for AI consumption
-- Inefficient parsing: LLMs pay extra attention to visual formatting like `**bold**`, `__underline__`, and ASCII art
+- Inefficient parsing: LLMs pay extra attention to visual formatting like `*italic*`, and ASCII art
 - Redundant structure: Human-friendly conventions like complex tables and decorative elements don't add value for AI agents
 - Cost amplification: Every agent that reads the document pays the same token tax for human-centric formatting
 
@@ -156,25 +156,17 @@ The linter enforces AI-friendly markdown standards.
 
 ### Error Rules (block content)
 
-- No bold text: `**bold**` and `__bold__` are rejected (errors)
-
+- No bold text: `**bold**` and `__bold__` are rejected (errors), except in code blocks
 - Heading structure: Multiple H1 headings and skipped heading levels are rejected (errors)
-
 - Table syntax: Complex table attributes and incorrect separator format are rejected (errors)
+- Simple table syntax: Very wide tables and inline formatting in cells are rejected (errors)
+- No ASCII graphs: Box drawing characters and visual patterns are rejected (errors)
+- Code block best practices: Code blocks without language specification are rejected (errors)
+- List formatting: Inconsistent list markers and numbering are rejected (errors)
+- Space indentation: Excessive indentation (more than 2 spaces) in regular text is rejected (errors) (code blocks exempt)
+- No useless links: Links where text equals the URL are rejected (errors)
 
 ### Warning Rules (style guidelines)
-
-- Simple table syntax: Very wide tables and inline formatting in cells generate warnings
-
-- No useless links: Links where text equals the URL generate warnings
-
-- No ASCII graphs: Box drawing characters and visual patterns generate warnings
-
-- Code block best practices: Code blocks without language specification generate warnings
-
-- List formatting: Inconsistent list markers and numbering generate warnings
-
-- Space indentation: Excessive indentation (more than 2 spaces) in regular text generates warnings (code blocks exempt)
 
 Detail at <docs/markdown-writing-rules.md>
 
