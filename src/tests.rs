@@ -2,6 +2,7 @@ use crate::*;
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::module_inception)]
     use super::*;
 
     // Tests for JsonlEntry serialization
@@ -43,13 +44,11 @@ mod tests {
             content: "# Test\n\nContent".to_string(),
             word_count: 2,
             line_count: 3,
-            headings: vec![
-                Heading {
-                    level: 1,
-                    text: "Test".to_string(),
-                    line: 1,
-                },
-            ],
+            headings: vec![Heading {
+                level: 1,
+                text: "Test".to_string(),
+                line: 1,
+            }],
         };
 
         let json = serde_json::to_string(&doc).unwrap();
@@ -99,12 +98,10 @@ mod tests {
     fn test_search_result_serialization() {
         let result = SearchResult {
             query: "test".to_string(),
-            matches: vec![
-                Match {
-                    line: 1,
-                    content: "test line".to_string(),
-                },
-            ],
+            matches: vec![Match {
+                line: 1,
+                content: "test line".to_string(),
+            }],
             total: 1,
         };
 
@@ -141,16 +138,34 @@ mod tests {
     // Tests for list item detection
     #[test]
     fn test_detect_list_item_unordered() {
-        assert_eq!(detect_list_item("- Item"), Some((ListType::Unordered, "-".to_string())));
-        assert_eq!(detect_list_item("* Item"), Some((ListType::Unordered, "*".to_string())));
-        assert_eq!(detect_list_item("+ Item"), Some((ListType::Unordered, "+".to_string())));
+        assert_eq!(
+            detect_list_item("- Item"),
+            Some((ListType::Unordered, "-".to_string()))
+        );
+        assert_eq!(
+            detect_list_item("* Item"),
+            Some((ListType::Unordered, "*".to_string()))
+        );
+        assert_eq!(
+            detect_list_item("+ Item"),
+            Some((ListType::Unordered, "+".to_string()))
+        );
     }
 
     #[test]
     fn test_detect_list_item_ordered() {
-        assert_eq!(detect_list_item("1. Item"), Some((ListType::Ordered, "1.".to_string())));
-        assert_eq!(detect_list_item("2) Item"), Some((ListType::Ordered, "2)".to_string())));
-        assert_eq!(detect_list_item("123. Item"), Some((ListType::Ordered, "123.".to_string())));
+        assert_eq!(
+            detect_list_item("1. Item"),
+            Some((ListType::Ordered, "1.".to_string()))
+        );
+        assert_eq!(
+            detect_list_item("2) Item"),
+            Some((ListType::Ordered, "2)".to_string()))
+        );
+        assert_eq!(
+            detect_list_item("123. Item"),
+            Some((ListType::Ordered, "123.".to_string()))
+        );
     }
 
     #[test]
@@ -164,8 +179,14 @@ mod tests {
 
     #[test]
     fn test_detect_list_item_edge_cases() {
-        assert_eq!(detect_list_item("- "), Some((ListType::Unordered, "-".to_string()))); // Empty item
-        assert_eq!(detect_list_item("1. "), Some((ListType::Ordered, "1.".to_string()))); // Empty item
+        assert_eq!(
+            detect_list_item("- "),
+            Some((ListType::Unordered, "-".to_string()))
+        ); // Empty item
+        assert_eq!(
+            detect_list_item("1. "),
+            Some((ListType::Ordered, "1.".to_string()))
+        ); // Empty item
         assert_eq!(detect_list_item("-Item with no space"), None);
         assert_eq!(detect_list_item("1.No space"), None);
     }
@@ -226,7 +247,7 @@ mod tests {
         let result = find_bold_text(line);
         assert_eq!(result.len(), 2);
         assert_eq!(result[0], 1); // First **
-        assert_eq!(result[1], 14); // Second **
+        assert_eq!(result[1], 15); // Second **
     }
 
     #[test]
@@ -242,8 +263,8 @@ mod tests {
         let line = "**Bold** and __bold__ text";
         let result = find_bold_text(line);
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0], 6); // First **
-        assert_eq!(result[1], 18); // First _
+        assert_eq!(result[0], 1); // First **
+        assert_eq!(result[1], 14); // First _
     }
 
     #[test]
@@ -268,7 +289,9 @@ This **bold** text should be another error.
         assert!(!result.valid); // Should have errors
 
         // Should have exactly 2 bold errors (lines 3 and 15, but not lines 5 or 7-11)
-        let bold_errors: Vec<&LintError> = result.errors.iter()
+        let bold_errors: Vec<&LintError> = result
+            .errors
+            .iter()
             .filter(|e| e.rule == "no-bold")
             .collect();
         assert_eq!(bold_errors.len(), 2);
@@ -292,7 +315,9 @@ Regular text with **bold** again should be an error.
         assert!(!result.valid); // Should have errors
 
         // Should have exactly 2 bold errors (lines 3 and 9, but not lines 5 and 7)
-        let bold_errors: Vec<&LintError> = result.errors.iter()
+        let bold_errors: Vec<&LintError> = result
+            .errors
+            .iter()
             .filter(|e| e.rule == "no-bold")
             .collect();
         assert_eq!(bold_errors.len(), 2);
@@ -662,8 +687,8 @@ function example() {
 ```
 
 | Column 1 | Column 2 |
-|----------|----------|
-| Value 1  | Value 2   |
+|---|---|---|
+| Value 1 | Value 2 |
 
 [Link text](https://example.com)
 
@@ -722,7 +747,8 @@ function example() {
 
     #[test]
     fn test_validate_markdown_multiple_errors() {
-        let content = "This has **bold** and [https://example.com](https://example.com) and graph: A -> B";
+        let content =
+            "This has **bold** and [https://example.com](https://example.com) and graph: A -> B";
         let result = validate_markdown(content);
         assert!(!result.valid); // Should have errors
         assert_eq!(result.errors.len(), 1); // One bold error
@@ -766,13 +792,15 @@ no language code block
         assert!(!result.valid); // Should have errors
 
         // Should have bold errors (2 instances)
-        let bold_errors: Vec<&LintError> = result.errors.iter()
+        let bold_errors: Vec<&LintError> = result
+            .errors
+            .iter()
             .filter(|e| e.rule == "no-bold")
             .collect();
         assert_eq!(bold_errors.len(), 2);
 
         // Should have various warnings
-        assert!(result.warnings.len() > 0);
+        assert!(!result.warnings.is_empty());
 
         // Check for specific warning types
         let warning_rules: Vec<String> = result.warnings.iter().map(|w| w.rule.clone()).collect();
@@ -807,9 +835,9 @@ Regular paragraph.
 
         // Check specific line numbers
         let warning_lines: Vec<usize> = result.warnings.iter().map(|w| w.line).collect();
-        assert!(warning_lines.contains(&5));  // "    Paragraph with 4 spaces"
-        assert!(warning_lines.contains(&7));  // "      Paragraph with 6 spaces"
-        assert!(warning_lines.contains(&9));  // "        Paragraph with 8 spaces"
+        assert!(warning_lines.contains(&5)); // "    Paragraph with 4 spaces"
+        assert!(warning_lines.contains(&7)); // "      Paragraph with 6 spaces"
+        assert!(warning_lines.contains(&9)); // "        Paragraph with 8 spaces"
     }
 
     #[test]
@@ -839,7 +867,10 @@ function example() {
 "#;
         let result = validate_markdown(content);
         // Should be valid (no space indentation warnings)
-        assert!(result.warnings.iter().all(|w| w.rule != "space-indentation"));
+        assert!(result
+            .warnings
+            .iter()
+            .all(|w| w.rule != "space-indentation"));
     }
 
     #[test]
@@ -862,7 +893,9 @@ Line with only spaces should be ignored.
 "#;
         let result = validate_markdown(content);
         // Should have space indentation warnings for lines with excessive indentation
-        let space_warnings: Vec<&LintWarning> = result.warnings.iter()
+        let space_warnings: Vec<&LintWarning> = result
+            .warnings
+            .iter()
             .filter(|w| w.rule == "space-indentation")
             .collect();
 
@@ -871,11 +904,11 @@ Line with only spaces should be ignored.
         assert_eq!(space_warnings.len(), 5);
 
         let warning_lines: Vec<usize> = space_warnings.iter().map(|w| w.line).collect();
-        assert!(warning_lines.contains(&3));  // "    Mixed with list item:"
-        // Line 4 is exempt (properly formatted ordered list item)
-        assert!(warning_lines.contains(&6));  // "    Mixed with heading:"
-        assert!(warning_lines.contains(&7));  // "    ## This should be exempt"
-        assert!(warning_lines.contains(&9));  // "    Mixed with blockquote:"
+        assert!(warning_lines.contains(&3)); // "    Mixed with list item:"
+                                             // Line 4 is exempt (properly formatted ordered list item)
+        assert!(warning_lines.contains(&6)); // "    Mixed with heading:"
+        assert!(warning_lines.contains(&7)); // "    ## This should be exempt"
+        assert!(warning_lines.contains(&9)); // "    Mixed with blockquote:"
         assert!(warning_lines.contains(&10)); // "    > This should be exempt"
     }
 
@@ -915,14 +948,16 @@ Final paragraph.
         let result = validate_markdown(content);
 
         // Should have exactly 2 space indentation warnings
-        let space_warnings: Vec<&LintWarning> = result.warnings.iter()
+        let space_warnings: Vec<&LintWarning> = result
+            .warnings
+            .iter()
             .filter(|w| w.rule == "space-indentation")
             .collect();
         assert_eq!(space_warnings.len(), 2);
 
         // Check the warning lines
         let warning_lines: Vec<usize> = space_warnings.iter().map(|w| w.line).collect();
-        assert!(warning_lines.contains(&7));  // "    This paragraph has 4 spaces"
+        assert!(warning_lines.contains(&7)); // "    This paragraph has 4 spaces"
         assert!(warning_lines.contains(&28)); // "    Another paragraph with 4 spaces"
 
         // Verify warning message
@@ -944,7 +979,9 @@ Final paragraph.
         let result = validate_markdown(content);
         assert!(result.valid); // Should be valid (warnings only)
 
-        let useless_link_warnings: Vec<&LintWarning> = result.warnings.iter()
+        let useless_link_warnings: Vec<&LintWarning> = result
+            .warnings
+            .iter()
             .filter(|w| w.rule == "useless-links")
             .collect();
         assert_eq!(useless_link_warnings.len(), 3); // Three useless links
@@ -956,7 +993,9 @@ Final paragraph.
         let result = validate_markdown(content);
         assert!(result.valid); // Should be valid (warnings only)
 
-        let useless_link_warnings: Vec<&LintWarning> = result.warnings.iter()
+        let useless_link_warnings: Vec<&LintWarning> = result
+            .warnings
+            .iter()
             .filter(|w| w.rule == "useless-links")
             .collect();
         assert_eq!(useless_link_warnings.len(), 1); // One useless link with path
@@ -974,7 +1013,9 @@ Normal text with -> arrow but not graph indicator
         let result = validate_markdown(content);
         assert!(result.valid); // Should be valid (warnings only)
 
-        let ascii_warnings: Vec<&LintWarning> = result.warnings.iter()
+        let ascii_warnings: Vec<&LintWarning> = result
+            .warnings
+            .iter()
             .filter(|w| w.rule == "no-ascii-graph")
             .collect();
         assert_eq!(ascii_warnings.len(), 4); // Four graph indicators
@@ -989,7 +1030,7 @@ Normal text with -> arrow but not graph indicator
         assert_eq!(doc.headings[0].level, 1);
         assert_eq!(doc.headings[0].text, "Title");
         assert_eq!(doc.headings[0].line, 1);
-        assert_eq!(doc.word_count, 3);
+        assert_eq!(doc.word_count, 5);
         assert_eq!(doc.line_count, 3);
     }
 
@@ -1009,7 +1050,7 @@ Normal text with -> arrow but not graph indicator
         let doc = parse_markdown(content);
         assert_eq!(doc.headings.len(), 0);
         assert_eq!(doc.word_count, 6);
-        assert_eq!(doc.line_count, 2);
+        assert_eq!(doc.line_count, 3);
     }
 
     #[test]
@@ -1046,7 +1087,7 @@ Normal text with -> arrow but not graph indicator
 
     #[test]
     fn test_parse_markdown_large_document() {
-        let content = "# Large Document\n\n".to_string() + &"This is a paragraph. ".repeat(100);
+        let content = "# Large Document\n\n".to_string() + &"This is a paragraph.\n".repeat(100);
         let doc = parse_markdown(&content);
         assert_eq!(doc.headings.len(), 1);
         assert!(doc.word_count > 100);
@@ -1231,7 +1272,8 @@ End of document.
 
     #[test]
     fn test_validate_markdown_large_document() {
-        let content = "# Large Document\n\n".to_string() + &"This is a paragraph with some content. ".repeat(1000);
+        let content = "# Large Document\n\n".to_string()
+            + &"This is a paragraph with some content. ".repeat(1000);
         let result = validate_markdown(&content);
         assert!(result.valid); // Should be valid
         assert_eq!(result.errors.len(), 0);

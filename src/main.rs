@@ -125,7 +125,7 @@ fn validate_markdown(content: &str) -> LintResult {
 
         // Rule: No useless links where text equals URL
         for col in find_useless_link(line) {
-            errors.push(LintError {
+            warnings.push(LintWarning {
                 line: line_num,
                 column: col,
                 message:
@@ -137,7 +137,7 @@ fn validate_markdown(content: &str) -> LintResult {
 
         // Rule: No ASCII Graphs - Human-readable ASCII graphs should be replaced with LLM-readable formats
         if let Some(col) = find_ascii_graph(line) {
-            errors.push(LintError {
+            warnings.push(LintWarning {
                 line: line_num,
                 column: col,
                 message: "Human-readable ASCII graph detected. Use LLM-readable formats instead: Structured CSV, JSON, Mermaid Diagram, Numbered List with Conditions, ZON format, or simple progress indicators".to_string(),
@@ -147,7 +147,7 @@ fn validate_markdown(content: &str) -> LintResult {
 
         // Rule: Limited Space Indentation
         if let Some(col) = validate_space_indentation(line) {
-            errors.push(LintError {
+            warnings.push(LintWarning {
                 line: line_num,
                 column: col,
                 message: "Use at most 2 spaces for indentation in regular text. Code blocks are exempt from this rule.".to_string(),
@@ -163,12 +163,28 @@ fn validate_markdown(content: &str) -> LintResult {
 
     // Rule: Code block best practices validation
     if let Some(code_block_issues) = validate_code_blocks(content) {
-        errors.extend(code_block_issues);
+        // Convert code block errors to warnings since they're suggestions
+        for issue in code_block_issues {
+            warnings.push(LintWarning {
+                line: issue.line,
+                column: issue.column,
+                message: issue.message,
+                rule: issue.rule,
+            });
+        }
     }
 
     // Rule: List formatting validation
     if let Some(list_issues) = validate_list_formatting(content) {
-        errors.extend(list_issues);
+        // Convert list errors to warnings since they're formatting suggestions
+        for issue in list_issues {
+            warnings.push(LintWarning {
+                line: issue.line,
+                column: issue.column,
+                message: issue.message,
+                rule: issue.rule,
+            });
+        }
     }
 
     LintResult {
@@ -179,19 +195,19 @@ fn validate_markdown(content: &str) -> LintResult {
 }
 
 #[derive(Debug, PartialEq)]
-enum Severity {
+pub enum Severity {
     Error,
     Warning,
 }
 
 #[derive(Debug, PartialEq)]
-struct TableIssue {
-    column: usize,
-    message: String,
-    severity: Severity,
+pub struct TableIssue {
+    pub column: usize,
+    pub message: String,
+    pub severity: Severity,
 }
 
-fn find_bold_text(line: &str) -> Vec<usize> {
+pub fn find_bold_text(line: &str) -> Vec<usize> {
     let mut results = Vec::new();
 
     // Find all inline code blocks and exclude them
@@ -202,7 +218,7 @@ fn find_bold_text(line: &str) -> Vec<usize> {
 
     // Find all inline code blocks
     for (i, &ch) in chars.iter().enumerate() {
-        if ch == '`' && (i == 0 || chars[i-1] != '\\') {
+        if ch == '`' && (i == 0 || chars[i - 1] != '\\') {
             if !in_code {
                 in_code = true;
                 code_start = i;
@@ -225,14 +241,18 @@ fn find_bold_text(line: &str) -> Vec<usize> {
             let abs_start = search_start + start;
 
             // Check if this bold is inside any code range
-            let in_code_range = code_ranges.iter().any(|&(start, end)| abs_start >= start && abs_start <= end);
+            let in_code_range = code_ranges
+                .iter()
+                .any(|&(start, end)| abs_start >= start && abs_start <= end);
 
             if !in_code_range {
                 if let Some(end_offset) = line[abs_start + 2..].find("**") {
                     let abs_end = abs_start + 2 + end_offset;
 
                     // Check if the end is also outside code ranges
-                    let end_in_code_range = code_ranges.iter().any(|&(start, end)| abs_end >= start && abs_end <= end);
+                    let end_in_code_range = code_ranges
+                        .iter()
+                        .any(|&(start, end)| abs_end >= start && abs_end <= end);
 
                     if !end_in_code_range {
                         results.push(abs_start + 1); // Return 1-based column
@@ -254,14 +274,18 @@ fn find_bold_text(line: &str) -> Vec<usize> {
             let abs_start = search_start + start;
 
             // Check if this bold is inside any code range
-            let in_code_range = code_ranges.iter().any(|&(start, end)| abs_start >= start && abs_start <= end);
+            let in_code_range = code_ranges
+                .iter()
+                .any(|&(start, end)| abs_start >= start && abs_start <= end);
 
             if !in_code_range {
                 if let Some(end_offset) = line[abs_start + 2..].find("__") {
                     let abs_end = abs_start + 2 + end_offset;
 
                     // Check if the end is also outside code ranges
-                    let end_in_code_range = code_ranges.iter().any(|&(start, end)| abs_end >= start && abs_end <= end);
+                    let end_in_code_range = code_ranges
+                        .iter()
+                        .any(|&(start, end)| abs_end >= start && abs_end <= end);
 
                     if !end_in_code_range {
                         results.push(abs_start + 1); // Return 1-based column
@@ -279,56 +303,53 @@ fn find_bold_text(line: &str) -> Vec<usize> {
     results
 }
 
-fn find_useless_link(line: &str) -> Vec<usize> {
+pub fn find_useless_link(line: &str) -> Vec<usize> {
     let mut results = Vec::new();
+    let chars: Vec<char> = line.chars().collect();
     let mut i = 0;
-    while i < line.len() {
-        if line.chars().nth(i) == Some('[') {
+
+    while i < chars.len() {
+        if chars[i] == '[' {
+            let bracket_start = i;
             // Find the closing bracket
             let mut bracket_end = i + 1;
             let mut bracket_content = String::new();
             let mut found_closing_bracket = false;
 
-            while bracket_end < line.len() {
-                if let Some(ch) = line.chars().nth(bracket_end) {
-                    if ch == ']' {
-                        found_closing_bracket = true;
-                        break;
-                    }
-                    bracket_content.push(ch);
-                    bracket_end += 1;
-                } else {
+            while bracket_end < chars.len() {
+                let ch = chars[bracket_end];
+                if ch == ']' {
+                    found_closing_bracket = true;
                     break;
                 }
+                bracket_content.push(ch);
+                bracket_end += 1;
             }
 
-            if found_closing_bracket && bracket_end + 1 < line.len() {
+            if found_closing_bracket && bracket_end + 1 < chars.len() {
                 // Check for opening parenthesis
-                if line.chars().nth(bracket_end + 1) == Some('(') {
+                if chars[bracket_end + 1] == '(' {
                     let mut paren_start = bracket_end + 2;
                     let mut url = String::new();
                     let mut found_closing_paren = false;
                     let mut paren_depth = 1;
 
-                    while paren_start < line.len() {
-                        if let Some(ch) = line.chars().nth(paren_start) {
-                            if ch == '(' {
-                                paren_depth += 1;
-                                url.push(ch);
-                            } else if ch == ')' {
-                                paren_depth -= 1;
-                                if paren_depth == 0 {
-                                    found_closing_paren = true;
-                                    break;
-                                }
-                                url.push(ch);
-                            } else {
-                                url.push(ch);
+                    while paren_start < chars.len() {
+                        let ch = chars[paren_start];
+                        if ch == '(' {
+                            paren_depth += 1;
+                            url.push(ch);
+                        } else if ch == ')' {
+                            paren_depth -= 1;
+                            if paren_depth == 0 {
+                                found_closing_paren = true;
+                                break;
                             }
-                            paren_start += 1;
+                            url.push(ch);
                         } else {
-                            break;
+                            url.push(ch);
                         }
+                        paren_start += 1;
                     }
 
                     if found_closing_paren {
@@ -353,7 +374,7 @@ fn find_useless_link(line: &str) -> Vec<usize> {
                             || link_text == url_without_slash
                             || link_text == url_without_www
                         {
-                            results.push(i + 1); // Return 1-based column
+                            results.push(bracket_start + 1); // Return 1-based column
                         }
                         i = paren_start + 1;
                         continue;
@@ -367,7 +388,7 @@ fn find_useless_link(line: &str) -> Vec<usize> {
     results
 }
 
-fn find_ascii_graph(line: &str) -> Option<usize> {
+pub fn find_ascii_graph(line: &str) -> Option<usize> {
     // Skip table separator lines (lines with only |, -, :, and spaces)
     let trimmed = line.trim();
     let is_table_separator = trimmed
@@ -512,7 +533,7 @@ fn find_ascii_graph(line: &str) -> Option<usize> {
     None
 }
 
-fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
+pub fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
     let mut issues = Vec::new();
     let trimmed = line.trim();
 
@@ -561,8 +582,8 @@ fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
         if trimmed.contains("**") || trimmed.contains("__") || trimmed.contains("*") {
             issues.push(TableIssue {
                 column: 1,
-                message: "Inline formatting in table cells should be avoided".to_string(),
-                severity: Severity::Error,
+                message: "inline formatting in table cells should be avoided".to_string(),
+                severity: Severity::Warning,
             });
             return issues;
         }
@@ -574,7 +595,7 @@ fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
             issues.push(TableIssue {
                 column: 1,
                 message: "Very wide tables should be simplified".to_string(),
-                severity: Severity::Error,
+                severity: Severity::Warning,
             });
         }
     }
@@ -582,7 +603,7 @@ fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
     issues
 }
 
-fn validate_heading_structure(content: &str) -> Option<Vec<LintError>> {
+pub fn validate_heading_structure(content: &str) -> Option<Vec<LintError>> {
     let mut heading_levels = Vec::new();
     let mut h1_count = 0;
     let mut h1_locations = Vec::new();
@@ -659,12 +680,12 @@ fn validate_heading_structure(content: &str) -> Option<Vec<LintError>> {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-enum ListType {
+pub enum ListType {
     Ordered,
     Unordered,
 }
 
-fn validate_list_formatting(content: &str) -> Option<Vec<LintError>> {
+pub fn validate_list_formatting(content: &str) -> Option<Vec<LintError>> {
     let mut errors = Vec::new();
     let mut list_items = Vec::new();
     let mut in_code_block = false;
@@ -726,9 +747,21 @@ fn validate_list_formatting(content: &str) -> Option<Vec<LintError>> {
                     errors.push(LintError {
                         line: *line_num,
                         column: 1,
-                        message: "Inconsistent list formatting detected. Use consistent list markers within the same list".to_string(),
+                        message: "inconsistent list formatting detected. Use consistent list markers within the same list".to_string(),
                         rule: "list-formatting".to_string(),
                     });
+                    break; // Stop after first inconsistency
+                } else if *list_type == ListType::Unordered
+                    && _current_list_marker.as_ref() != Some(marker)
+                {
+                    // For unordered lists, also check for consistent markers
+                    errors.push(LintError {
+                        line: *line_num,
+                        column: 1,
+                        message: "inconsistent list formatting detected. Use consistent list markers within the same list".to_string(),
+                        rule: "list-formatting".to_string(),
+                    });
+                    break; // Stop after first inconsistency
                 }
 
                 // For ordered lists, check for sequential numbering
@@ -765,12 +798,34 @@ fn validate_list_formatting(content: &str) -> Option<Vec<LintError>> {
     }
 }
 
-fn extract_number_from_marker(marker: &str) -> Option<u32> {
-    let num_str: String = marker.chars().take_while(|c| c.is_ascii_digit()).collect();
-    num_str.parse::<u32>().ok()
+pub fn extract_number_from_marker(marker: &str) -> Option<u32> {
+    // Find the separator (. or ))
+    let mut separator_pos = None;
+    for (i, c) in marker.chars().enumerate() {
+        if c == '.' || c == ')' {
+            separator_pos = Some(i);
+            break;
+        }
+    }
+
+    if let Some(pos) = separator_pos {
+        if pos == 0 {
+            return None; // Separator at start, no digits
+        }
+
+        let num_part = &marker[..pos];
+        // Check if all characters before separator are digits
+        if num_part.chars().all(|c| c.is_ascii_digit()) {
+            num_part.parse::<u32>().ok()
+        } else {
+            None
+        }
+    } else {
+        None // No separator found
+    }
 }
 
-fn detect_list_item(line: &str) -> Option<(ListType, String)> {
+pub fn detect_list_item(line: &str) -> Option<(ListType, String)> {
     // Check for unordered lists: -, *, or + followed by space
     if line.len() >= 2 {
         let first_char = line.chars().next().unwrap();
@@ -807,7 +862,7 @@ fn detect_list_item(line: &str) -> Option<(ListType, String)> {
     None
 }
 
-fn validate_code_blocks(content: &str) -> Option<Vec<LintError>> {
+pub fn validate_code_blocks(content: &str) -> Option<Vec<LintError>> {
     let mut errors = Vec::new();
     let mut in_code_block = false;
     let mut code_block_start_line = 0;
@@ -880,7 +935,7 @@ fn validate_code_blocks(content: &str) -> Option<Vec<LintError>> {
     }
 }
 
-fn validate_space_indentation(line: &str) -> Option<usize> {
+pub fn validate_space_indentation(line: &str) -> Option<usize> {
     // Check for leading spaces in regular text (not code blocks or list items)
     let trimmed = line.trim_end();
     if trimmed.is_empty() {
@@ -898,7 +953,13 @@ fn validate_space_indentation(line: &str) -> Option<usize> {
     if line_without_leading_spaces.len() >= 3 {
         let mut i = 0;
         let mut has_digits = false;
-        while i < line_without_leading_spaces.len() && line_without_leading_spaces.chars().nth(i).unwrap().is_ascii_digit() {
+        while i < line_without_leading_spaces.len()
+            && line_without_leading_spaces
+                .chars()
+                .nth(i)
+                .unwrap()
+                .is_ascii_digit()
+        {
             has_digits = true;
             i += 1;
         }
@@ -961,14 +1022,13 @@ fn extract_heading_level(line: &str) -> Option<u32> {
     }
 }
 
-fn parse_markdown(content: &str) -> Document {
+pub fn parse_markdown(content: &str) -> Document {
     let word_count = content.split_whitespace().count();
     let line_count = content.lines().count();
     let mut headings = Vec::new();
 
     let parser = MarkdownParser::new(content);
     let mut in_heading = false;
-    let mut current_heading = String::new();
     let mut current_level = 0;
     let mut current_heading_offset = 0;
 
@@ -977,17 +1037,22 @@ fn parse_markdown(content: &str) -> Document {
             Event::Start(Tag::Heading { level, .. }) => {
                 in_heading = true;
                 current_level = level as u32;
-                current_heading = String::new();
                 current_heading_offset = range.start;
             }
-            Event::Text(text) if in_heading => {
-                current_heading.push_str(&text);
-            }
-            Event::Code(code) if in_heading => {
-                current_heading.push_str(&code);
-            }
             Event::End(TagEnd::Heading(_)) => {
-                if in_heading && !current_heading.is_empty() {
+                if in_heading {
+                    // Extract the raw heading text from the original content
+                    let heading_start = current_heading_offset;
+                    let heading_end = range.end;
+                    let heading_text = content[heading_start..heading_end].trim();
+
+                    // Remove the leading # characters and whitespace
+                    let heading_text = heading_text
+                        .chars()
+                        .skip_while(|c| *c == '#')
+                        .skip_while(|c| c.is_whitespace())
+                        .collect();
+
                     let line_num = content[..current_heading_offset]
                         .chars()
                         .filter(|&c| c == '\n')
@@ -995,7 +1060,7 @@ fn parse_markdown(content: &str) -> Document {
                         + 1;
                     headings.push(Heading {
                         level: current_level,
-                        text: current_heading.clone(),
+                        text: heading_text,
                         line: line_num,
                     });
                 }
@@ -1974,7 +2039,7 @@ fn cmd_lint_file(path: &str) {
     }
 }
 
-fn parse_markdown_to_jsonl(content: &str) -> Vec<JsonlEntry> {
+pub fn parse_markdown_to_jsonl(content: &str) -> Vec<JsonlEntry> {
     let parser = MarkdownParser::new(content);
     let mut entries = Vec::new();
     let mut current_text = String::new();
@@ -2039,7 +2104,7 @@ fn parse_markdown_to_jsonl(content: &str) -> Vec<JsonlEntry> {
             }
             Event::End(TagEnd::CodeBlock) => {
                 entries.push(JsonlEntry {
-                    entry_type: "code".to_string(),
+                    entry_type: "code_block".to_string(),
                     content: code_content.clone(),
                     level: None,
                     language: if code_language.is_empty() {
