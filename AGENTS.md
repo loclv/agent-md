@@ -18,6 +18,8 @@ For any development task:
    - Run formatter: `make format`
    - Run tests: `make test`
 
+After creating or updating any markdown file, always run `agent-md lint path/to/file.md` to validate the content before considering the task complete.
+
 ## Markdown Writing Rules
 
 When writing Markdown files in this project, follow these critical rules:

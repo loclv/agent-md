@@ -43,6 +43,14 @@ export PATH="/Users/username/w/agent-md/target/release:$PATH"
 
 Now you can use the `agent-md` command from anywhere.
 
+## Add a rule or command for LLM/Agents to follow
+
+For example, when adding a new rule, add it to the `AGENTS.md` file.
+
+> After creating or updating any markdown file, always run `agent-md lint path/to/file.md` to validate the content before considering the task complete.
+
+Or tell the prompt above with LLM/Agents.
+
 ## Commands (LLM-friendly JSON output)
 
 All commands return JSON for easy parsing.
