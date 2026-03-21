@@ -294,3 +294,7 @@ agent-md write document.md "# Title\nValid content without bold"
 ## Development
 
 See `docs/DEV.md` for complete development setup and guidelines.
+
+## License
+
+MIT
