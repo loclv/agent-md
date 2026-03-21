@@ -49,7 +49,9 @@ For example, when adding a new rule, add it to the `AGENTS.md` file.
 
 > After creating or updating any markdown file, always run `agent-md lint path/to/file.md` to validate the content before considering the task complete.
 
-Or tell the prompt above with LLM/Agents.
+Or tell LLM/Agents:
+
+> Use `agent-md` CLI to run lint
 
 ## Commands (LLM-friendly JSON output)
 
