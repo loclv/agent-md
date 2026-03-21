@@ -28,3 +28,9 @@ fn main() {
     Another paragraph with 4 spaces - invalid.
 
 Final paragraph.
+
+### ASCII Graph Example
+
+┌───┐
+│ A │
+└───┘
