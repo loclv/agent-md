@@ -1078,13 +1078,16 @@ pub fn parse_markdown(content: &str) -> Document {
         headings,
     }
 }
-
 #[derive(Parser)]
 #[command(name = "agent-md")]
 #[command(about = "Markdown editor for AI agents", long_about = None)]
+#[command(disable_version_flag = true)]
 struct Cli {
+    #[arg(short = 'v', long = "version", help = "Print version information")]
+    version: bool,
+
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
 #[derive(Subcommand)]
@@ -1182,32 +1185,43 @@ enum Commands {
 fn main() {
     let cli = Cli::parse();
 
+    if cli.version {
+        println!("agent-md 0.1.1");
+        return;
+    }
+
     match cli.command {
-        Commands::Read {
+        Some(Commands::Read {
             path,
             field,
             content,
-        } => cmd_read(&path, field.as_deref(), content.as_deref()),
-        Commands::Write { path, content } => cmd_write(&path, &content),
-        Commands::WriteSection {
+        }) => cmd_read(&path, field.as_deref(), content.as_deref()),
+        Some(Commands::Write { path, content }) => cmd_write(&path, &content),
+        Some(Commands::WriteSection {
             path,
             section,
             content,
-        } => cmd_write_section(&path, &section, &content),
-        Commands::Append { path, content } => cmd_append(&path, &content),
-        Commands::Insert {
+        }) => cmd_write_section(&path, &section, &content),
+        Some(Commands::Append { path, content }) => cmd_append(&path, &content),
+        Some(Commands::Insert {
             path,
             line,
             content,
-        } => cmd_insert(&path, line, &content),
-        Commands::Delete { path, line, count } => cmd_delete(&path, line, count),
-        Commands::List { path } => cmd_list(&path),
-        Commands::Search { path, query } => cmd_search(&path, &query),
-        Commands::Headings { path } => cmd_headings(&path),
-        Commands::Stats { path } => cmd_stats(&path),
-        Commands::ToJsonl { path } => cmd_to_jsonl(&path),
-        Commands::Lint { path, content } => cmd_lint(&path, content),
-        Commands::LintFile { path } => cmd_lint_file(&path),
+        }) => cmd_insert(&path, line, &content),
+        Some(Commands::Delete { path, line, count }) => cmd_delete(&path, line, count),
+        Some(Commands::List { path }) => cmd_list(&path),
+        Some(Commands::Search { path, query }) => cmd_search(&path, &query),
+        Some(Commands::Headings { path }) => cmd_headings(&path),
+        Some(Commands::Stats { path }) => cmd_stats(&path),
+        Some(Commands::ToJsonl { path }) => cmd_to_jsonl(&path),
+        Some(Commands::Lint { path, content }) => cmd_lint(&path, content),
+        Some(Commands::LintFile { path }) => cmd_lint_file(&path),
+        None => {
+            // If no command and not version, show help
+            eprintln!("Usage: agent-md <COMMAND>");
+            eprintln!("For more information, try '--help'.");
+            std::process::exit(1);
+        }
     }
 }
 

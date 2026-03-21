@@ -1289,4 +1289,75 @@ End of document.
         assert!(result.valid); // Should be valid
         assert!(duration.as_millis() < 1000); // Should complete within 1 second
     }
+
+    // Tests for CLI argument parsing
+    #[test]
+    fn test_cli_parsing_version_flag() {
+        // Test parsing version flag with -v
+        let args = vec!["agent-md", "-v"];
+        let cli = Cli::try_parse_from(&args).expect("Should parse -v flag");
+        assert!(cli.version);
+        assert!(cli.command.is_none());
+    }
+
+    #[test]
+    fn test_cli_parsing_version_long_flag() {
+        // Test parsing version flag with --version
+        let args = vec!["agent-md", "--version"];
+        let cli = Cli::try_parse_from(&args).expect("Should parse --version flag");
+        assert!(cli.version);
+        assert!(cli.command.is_none());
+    }
+
+    #[test]
+    fn test_cli_parsing_no_command() {
+        // Test parsing with no command - this should actually succeed in parsing
+        // but will fail at runtime in main()
+        let args = vec!["agent-md"];
+        let cli = Cli::try_parse_from(&args).expect("Should parse without command");
+        assert!(!cli.version);
+        assert!(cli.command.is_none());
+    }
+
+    #[test]
+    fn test_cli_parsing_help_flag() {
+        // Test parsing help flag
+        let args = vec!["agent-md", "--help"];
+        let result = Cli::try_parse_from(&args);
+        // Help should cause early exit, so parsing will fail
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_cli_parsing_with_command() {
+        // Test parsing with a valid command
+        let args = vec!["agent-md", "read", "test.md"];
+        let cli = Cli::try_parse_from(&args).expect("Should parse read command");
+        assert!(!cli.version);
+        assert!(cli.command.is_some());
+
+        match cli.command.unwrap() {
+            Commands::Read { path, field: _, content: _ } => {
+                assert_eq!(path, "test.md");
+            }
+            _ => panic!("Expected Read command"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parsing_version_with_command() {
+        // Test that version flag can be parsed with command
+        // The version flag will be set and command will be parsed
+        let args = vec!["agent-md", "-v", "read", "test.md"];
+        let cli = Cli::try_parse_from(&args).expect("Should parse version with command");
+        assert!(cli.version);
+        assert!(cli.command.is_some());
+
+        match cli.command.unwrap() {
+            Commands::Read { path, field: _, content: _ } => {
+                assert_eq!(path, "test.md");
+            }
+            _ => panic!("Expected Read command"),
+        }
+    }
 }

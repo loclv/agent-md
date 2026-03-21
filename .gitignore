@@ -1,1 +1,5 @@
 /target
+temp/
+*.log
+*.tgz
+logs/

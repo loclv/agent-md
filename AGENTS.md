@@ -20,6 +20,26 @@ For any development task:
 
 After creating or updating any markdown file, always run `agent-md lint path/to/file.md` to validate the content before considering the task complete.
 
+## Strict Rules
+
+### grep/rg for definitions, signatures, class names, or type declarations
+
+- NEVER start with grep/rg for definitions, signatures, class names, or type declarations, use `vfs` CLI first. If `vfs` doesn't work, then use grep/rg.
+
+### Logging
+
+Whenever you finish a task or change codes, always log your work using the l-log bash command (llm-lean-log-cli package) with the following format:
+
+`l-log add ./logs/chat.csv "<Task Name>" --tags="<tags>" --problem="<problem>" --solution="<solution>" --action="<action>" --files="<files>" --tech-stack="<tech>" --created-by-agent="<agent-name>"`
+
+Note: `--last-commit-short-sha` is optional and will be auto-populated by the CLI if not provided.
+
+Before run:
+
+- Install the l-log CLI if not already installed: `bun add -g llm-lean-log-cli`.
+- If need, run CLI help command: `l-log -h` for more information.
+- log path: `./logs/chat.csv`.
+
 ## Markdown Writing Rules
 
 When writing Markdown files in this project, follow these critical rules:
