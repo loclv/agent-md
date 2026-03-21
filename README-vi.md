@@ -13,14 +13,14 @@ Nguyên nhân là markdown được thiết kế để con người dễ đọc,
 
 Thực tế, LLM/agents không cần đọc toàn bộ file. Chúng chỉ cần truy cập đúng phần nội dung cần thiết (ví dụ: ## Development) thay vì xử lý cả tài liệu.
 
-## Vấn đề
+### Vấn đề
 
 - Lãng phí token: Các định dạng như in đậm, bảng, ký tự trang trí làm tăng số token mà không giúp ích cho AI
 - Đọc không hiệu quả: LLM vẫn phải xử lý cả các yếu tố trình bày như *bold*, ASCII art…
 - Cấu trúc dư thừa: Nhiều thành phần chỉ hữu ích cho người (bảng phức tạp, layout đẹp) nhưng không cần cho AI
 - Tăng chi phí: Mỗi lần LLM đọc lại tài liệu đều phải “trả phí” cho những phần định dạng này
 
-## Giải pháp
+### Giải pháp
 
 agent-md đưa ra một cách viết markdown tối giản, thân thiện với AI, giúp:
 
