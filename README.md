@@ -1,4 +1,4 @@
-# Agent MD - A CLI that helps you write LLM-friendly markdown
+# `agent-md` - A CLI that helps you write LLM-friendly markdown
 
 ```bash
 agent-md lint README.md
@@ -14,13 +14,13 @@ LLM/Agents need to read and write specific sections of markdown files, they don'
 ### The Problems
 
 - Token waste: Human-readable markdown uses formatting that adds unnecessary tokens for AI consumption
-- Inefficient parsing: LLMs pay extra attention to visual formatting like `*italic*`, and ASCII art
+- Inefficient parsing: LLMs pay extra attention to visual formatting like `**bold**`, and ASCII art
 - Redundant structure: Human-friendly conventions like complex tables and decorative elements don't add value for AI agents
 - Cost amplification: Every agent that reads the document pays the same token tax for human-centric formatting
 
 ### The Solution
 
-Agent MD enforces AI-friendly markdown standards that eliminate token waste while maintaining readability for both humans and machines.
+`agent-md` enforces AI-friendly markdown standards that eliminate token waste while maintaining readability for both humans and machines.
 
 ## Installation
 
