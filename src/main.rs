@@ -144,6 +144,16 @@ fn validate_markdown(content: &str) -> LintResult {
                 rule: "no-ascii-graph".to_string(),
             });
         }
+
+        // Rule: Limited Space Indentation
+        if let Some(col) = validate_space_indentation(line) {
+            warnings.push(LintWarning {
+                line: line_num,
+                column: col,
+                message: "Use at most 2 spaces for indentation in regular text. Code blocks are exempt from this rule.".to_string(),
+                rule: "space-indentation".to_string(),
+            });
+        }
     }
 
     // Rule: Proper heading structure validation
@@ -818,6 +828,64 @@ fn validate_code_blocks(content: &str) -> Option<Vec<LintWarning>> {
     } else {
         Some(warnings)
     }
+}
+
+fn validate_space_indentation(line: &str) -> Option<usize> {
+    // Check for leading spaces in regular text (not code blocks or list items)
+    let trimmed = line.trim_end();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    // Skip if this looks like a list item (including nested ones)
+    if trimmed.starts_with("- ") || trimmed.starts_with("* ") || trimmed.starts_with("+ ") {
+        return None;
+    }
+
+    // Skip if this looks like an ordered list item (including nested ones)
+    // Check both at start and after indentation
+    let line_without_leading_spaces = line.trim_start();
+    if line_without_leading_spaces.len() >= 3 {
+        let mut i = 0;
+        let mut has_digits = false;
+        while i < line_without_leading_spaces.len() && line_without_leading_spaces.chars().nth(i).unwrap().is_ascii_digit() {
+            has_digits = true;
+            i += 1;
+        }
+        if has_digits && i < line_without_leading_spaces.len() {
+            let separator = line_without_leading_spaces.chars().nth(i).unwrap();
+            if (separator == '.' || separator == ')') && i + 1 < line_without_leading_spaces.len() {
+                let next_char = line_without_leading_spaces.chars().nth(i + 1).unwrap();
+                if next_char == ' ' {
+                    return None;
+                }
+            }
+        }
+    }
+
+    // Skip if this looks like a heading
+    if trimmed.starts_with('#') {
+        return None;
+    }
+
+    // Skip if this looks like a blockquote
+    if trimmed.starts_with('>') {
+        return None;
+    }
+
+    // Count leading spaces
+    let leading_spaces = line.len() - line.trim_start().len();
+
+    // Only check spaces, not tabs
+    if leading_spaces > 2 && line.starts_with("   ") {
+        // Check if the line starts with spaces (not tabs)
+        let has_leading_spaces = line.chars().take(leading_spaces).all(|c| c == ' ');
+        if has_leading_spaces {
+            return Some(1); // Return column 1 for the indentation issue
+        }
+    }
+
+    None
 }
 
 fn extract_heading_level(line: &str) -> Option<u32> {
@@ -3064,5 +3132,154 @@ End.
         let result = validate_markdown(content);
         assert!(result.valid); // Should be valid - whitespace shouldn't affect validation
         assert_eq!(result.errors.len(), 0);
+    }
+
+    // Tests for space indentation validation
+    #[test]
+    fn test_validate_space_indentation_excessive_spaces() {
+        let content = r#"# Title
+
+Regular paragraph.
+
+    Paragraph with 4 spaces - should trigger warning.
+
+      Paragraph with 6 spaces - should trigger warning.
+
+        Paragraph with 8 spaces - should trigger warning.
+"#;
+    let result = validate_markdown(content);
+    assert!(result.valid); // Should be valid (no errors, only warnings)
+    assert_eq!(result.warnings.len(), 3);
+
+    // Check that all warnings are for space-indentation rule
+        for warning in &result.warnings {
+            assert_eq!(warning.rule, "space-indentation");
+        }
+
+        // Check specific line numbers
+        let warning_lines: Vec<usize> = result.warnings.iter().map(|w| w.line).collect();
+        assert!(warning_lines.contains(&5));  // "    Paragraph with 4 spaces"
+        assert!(warning_lines.contains(&7));  // "      Paragraph with 6 spaces"
+        assert!(warning_lines.contains(&9));  // "        Paragraph with 8 spaces"
+    }
+
+    #[test]
+    fn test_validate_space_indentation_valid_cases() {
+        let content = r#"# Title
+
+Regular paragraph.
+
+  Paragraph with 2 spaces - should be valid.
+
+	Paragraph with tab - should be valid.
+
+1. Ordered list item
+    2. Nested ordered list item
+
+- Unordered list item
+  - Nested unordered list item
+
+> Blockquote with indentation
+
+```javascript
+function example() {
+    // Code block should be exempt
+    return true;
+}
+```
+"#;
+        let result = validate_markdown(content);
+        // Should be valid (no space indentation warnings)
+        assert!(result.warnings.iter().all(|w| w.rule != "space-indentation"));
+    }
+
+    #[test]
+    fn test_validate_space_indentation_edge_cases() {
+        let content = r#"# Title
+
+    Mixed with list item:
+    1. This should still be exempt
+
+    Mixed with heading:
+    ## This should be exempt
+
+    Mixed with blockquote:
+    > This should be exempt
+
+Empty line with spaces:
+
+
+Line with only spaces should be ignored.
+"#;
+        let result = validate_markdown(content);
+        // Should have space indentation warnings for lines with excessive indentation
+        let space_warnings: Vec<&LintWarning> = result.warnings.iter()
+            .filter(|w| w.rule == "space-indentation")
+            .collect();
+
+        // Lines with 4+ spaces should trigger warnings, except for properly formatted
+        // list items which are exempt even with indentation
+        assert_eq!(space_warnings.len(), 5);
+
+        let warning_lines: Vec<usize> = space_warnings.iter().map(|w| w.line).collect();
+        assert!(warning_lines.contains(&3));  // "    Mixed with list item:"
+        // Line 4 is exempt (properly formatted ordered list item)
+        assert!(warning_lines.contains(&6));  // "    Mixed with heading:"
+        assert!(warning_lines.contains(&7));  // "    ## This should be exempt"
+        assert!(warning_lines.contains(&9));  // "    Mixed with blockquote:"
+        assert!(warning_lines.contains(&10)); // "    > This should be exempt"
+    }
+
+    #[test]
+    fn test_validate_space_indentation_comprehensive() {
+        let content = r#"# Document Title
+
+This is a regular paragraph.
+
+  This paragraph has 2 spaces - valid.
+
+    This paragraph has 4 spaces - invalid.
+
+## Section
+
+1. First item
+    2. Second item - should be valid (nested list)
+
+- Unordered item
+  - Nested item - should be valid
+
+```rust
+fn main() {
+    // Code block - exempt
+    println!("Hello");
+}
+```
+
+> Blockquote
+> With multiple lines
+>     Even with indentation - exempt
+
+    Another paragraph with 4 spaces - invalid.
+
+Final paragraph.
+"#;
+        let result = validate_markdown(content);
+
+        // Should have exactly 2 space indentation warnings
+        let space_warnings: Vec<&LintWarning> = result.warnings.iter()
+            .filter(|w| w.rule == "space-indentation")
+            .collect();
+        assert_eq!(space_warnings.len(), 2);
+
+        // Check the warning lines
+        let warning_lines: Vec<usize> = space_warnings.iter().map(|w| w.line).collect();
+        assert!(warning_lines.contains(&7));  // "    This paragraph has 4 spaces"
+        assert!(warning_lines.contains(&28)); // "    Another paragraph with 4 spaces"
+
+        // Verify warning message
+        for warning in space_warnings {
+            assert_eq!(warning.message, "Use at most 2 spaces for indentation in regular text. Code blocks are exempt from this rule.");
+            assert_eq!(warning.column, 1);
+        }
     }
 }

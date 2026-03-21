@@ -641,6 +641,76 @@ Multiple H1 headings create confusion about the document's main title and struct
 
 ---
 
+## Rule 10: Limited Space Indentation
+
+Rule ID: `space-indentation`
+Severity: Warning
+Description: Use at most 2 spaces for indentation in regular text. Code blocks are exempt from this rule.
+
+### Rule 10 Invalid Examples
+
+❌ Invalid - 4 spaces for text indentation
+
+```text
+    This paragraph is indented with 4 spaces.
+    It should use 2 spaces or less.
+```
+
+❌ Invalid - Excessive indentation in lists
+
+```text
+1. First item
+      2. Second item with deep indentation
+   3. Third item
+```
+
+### Rule 10 Recommended Alternatives
+
+✅ Valid - 2 spaces or fewer for text
+
+```text
+  This paragraph uses 2 spaces for emphasis.
+  Second line of the paragraph.
+```
+
+✅ Valid - No indentation for regular text
+
+```text
+This paragraph starts at the left margin.
+No extra spaces are needed.
+```
+
+✅ Valid - Code blocks are exempt
+
+```javascript
+function example() {
+    // Code blocks can use proper indentation
+    // regardless of space count
+    return true;
+}
+```
+
+✅ Valid - Indented code blocks preserve formatting
+
+```python
+def example():
+    # Python code uses 4 spaces
+    # This is intentional and allowed
+    pass
+```
+
+✅ Valid - Tab character for text indentation
+
+```text
+	This paragraph uses a tab character.
+```
+
+### Rationale for Space Indentation Rule
+
+Excessive indentation (more than 2 spaces) in regular text can cause parsing issues and formatting inconsistencies. Code blocks are exempt because they require proper indentation for readability and many programming languages mandate specific indentation styles.
+
+---
+
 ## Validation Output Format
 
 When using the `agent-md lint` command, validation results are returned in JSON format:
@@ -690,6 +760,7 @@ When using the `agent-md lint` command, validation results are returned in JSON 
 7. Format lists consistently with proper spacing and structure
 8. Avoid duplicate headings with the same content
 9. Use only one H1 heading per document
+10. Limit text indentation to 2 spaces or fewer (code blocks exempt)
 
 ---
 

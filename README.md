@@ -174,6 +174,10 @@ The linter enforces AI-friendly markdown standards.
 
 - List formatting: Inconsistent list markers and numbering generate warnings
 
+- Space indentation: Excessive indentation (more than 2 spaces) in regular text generates warnings (code blocks exempt)
+
+Detail at <docs/markdown-writing-rules.md>
+
 ### Automatic validation
 
 The `write` command validates content before writing to ensure AI-friendly markdown.
