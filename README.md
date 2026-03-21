@@ -1,4 +1,4 @@
-# Agent MD - Markdown Editor and Linter for AI Agents
+# Agent MD - A CLI that helps you write LLM-friendly markdown
 
 ```bash
 agent-md lint README.md
