@@ -1196,7 +1196,7 @@ fn main() {
     let cli = Cli::parse();
 
     if cli.version {
-        println!("agent-md 0.1.1");
+        println!("0.1.2");
         return;
     }
 
