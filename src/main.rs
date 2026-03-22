@@ -75,6 +75,14 @@ pub struct LintWarning {
     pub rule: String,
 }
 
+fn json_output<T: ?Sized + Serialize>(value: &T, human: bool) -> String {
+    if human {
+        serde_json::to_string_pretty(value).unwrap()
+    } else {
+        serde_json::to_string(value).unwrap()
+    }
+}
+
 fn validate_markdown(content: &str) -> LintResult {
     let mut errors = Vec::new();
     let mut warnings = Vec::new();
@@ -1095,6 +1103,8 @@ pub fn parse_markdown(content: &str) -> Document {
 struct Cli {
     #[arg(short = 'v', long = "version", help = "Print version information")]
     version: bool,
+    #[arg(long = "human", help = "Pretty print JSON output")]
+    human: bool,
 
     #[command(subcommand)]
     command: Option<Commands>,
@@ -1196,7 +1206,7 @@ fn main() {
     let cli = Cli::parse();
 
     if cli.version {
-        println!("0.1.2");
+        println!("0.1.3");
         return;
     }
 
@@ -1205,27 +1215,27 @@ fn main() {
             path,
             field,
             content,
-        }) => cmd_read(&path, field.as_deref(), content.as_deref()),
-        Some(Commands::Write { path, content }) => cmd_write(&path, &content),
+        }) => cmd_read(&path, field.as_deref(), content.as_deref(), cli.human),
+        Some(Commands::Write { path, content }) => cmd_write(&path, &content, cli.human),
         Some(Commands::WriteSection {
             path,
             section,
             content,
-        }) => cmd_write_section(&path, &section, &content),
-        Some(Commands::Append { path, content }) => cmd_append(&path, &content),
+        }) => cmd_write_section(&path, &section, &content, cli.human),
+        Some(Commands::Append { path, content }) => cmd_append(&path, &content, cli.human),
         Some(Commands::Insert {
             path,
             line,
             content,
-        }) => cmd_insert(&path, line, &content),
-        Some(Commands::Delete { path, line, count }) => cmd_delete(&path, line, count),
-        Some(Commands::List { path }) => cmd_list(&path),
-        Some(Commands::Search { path, query }) => cmd_search(&path, &query),
-        Some(Commands::Headings { path }) => cmd_headings(&path),
-        Some(Commands::Stats { path }) => cmd_stats(&path),
-        Some(Commands::ToJsonl { path }) => cmd_to_jsonl(&path),
-        Some(Commands::Lint { path, content }) => cmd_lint(&path, content),
-        Some(Commands::LintFile { path }) => cmd_lint_file(&path),
+        }) => cmd_insert(&path, line, &content, cli.human),
+        Some(Commands::Delete { path, line, count }) => cmd_delete(&path, line, count, cli.human),
+        Some(Commands::List { path }) => cmd_list(&path, cli.human),
+        Some(Commands::Search { path, query }) => cmd_search(&path, &query, cli.human),
+        Some(Commands::Headings { path }) => cmd_headings(&path, cli.human),
+        Some(Commands::Stats { path }) => cmd_stats(&path, cli.human),
+        Some(Commands::ToJsonl { path }) => cmd_to_jsonl(&path, cli.human),
+        Some(Commands::Lint { path, content }) => cmd_lint(&path, content, cli.human),
+        Some(Commands::LintFile { path }) => cmd_lint_file(&path, cli.human),
         None => {
             // If no command and not version, show help
             eprintln!("Usage: agent-md <COMMAND>");
@@ -1387,22 +1397,23 @@ fn unescape_content(s: &str) -> String {
     result
 }
 
-fn cmd_read(path: &str, field: Option<&str>, content_filter: Option<&str>) {
+fn cmd_read(path: &str, field: Option<&str>, content_filter: Option<&str>, human: bool) {
     match fs::read_to_string(path) {
         Ok(content) => {
-            // Handle content filtering first
             let filtered_content = if let Some(section_name) = content_filter {
                 match extract_section_content(&content, section_name) {
                     Some(section) => section,
                     None => {
                         println!(
                             "{}",
-                            serde_json::to_string(&EditResult {
-                                success: false,
-                                message: format!("Section '{}' not found", section_name),
-                                document: None
-                            })
-                            .unwrap()
+                            json_output(
+                                &EditResult {
+                                    success: false,
+                                    message: format!("Section '{}' not found", section_name),
+                                    document: None
+                                },
+                                human
+                            )
                         );
                         return;
                     }
@@ -1416,18 +1427,18 @@ fn cmd_read(path: &str, field: Option<&str>, content_filter: Option<&str>) {
 
             let output = if let Some(field_name) = field {
                 match field_name {
-                    "path" => serde_json::to_string(&doc.path).unwrap(),
-                    "content" => serde_json::to_string(&doc.content).unwrap(),
-                    "word_count" => serde_json::to_string(&doc.word_count).unwrap(),
-                    "line_count" => serde_json::to_string(&doc.line_count).unwrap(),
-                    "headings" => serde_json::to_string(&doc.headings).unwrap(),
+                    "path" => json_output(&doc.path, human),
+                    "content" => json_output(&doc.content, human),
+                    "word_count" => json_output(&doc.word_count, human),
+                    "line_count" => json_output(&doc.line_count, human),
+                    "headings" => json_output(&doc.headings, human),
                     _ => {
                         eprintln!("Error: Invalid field '{}'. Valid fields: path, content, word_count, line_count, headings", field_name);
                         std::process::exit(1);
                     }
                 }
             } else {
-                serde_json::to_string(&doc).unwrap()
+                json_output(&doc, human)
             };
 
             println!("{}", output);
@@ -1435,37 +1446,39 @@ fn cmd_read(path: &str, field: Option<&str>, content_filter: Option<&str>) {
         Err(e) => {
             println!(
                 "{}",
-                serde_json::to_string(&EditResult {
-                    success: false,
-                    message: format!("Failed to read file: {}", e),
-                    document: None
-                })
-                .unwrap()
+                json_output(
+                    &EditResult {
+                        success: false,
+                        message: format!("Failed to read file: {}", e),
+                        document: None
+                    },
+                    human
+                )
             );
         }
     }
 }
 
-fn cmd_write(path: &str, content: &str) {
+fn cmd_write(path: &str, content: &str, human: bool) {
     let content = unescape_content(content);
-    // Validate content before writing
     let validation = validate_markdown(&content);
 
     if !validation.valid {
         println!(
             "{}",
-            serde_json::to_string(&EditResult {
-                success: false,
-                message: format!(
-                    "Content validation failed: {} errors found",
-                    validation.errors.len()
-                ),
-                document: None,
-            })
-            .unwrap()
+            json_output(
+                &EditResult {
+                    success: false,
+                    message: format!(
+                        "Content validation failed: {} errors found",
+                        validation.errors.len()
+                    ),
+                    document: None,
+                },
+                human
+            )
         );
-        // Also output validation details
-        println!("{}", serde_json::to_string(&validation).unwrap());
+        println!("{}", json_output(&validation, human));
         return;
     }
 
@@ -1475,46 +1488,52 @@ fn cmd_write(path: &str, content: &str) {
             doc.path = path.to_string();
             println!(
                 "{}",
-                serde_json::to_string(&EditResult {
-                    success: true,
-                    message: "File written successfully".to_string(),
-                    document: Some(doc),
-                })
-                .unwrap()
+                json_output(
+                    &EditResult {
+                        success: true,
+                        message: "File written successfully".to_string(),
+                        document: Some(doc),
+                    },
+                    human
+                )
             );
         }
         Err(e) => {
             println!(
                 "{}",
-                serde_json::to_string(&EditResult {
-                    success: false,
-                    message: format!("Failed to write file: {}", e),
-                    document: None
-                })
-                .unwrap()
+                json_output(
+                    &EditResult {
+                        success: false,
+                        message: format!("Failed to write file: {}", e),
+                        document: None
+                    },
+                    human
+                )
             );
         }
     }
 }
 
-fn cmd_write_section(path: &str, section_path: &str, new_content: &str) {
+fn cmd_write_section(path: &str, section_path: &str, new_content: &str, human: bool) {
     let new_content = unescape_content(new_content);
     let validation = validate_markdown(&new_content);
 
     if !validation.valid {
         println!(
             "{}",
-            serde_json::to_string(&EditResult {
-                success: false,
-                message: format!(
-                    "Content validation failed: {} errors found",
-                    validation.errors.len()
-                ),
-                document: None,
-            })
-            .unwrap()
+            json_output(
+                &EditResult {
+                    success: false,
+                    message: format!(
+                        "Content validation failed: {} errors found",
+                        validation.errors.len()
+                    ),
+                    document: None,
+                },
+                human
+            )
         );
-        println!("{}", serde_json::to_string(&validation).unwrap());
+        println!("{}", json_output(&validation, human));
         return;
     }
 
@@ -1533,35 +1552,44 @@ fn cmd_write_section(path: &str, section_path: &str, new_content: &str) {
                         doc.path = path.to_string();
                         println!(
                             "{}",
-                            serde_json::to_string(&EditResult {
-                                success: true,
-                                message: format!("Section '{}' written successfully", section_path),
-                                document: Some(doc),
-                            })
-                            .unwrap()
+                            json_output(
+                                &EditResult {
+                                    success: true,
+                                    message: format!(
+                                        "Section '{}' written successfully",
+                                        section_path
+                                    ),
+                                    document: Some(doc),
+                                },
+                                human
+                            )
                         );
                     }
                     Err(e) => {
                         println!(
                             "{}",
-                            serde_json::to_string(&EditResult {
-                                success: false,
-                                message: format!("Failed to write file: {}", e),
-                                document: None,
-                            })
-                            .unwrap()
+                            json_output(
+                                &EditResult {
+                                    success: false,
+                                    message: format!("Failed to write file: {}", e),
+                                    document: None,
+                                },
+                                human
+                            )
                         );
                     }
                 },
                 Err(e) => {
                     println!(
                         "{}",
-                        serde_json::to_string(&EditResult {
-                            success: false,
-                            message: e,
-                            document: None,
-                        })
-                        .unwrap()
+                        json_output(
+                            &EditResult {
+                                success: false,
+                                message: e,
+                                document: None,
+                            },
+                            human
+                        )
                     );
                 }
             }
@@ -1569,12 +1597,14 @@ fn cmd_write_section(path: &str, section_path: &str, new_content: &str) {
         Err(e) => {
             println!(
                 "{}",
-                serde_json::to_string(&EditResult {
-                    success: false,
-                    message: format!("Failed to read file: {}", e),
-                    document: None,
-                })
-                .unwrap()
+                json_output(
+                    &EditResult {
+                        success: false,
+                        message: format!("Failed to read file: {}", e),
+                        document: None,
+                    },
+                    human
+                )
             );
         }
     }
@@ -1687,7 +1717,7 @@ fn insert_section_content(
     Ok(result.join("\n"))
 }
 
-fn cmd_append(path: &str, content: &str) {
+fn cmd_append(path: &str, content: &str, human: bool) {
     let content = unescape_content(content);
     match fs::read_to_string(path) {
         Ok(mut existing) => {
@@ -1701,23 +1731,27 @@ fn cmd_append(path: &str, content: &str) {
                     doc.path = path.to_string();
                     println!(
                         "{}",
-                        serde_json::to_string(&EditResult {
-                            success: true,
-                            message: "Content appended successfully".to_string(),
-                            document: Some(doc),
-                        })
-                        .unwrap()
+                        json_output(
+                            &EditResult {
+                                success: true,
+                                message: "Content appended successfully".to_string(),
+                                document: Some(doc),
+                            },
+                            human
+                        )
                     );
                 }
                 Err(e) => {
                     println!(
                         "{}",
-                        serde_json::to_string(&EditResult {
-                            success: false,
-                            message: format!("Failed to write file: {}", e),
-                            document: None
-                        })
-                        .unwrap()
+                        json_output(
+                            &EditResult {
+                                success: false,
+                                message: format!("Failed to write file: {}", e),
+                                document: None
+                            },
+                            human
+                        )
                     );
                 }
             }
@@ -1725,18 +1759,20 @@ fn cmd_append(path: &str, content: &str) {
         Err(e) => {
             println!(
                 "{}",
-                serde_json::to_string(&EditResult {
-                    success: false,
-                    message: format!("Failed to read file: {}", e),
-                    document: None
-                })
-                .unwrap()
+                json_output(
+                    &EditResult {
+                        success: false,
+                        message: format!("Failed to read file: {}", e),
+                        document: None
+                    },
+                    human
+                )
             );
         }
     }
 }
 
-fn cmd_insert(path: &str, line: usize, content: &str) {
+fn cmd_insert(path: &str, line: usize, content: &str, human: bool) {
     let content = unescape_content(content);
     match fs::read_to_string(path) {
         Ok(existing) => {
@@ -1751,23 +1787,27 @@ fn cmd_insert(path: &str, line: usize, content: &str) {
                     doc.path = path.to_string();
                     println!(
                         "{}",
-                        serde_json::to_string(&EditResult {
-                            success: true,
-                            message: format!("Inserted at line {}", line),
-                            document: Some(doc),
-                        })
-                        .unwrap()
+                        json_output(
+                            &EditResult {
+                                success: true,
+                                message: format!("Inserted at line {}", line),
+                                document: Some(doc),
+                            },
+                            human
+                        )
                     );
                 }
                 Err(e) => {
                     println!(
                         "{}",
-                        serde_json::to_string(&EditResult {
-                            success: false,
-                            message: format!("Failed to write file: {}", e),
-                            document: None
-                        })
-                        .unwrap()
+                        json_output(
+                            &EditResult {
+                                success: false,
+                                message: format!("Failed to write file: {}", e),
+                                document: None
+                            },
+                            human
+                        )
                     );
                 }
             }
@@ -1775,18 +1815,20 @@ fn cmd_insert(path: &str, line: usize, content: &str) {
         Err(e) => {
             println!(
                 "{}",
-                serde_json::to_string(&EditResult {
-                    success: false,
-                    message: format!("Failed to read file: {}", e),
-                    document: None
-                })
-                .unwrap()
+                json_output(
+                    &EditResult {
+                        success: false,
+                        message: format!("Failed to read file: {}", e),
+                        document: None
+                    },
+                    human
+                )
             );
         }
     }
 }
 
-fn cmd_delete(path: &str, line: usize, count: usize) {
+fn cmd_delete(path: &str, line: usize, count: usize, human: bool) {
     match fs::read_to_string(path) {
         Ok(existing) => {
             let mut lines: Vec<String> = existing.lines().map(|s| s.to_string()).collect();
@@ -1800,23 +1842,27 @@ fn cmd_delete(path: &str, line: usize, count: usize) {
                     doc.path = path.to_string();
                     println!(
                         "{}",
-                        serde_json::to_string(&EditResult {
-                            success: true,
-                            message: format!("Deleted {} lines from line {}", count, line),
-                            document: Some(doc),
-                        })
-                        .unwrap()
+                        json_output(
+                            &EditResult {
+                                success: true,
+                                message: format!("Deleted {} lines from line {}", count, line),
+                                document: Some(doc),
+                            },
+                            human
+                        )
                     );
                 }
                 Err(e) => {
                     println!(
                         "{}",
-                        serde_json::to_string(&EditResult {
-                            success: false,
-                            message: format!("Failed to write file: {}", e),
-                            document: None
-                        })
-                        .unwrap()
+                        json_output(
+                            &EditResult {
+                                success: false,
+                                message: format!("Failed to write file: {}", e),
+                                document: None
+                            },
+                            human
+                        )
                     );
                 }
             }
@@ -1824,18 +1870,20 @@ fn cmd_delete(path: &str, line: usize, count: usize) {
         Err(e) => {
             println!(
                 "{}",
-                serde_json::to_string(&EditResult {
-                    success: false,
-                    message: format!("Failed to read file: {}", e),
-                    document: None
-                })
-                .unwrap()
+                json_output(
+                    &EditResult {
+                        success: false,
+                        message: format!("Failed to read file: {}", e),
+                        document: None
+                    },
+                    human
+                )
             );
         }
     }
 }
 
-fn cmd_list(path: &str) {
+fn cmd_list(path: &str, human: bool) {
     let path = PathBuf::from(path);
     match fs::read_dir(&path) {
         Ok(entries) => {
@@ -1848,23 +1896,25 @@ fn cmd_list(path: &str) {
                 }
             }
             files.sort();
-            println!("{}", serde_json::to_string(&files).unwrap());
+            println!("{}", json_output(&files, human));
         }
         Err(e) => {
             println!(
                 "{}",
-                serde_json::to_string(&EditResult {
-                    success: false,
-                    message: format!("Failed to list directory: {}", e),
-                    document: None
-                })
-                .unwrap()
+                json_output(
+                    &EditResult {
+                        success: false,
+                        message: format!("Failed to list directory: {}", e),
+                        document: None
+                    },
+                    human
+                )
             );
         }
     }
 }
 
-fn cmd_search(path: &str, query: &str) {
+fn cmd_search(path: &str, query: &str, human: bool) {
     match fs::read_to_string(path) {
         Ok(content) => {
             let query_lower = query.to_lowercase();
@@ -1879,103 +1929,115 @@ fn cmd_search(path: &str, query: &str) {
             }
             println!(
                 "{}",
-                serde_json::to_string(&SearchResult {
-                    query: query.to_string(),
-                    total: matches.len(),
-                    matches,
-                })
-                .unwrap()
+                json_output(
+                    &SearchResult {
+                        query: query.to_string(),
+                        total: matches.len(),
+                        matches,
+                    },
+                    human
+                )
             );
         }
         Err(e) => {
             println!(
                 "{}",
-                serde_json::to_string(&EditResult {
-                    success: false,
-                    message: format!("Failed to read file: {}", e),
-                    document: None
-                })
-                .unwrap()
+                json_output(
+                    &EditResult {
+                        success: false,
+                        message: format!("Failed to read file: {}", e),
+                        document: None
+                    },
+                    human
+                )
             );
         }
     }
 }
 
-fn cmd_headings(path: &str) {
+fn cmd_headings(path: &str, human: bool) {
     match fs::read_to_string(path) {
         Ok(content) => {
             let doc = parse_markdown(&content);
-            println!("{}", serde_json::to_string(&doc.headings).unwrap());
+            println!("{}", json_output(&doc.headings, human));
         }
         Err(e) => {
             println!(
                 "{}",
-                serde_json::to_string(&EditResult {
-                    success: false,
-                    message: format!("Failed to read file: {}", e),
-                    document: None
-                })
-                .unwrap()
+                json_output(
+                    &EditResult {
+                        success: false,
+                        message: format!("Failed to read file: {}", e),
+                        document: None
+                    },
+                    human
+                )
             );
         }
     }
 }
 
-fn cmd_stats(path: &str) {
+fn cmd_stats(path: &str, human: bool) {
     match fs::read_to_string(path) {
         Ok(content) => {
             let mut doc = parse_markdown(&content);
             doc.path = path.to_string();
             println!(
                 "{}",
-                serde_json::to_string(&serde_json::json!({
-                    "path": doc.path,
-                    "word_count": doc.word_count,
-                    "line_count": doc.line_count,
-                    "heading_count": doc.headings.len(),
-                }))
-                .unwrap()
+                json_output(
+                    &serde_json::json!({
+                        "path": doc.path,
+                        "word_count": doc.word_count,
+                        "line_count": doc.line_count,
+                        "heading_count": doc.headings.len(),
+                    }),
+                    human
+                )
             );
         }
         Err(e) => {
             println!(
                 "{}",
-                serde_json::to_string(&EditResult {
-                    success: false,
-                    message: format!("Failed to read file: {}", e),
-                    document: None
-                })
-                .unwrap()
+                json_output(
+                    &EditResult {
+                        success: false,
+                        message: format!("Failed to read file: {}", e),
+                        document: None
+                    },
+                    human
+                )
             );
         }
     }
 }
 
-fn cmd_to_jsonl(path: &str) {
+fn cmd_to_jsonl(path: &str, human: bool) {
     match fs::read_to_string(path) {
         Ok(content) => {
             let entries = parse_markdown_to_jsonl(&content);
             let stdout = io::stdout();
             let mut handle = stdout.lock();
             for entry in entries {
-                writeln!(handle, "{}", serde_json::to_string(&entry).unwrap()).unwrap();
+                writeln!(handle, "{}", json_output(&entry, human)).unwrap();
             }
         }
         Err(e) => {
             println!(
                 "{}",
-                serde_json::to_string(&EditResult {
-                    success: false,
-                    message: format!("Failed to read file: {}", e),
-                    document: None
-                })
-                .unwrap()
+                json_output(
+                    &EditResult {
+                        success: false,
+                        message: format!("Failed to read file: {}", e),
+                        document: None
+                    },
+                    human
+                )
             );
         }
     }
 }
 
-fn cmd_lint(path: &str, is_content: bool) {
+fn cmd_lint(path: &str, is_content: bool, human: bool) {
     let content = if is_content {
         unescape_content(path)
     } else {
@@ -1984,17 +2046,19 @@ fn cmd_lint(path: &str, is_content: bool) {
             Err(e) => {
                 println!(
                     "{}",
-                    serde_json::to_string(&LintResult {
-                        valid: false,
-                        errors: vec![LintError {
-                            line: 0,
-                            column: 0,
-                            message: format!("Failed to read file: {}", e),
-                            rule: "file-read".to_string(),
-                        }],
-                        warnings: vec![],
-                    })
-                    .unwrap()
+                    json_output(
+                        &LintResult {
+                            valid: false,
+                            errors: vec![LintError {
+                                line: 0,
+                                column: 0,
+                                message: format!("Failed to read file: {}", e),
+                                rule: "file-read".to_string(),
+                            }],
+                            warnings: vec![],
+                        },
+                        human
+                    )
                 );
                 return;
             }
@@ -2002,10 +2066,10 @@ fn cmd_lint(path: &str, is_content: bool) {
     };
 
     let result = validate_markdown(&content);
-    println!("{}", serde_json::to_string(&result).unwrap());
+    println!("{}", json_output(&result, human));
 }
 
-fn cmd_lint_file(path: &str) {
+fn cmd_lint_file(path: &str, _human: bool) {
     match fs::read_to_string(path) {
         Ok(content) => {
             let result = validate_markdown(&content);

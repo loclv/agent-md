@@ -142,7 +142,12 @@ Or tell LLM/Agents:
 
 ## Commands (LLM-friendly JSON output)
 
-All commands return JSON for easy parsing.
+All commands return JSON for easy parsing. Use `--human` flag before the subcommand for pretty-printed output:
+
+```bash
+agent-md --human lint README.md
+agent-md --human read README.md --field headings
+```
 
 ### Read a file
 

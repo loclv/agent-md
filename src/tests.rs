@@ -1337,7 +1337,11 @@ End of document.
         assert!(cli.command.is_some());
 
         match cli.command.unwrap() {
-            Commands::Read { path, field: _, content: _ } => {
+            Commands::Read {
+                path,
+                field: _,
+                content: _,
+            } => {
                 assert_eq!(path, "test.md");
             }
             _ => panic!("Expected Read command"),
@@ -1354,10 +1358,166 @@ End of document.
         assert!(cli.command.is_some());
 
         match cli.command.unwrap() {
-            Commands::Read { path, field: _, content: _ } => {
+            Commands::Read {
+                path,
+                field: _,
+                content: _,
+            } => {
                 assert_eq!(path, "test.md");
             }
             _ => panic!("Expected Read command"),
         }
+    }
+
+    // Tests for ASCII graph detection in code blocks (now errors, not warnings)
+    #[test]
+    fn test_validate_markdown_ascii_graph_in_code_block_error() {
+        let content = r#"# Document Title
+
+## ASCII Graph Example
+
+```text
+├── public/
+│   ├── pagefind/
+│   ├── favicon.svg
+```
+
+Regular text here.
+"#;
+        let result = validate_markdown(content);
+        assert!(!result.valid); // Should have errors
+
+        let ascii_errors: Vec<&LintError> = result
+            .errors
+            .iter()
+            .filter(|e| e.rule == "no-ascii-graph")
+            .collect();
+        assert_eq!(ascii_errors.len(), 3); // Three lines with tree structure
+
+        // All should have the "in code block" message
+        for error in &ascii_errors {
+            assert!(error.message.contains("in code block"));
+            assert_eq!(error.rule, "no-ascii-graph");
+        }
+    }
+
+    #[test]
+    fn test_validate_markdown_ascii_graph_box_drawing_in_code_block_error() {
+        let content = r#"# Box Example
+
+```text
+┌───┐
+│ A │
+└───┘
+```
+"#;
+        let result = validate_markdown(content);
+        assert!(!result.valid); // Should have errors
+
+        let ascii_errors: Vec<&LintError> = result
+            .errors
+            .iter()
+            .filter(|e| e.rule == "no-ascii-graph")
+            .collect();
+        assert!(ascii_errors.len() >= 2); // At least 2 lines with box drawing
+
+        for error in &ascii_errors {
+            assert!(error.message.contains("in code block"));
+        }
+    }
+
+    #[test]
+    fn test_validate_markdown_ascii_graph_outside_code_block_warning() {
+        let content = r#"# Document
+
+Regular text with graph: A -> B
+
+```text
+Code block content
+```
+
+More text.
+"#;
+        let result = validate_markdown(content);
+        assert!(result.valid); // Should be valid (warnings only)
+
+        // Should have warning for ASCII graph outside code block
+        let ascii_warnings: Vec<&LintWarning> = result
+            .warnings
+            .iter()
+            .filter(|w| w.rule == "no-ascii-graph")
+            .collect();
+        assert_eq!(ascii_warnings.len(), 1);
+        assert!(ascii_warnings[0].message.contains("ASCII graph detected"));
+    }
+
+    #[test]
+    fn test_validate_markdown_ascii_graph_mixed_code_block_and_regular() {
+        let content = r#"# Document
+
+Text with graph: flow outside code block.
+
+```text
+├── tree
+│   └── inside code block
+```
+
+More regular text.
+"#;
+        let result = validate_markdown(content);
+        // Should have errors from code block but valid for regular text
+        assert!(!result.valid);
+
+        // Warning for outside code block
+        let ascii_warnings: Vec<&LintWarning> = result
+            .warnings
+            .iter()
+            .filter(|w| w.rule == "no-ascii-graph")
+            .collect();
+        assert_eq!(ascii_warnings.len(), 1);
+
+        // Errors for inside code block
+        let ascii_errors: Vec<&LintError> = result
+            .errors
+            .iter()
+            .filter(|e| e.rule == "no-ascii-graph")
+            .collect();
+        assert_eq!(ascii_errors.len(), 2);
+    }
+
+    #[test]
+    fn test_validate_markdown_ascii_graph_in_code_block_with_language() {
+        let content = r#"# Code Example
+
+```bash
+├── public/
+│   ├── favicon.svg
+└── images/
+```
+"#;
+        let result = validate_markdown(content);
+        assert!(!result.valid); // Should have errors
+
+        let ascii_errors: Vec<&LintError> = result
+            .errors
+            .iter()
+            .filter(|e| e.rule == "no-ascii-graph")
+            .collect();
+        assert!(ascii_errors.len() >= 2);
+
+        for error in &ascii_errors {
+            assert_eq!(error.rule, "no-ascii-graph");
+            assert!(error.message.contains("in code block"));
+        }
+    }
+
+    #[test]
+    fn test_find_ascii_graph_folder_structure() {
+        // Test common folder tree patterns that should be detected
+        assert!(find_ascii_graph("├── public/").is_some());
+        assert!(find_ascii_graph("│   ├── pagefind/").is_some());
+        assert!(find_ascii_graph("└── images/").is_some());
+        // Tree structure needs at least the tree prefix pattern to be detected
+        assert!(find_ascii_graph("│   └── file").is_some());
     }
 }

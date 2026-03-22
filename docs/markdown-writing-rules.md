@@ -224,34 +224,63 @@ Links where the text equals the URL provide no additional context and create red
 
 Rule ID: `no-ascii-graph`
 Severity: Error
-Description: Human-readable ASCII graphs should be replaced with LLM-readable formats.
+Description: Human-readable ASCII graphs should be replaced with LLM-readable formats. This rule applies to ALL content, including inside code blocks.
 
 ### Rule 4 Invalid Examples
 
+Example - Box drawing characters in regular text (invalid)
+
 ```text
-# ❌ Invalid - Box drawing characters
 ┌─────────┬─────────┐
 │ Name    | Value   │
 ├─────────┼─────────┤
 │ Item 1  | 100     │
 │ Item 2  | 200     │
 └─────────┴─────────┘
+```
 
-# ❌ Invalid - Tree structures
+Example - Box drawing characters in code blocks (invalid)
+
+```text
+┌───┐
+│ A │
+└───┘
+```
+
+Example - Tree structures in regular text (invalid)
+
+```text
 root
 ├── branch1
 │   ├── leaf1
 │   └── leaf2
 └── branch2
     └── leaf3
+```
 
-# ❌ Invalid - Flow chart patterns
+Example - Tree structures in code blocks (invalid)
+
+```text
+├── public/
+│   ├── pagefind/
+│   └── favicon.svg
+```
+
+Example - Flow chart patterns (invalid)
+
+```text
 [Start] -> [Process] -> [End]
+```
 
-# ❌ Invalid - Progress bars
+Example - Progress bars (invalid)
+
+```text
 Progress: [████████░░] 80%
+```
 
-# ❌ Invalid - Graph-like patterns
+Example - Graph-like patterns (invalid)
+
+```text
 A --- B --- C
  \    |    /
   D --- E
@@ -320,6 +349,16 @@ Progress: 80% complete
 ### Rationale for ASCII Graphs Rule
 
 ASCII graphs are visually appealing but difficult for AI agents to parse reliably. Structured formats like JSON, CSV, or Mermaid diagrams provide machine-readable alternatives.
+
+Unlike bold text (which is allowed in code blocks because it may be part of programming language syntax), ASCII graphs in code blocks are still visual patterns that AI agents struggle to interpret. The `agent-md` linter therefore rejects ASCII graphs even inside code blocks, as they provide no additional semantic value for AI processing.
+
+When you need to represent tree structures, diagrams, or visual hierarchies, use these alternatives:
+
+- JSON for nested data structures
+- CSV for tabular data
+- Mermaid for flowcharts and diagrams
+- Numbered lists with conditions for processes
+- Simple text descriptions for progress indicators
 
 ---
 
