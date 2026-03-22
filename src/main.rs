@@ -90,7 +90,27 @@ fn validate_markdown(content: &str) -> LintResult {
             continue;
         }
 
-        // Skip all checks inside code blocks
+        // Rule: No ASCII Graphs - check on ALL lines including inside code blocks
+        // This is an error even in code blocks per the specification
+        if let Some(col) = find_ascii_graph(line) {
+            if in_code_block {
+                errors.push(LintError {
+                    line: line_num,
+                    column: col,
+                    message: "ASCII graph detected in code block. Use LLM-readable formats instead: Structured CSV, JSON, Mermaid Diagram, Numbered List with Conditions, ZON format, or simple progress indicators".to_string(),
+                    rule: "no-ascii-graph".to_string(),
+                });
+            } else {
+                warnings.push(LintWarning {
+                    line: line_num,
+                    column: col,
+                    message: "Human-readable ASCII graph detected. Use LLM-readable formats instead: Structured CSV, JSON, Mermaid Diagram, Numbered List with Conditions, ZON format, or simple progress indicators".to_string(),
+                    rule: "no-ascii-graph".to_string(),
+                });
+            }
+        }
+
+        // Skip all other checks inside code blocks
         if in_code_block {
             continue;
         }
@@ -132,16 +152,6 @@ fn validate_markdown(content: &str) -> LintResult {
                     "Link text should not be the same as the URL - provide meaningful link text"
                         .to_string(),
                 rule: "useless-links".to_string(),
-            });
-        }
-
-        // Rule: No ASCII Graphs - Human-readable ASCII graphs should be replaced with LLM-readable formats
-        if let Some(col) = find_ascii_graph(line) {
-            warnings.push(LintWarning {
-                line: line_num,
-                column: col,
-                message: "Human-readable ASCII graph detected. Use LLM-readable formats instead: Structured CSV, JSON, Mermaid Diagram, Numbered List with Conditions, ZON format, or simple progress indicators".to_string(),
-                rule: "no-ascii-graph".to_string(),
             });
         }
 

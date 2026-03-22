@@ -255,7 +255,7 @@ The linter enforces AI-friendly markdown standards.
 - Heading structure: Multiple H1 headings and skipped heading levels are rejected (errors)
 - Table syntax: Complex table attributes and incorrect separator format are rejected (errors)
 - Simple table syntax: Very wide tables and inline formatting in cells are rejected (errors)
-- No ASCII graphs: Box drawing characters and visual patterns are rejected (errors)
+- No ASCII graphs: Box drawing characters and visual patterns are rejected, even in code blocks (errors)
 - Code block best practices: Code blocks without language specification are rejected (errors)
 - List formatting: Inconsistent list markers and numbering are rejected (errors)
 - Space indentation: Excessive indentation (more than 2 spaces) in regular text is rejected (errors) (code blocks exempt)
