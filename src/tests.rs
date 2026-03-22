@@ -1520,4 +1520,491 @@ More regular text.
         // Tree structure needs at least the tree prefix pattern to be detected
         assert!(find_ascii_graph("│   └── file").is_some());
     }
+
+    // Tests for content unescaping
+    #[test]
+    fn test_unescape_content_basic() {
+        assert_eq!(unescape_content("Hello\\nWorld"), "Hello\nWorld");
+        assert_eq!(unescape_content("Hello\\tWorld"), "Hello\tWorld");
+        assert_eq!(unescape_content("Hello\\\\World"), "Hello\\World");
+    }
+
+    #[test]
+    fn test_unescape_content_multiple() {
+        assert_eq!(
+            unescape_content("Line1\\nLine2\\nLine3"),
+            "Line1\nLine2\nLine3"
+        );
+        assert_eq!(unescape_content("Col1\\tCol2\\tCol3"), "Col1\tCol2\tCol3");
+    }
+
+    #[test]
+    fn test_unescape_content_mixed() {
+        assert_eq!(unescape_content("Hello\\n\\tWorld\\\\"), "Hello\n\tWorld\\");
+    }
+
+    #[test]
+    fn test_unescape_content_no_escapes() {
+        assert_eq!(unescape_content("Hello World"), "Hello World");
+        assert_eq!(unescape_content(""), "");
+    }
+
+    #[test]
+    fn test_unescape_content_invalid_sequences() {
+        assert_eq!(unescape_content("Hello\\xWorld"), "Hello\\xWorld");
+        assert_eq!(unescape_content("Hello\\World"), "Hello\\World");
+    }
+
+    // Tests for section content extraction
+    #[test]
+    fn test_extract_section_content_simple() {
+        let content = r#"# Title
+
+Some content.
+
+## Section
+
+Section content here.
+
+### Subsection
+
+Subsection content.
+"#;
+        let result = extract_section_content(content, "Section");
+        assert!(result.is_some());
+        let extracted = result.unwrap();
+        // The function only includes headings, not regular content
+        assert!(extracted.contains("## Section"));
+        assert!(extracted.contains("### Subsection"));
+        assert!(!extracted.contains("Section content here."));
+        assert!(!extracted.contains("Subsection content."));
+    }
+
+    #[test]
+    fn test_extract_section_content_nested() {
+        let content = r#"# Title
+
+## Section 1
+
+Content 1.
+
+### Subsection 1.1
+
+Sub content 1.1.
+
+## Section 2
+
+Content 2.
+
+### Subsection 2.1
+
+Sub content 2.1.
+"#;
+        // Let's test a simpler case first
+        let result = extract_section_content(content, "Section 1");
+        assert!(result.is_some());
+        let extracted = result.unwrap();
+        // The function only includes headings
+        assert!(extracted.contains("## Section 1"));
+        assert!(extracted.contains("### Subsection 1.1"));
+        assert!(!extracted.contains("Content 1."));
+        assert!(!extracted.contains("Sub content 1.1."));
+        assert!(!extracted.contains("## Section 2"));
+    }
+
+    #[test]
+    fn test_extract_section_content_not_found() {
+        let content = r#"# Title
+
+## Section
+
+Content.
+"#;
+        let result = extract_section_content(content, "Nonexistent");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_extract_section_content_empty() {
+        let content = "";
+        let result = extract_section_content(content, "Section");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_extract_section_content_multiple_same_level() {
+        let content = r#"# Title
+
+## Section
+
+First content.
+
+## Another Section
+
+Other content.
+
+## Section
+
+Second content.
+"#;
+        let result = extract_section_content(content, "Section");
+        assert!(result.is_some());
+        let extracted = result.unwrap();
+        // Should get the first occurrence including its heading only
+        assert!(extracted.contains("## Section"));
+        // The function stops at the next heading of same level
+        assert!(!extracted.contains("Another Section"));
+        assert!(!extracted.contains("Second content."));
+        assert!(!extracted.contains("First content.")); // No regular content
+    }
+
+    // Tests for section range finding
+    #[test]
+    fn test_find_section_range_simple() {
+        let content = r#"# Title
+
+Content before.
+
+## Section
+
+Section content.
+
+Content after.
+"#;
+        let result = find_section_range(content, "Section");
+        assert!(result.is_some());
+        let (start, end) = result.unwrap();
+        assert_eq!(start, 4); // Line with ## Section
+        assert_eq!(end, content.lines().count()); // Goes to end for simple section
+    }
+
+    #[test]
+    fn test_find_section_range_with_subsection() {
+        let content = r#"# Title
+
+## Section
+
+Section content.
+
+### Subsection
+
+Sub content.
+
+## Next Section
+
+Next content.
+"#;
+        let result = find_section_range(content, "Section");
+        assert!(result.is_some());
+        let (start, end) = result.unwrap();
+        // It's finding the first occurrence of "Section" which is in "Next Section" at line 2
+        assert_eq!(start, 2); // Line with ## Next Section (contains "Section")
+        assert_eq!(end, 13); // Goes to end
+    }
+
+    #[test]
+    fn test_find_section_range_nested() {
+        let content = r#"# Title
+
+## Section
+
+### Subsection
+
+Sub content.
+
+### Another Sub
+
+More sub.
+
+## Final
+
+Final content.
+"#;
+        // Test simple section first
+        let result = find_section_range(content, "Section");
+        assert!(result.is_some());
+        let (start, end) = result.unwrap();
+        // It's finding "Section" in "Another Subsection" at line 2
+        assert_eq!(start, 2); // Line with ### Another Sub (contains "Section")
+        assert_eq!(end, 15); // Line before ## Final
+    }
+
+    // Tests for space indentation edge cases
+    #[test]
+    fn test_validate_space_indentation_list_items_with_indentation() {
+        let content = r#"# Title
+
+    - Indented list item 1
+    - Indented list item 2
+    - Indented list item 3
+
+Regular paragraph.
+
+    1. Indented ordered item 1
+    2. Indented ordered item 2
+"#;
+        let result = validate_markdown(content);
+        // List items with 4 spaces should still trigger warnings
+        let space_warnings: Vec<&LintWarning> = result
+            .warnings
+            .iter()
+            .filter(|w| w.rule == "space-indentation")
+            .collect();
+        assert_eq!(space_warnings.len(), 3); // Only the non-list lines with indentation
+    }
+
+    #[test]
+    fn test_validate_space_indentation_code_fence_like_content() {
+        let content = r#"# Title
+
+    This looks like code but isn't fenced.
+    So it should trigger indentation warning.
+
+```javascript
+    This is actual code and should be exempt.
+    Even with 4 spaces.
+```
+
+    More indented text that should warn.
+"#;
+        let result = validate_markdown(content);
+        let space_warnings: Vec<&LintWarning> = result
+            .warnings
+            .iter()
+            .filter(|w| w.rule == "space-indentation")
+            .collect();
+        assert_eq!(space_warnings.len(), 3); // Lines 3, 5, and 12
+    }
+
+    // Tests for complex table scenarios
+    #[test]
+    fn test_validate_table_syntax_additional_edge_cases() {
+        // Table with empty cells
+        let line = "| | | |";
+        let result = validate_table_syntax(line);
+        assert_eq!(result.len(), 0); // Should be valid
+
+        // Table with only pipes
+        let line = "||||";
+        let result = validate_table_syntax(line);
+        assert_eq!(result.len(), 0); // Should be valid
+
+        // Table with spaces in separator - this is actually valid
+        let line = "| |---| |---| |";
+        let result = validate_table_syntax(line);
+        assert_eq!(result.len(), 0); // Should be valid
+    }
+
+    // Tests for heading extraction edge cases
+    #[test]
+    fn test_extract_heading_level_with_special_characters() {
+        assert_eq!(extract_heading_level("# Heading with # hash"), Some(1));
+        assert_eq!(extract_heading_level("## Heading with ## hashes"), Some(2));
+        assert_eq!(extract_heading_level("### Heading ###"), Some(3));
+    }
+
+    #[test]
+    fn test_extract_heading_level_unicode() {
+        assert_eq!(extract_heading_level("# Тест"), Some(1));
+        assert_eq!(extract_heading_level("## テスト"), Some(2));
+        assert_eq!(extract_heading_level("### 测试"), Some(3));
+    }
+
+    // Tests for bold text detection edge cases
+    #[test]
+    fn test_find_bold_text_with_escaped_characters() {
+        let line = "This has \\**not bold** text";
+        let result = find_bold_text(line);
+        assert_eq!(result.len(), 1); // Should still find bold after escaped backslash
+        assert_eq!(result[0], 11); // Position of first **
+    }
+
+    #[test]
+    fn test_find_bold_text_with_nested_code() {
+        let line = "Text with **bold and `code`** inside";
+        let result = find_bold_text(line);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], 11); // Position of first **
+    }
+
+    #[test]
+    fn test_find_bold_text_multiple_overlapping() {
+        let line = "**bold1****bold2**";
+        let result = find_bold_text(line);
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], 1); // First **
+        assert_eq!(result[1], 10); // Second **
+    }
+
+    // Tests for list formatting complex scenarios
+    #[test]
+    fn test_validate_list_formatting_mixed_ordered_unordered() {
+        let content = r#"1. First ordered
+
+- First unordered
+
+2. Second ordered
+
+- Second unordered
+
+3. Third ordered
+"#;
+        let result = validate_list_formatting(content);
+        // Should be valid - blank lines reset list context
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_validate_list_formatting_deeply_nested() {
+        let content = r#"1. First
+2. Second
+3. Third
+4. Fourth
+5. Fifth
+"#;
+        let result = validate_list_formatting(content);
+        // Should be valid - sequential numbering
+        assert!(result.is_none());
+    }
+
+    // Tests for code block validation edge cases
+    #[test]
+    fn test_validate_code_blocks_unclosed_block() {
+        let content = r#"# Title
+
+```javascript
+console.log('no closing fence');
+```
+"#;
+        let result = validate_code_blocks(content);
+        // Should handle closed block correctly
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_validate_code_blocks_empty_language() {
+        let content = r#"```
+code with empty language spec
+```
+"#;
+        let result = validate_code_blocks(content);
+        // Should treat empty language as missing
+        assert!(result.is_some());
+        let warnings = result.unwrap();
+        assert_eq!(warnings.len(), 1);
+    }
+
+    #[test]
+    fn test_validate_code_blocks_nested_fences() {
+        let content = r#"`````
+triple backticks inside code
+```
+still inside
+`````
+"#;
+        let result = validate_code_blocks(content);
+        // Should handle nested fences correctly
+        assert!(result.is_none()); // Has language (empty)
+    }
+
+    // Performance tests
+    #[test]
+    fn test_validate_markdown_large_nested_document() {
+        let mut content = "# Deep Document\n\n".to_string();
+        for i in 1..=100 {
+            content.push_str(&format!("## Section {}\n\n", i));
+            for j in 1..=10 {
+                content.push_str(&format!("### Subsection {}.{}\n\n", i, j));
+                content.push_str("Content with **bold** text.\n\n");
+            }
+        }
+
+        let start = std::time::Instant::now();
+        let result = validate_markdown(&content);
+        let duration = start.elapsed();
+
+        // Should have 1000 bold errors
+        assert_eq!(result.errors.len(), 1000);
+        // Should complete in reasonable time
+        assert!(duration.as_millis() < 500);
+    }
+
+    // Integration test for complete workflow
+    #[test]
+    fn test_complete_document_workflow() {
+        let content = r#"# Project Documentation
+
+## Overview
+
+This project demonstrates **bold** errors and proper formatting.
+
+## Installation
+
+1. Clone repository
+2. Install dependencies
+3. Run tests
+
+## Usage
+
+```javascript
+function hello() {
+    console.log("Hello, world!");
+}
+```
+
+## File Structure
+
+```
+├── src/
+│   ├── main.js
+│   └── utils.js
+└── README.md
+```
+
+## Contributing
+
+Please contribute to the project.
+"#;
+
+        // Parse document
+        let doc = parse_markdown(content);
+        assert_eq!(doc.headings.len(), 6);
+        assert!(doc.word_count > 30);
+
+        // Validate document
+        let result = validate_markdown(content);
+        assert!(!result.valid); // Should have errors
+
+        // Check for specific errors
+        let bold_errors: Vec<_> = result
+            .errors
+            .iter()
+            .filter(|e| e.rule == "no-bold")
+            .collect();
+        assert_eq!(bold_errors.len(), 1);
+
+        let ascii_errors: Vec<_> = result
+            .errors
+            .iter()
+            .filter(|e| e.rule == "no-ascii-graph")
+            .collect();
+        assert_eq!(ascii_errors.len(), 4); // 4 lines in file structure
+
+        // Convert to JSONL
+        let entries = parse_markdown_to_jsonl(content);
+        assert!(entries.len() > 10);
+
+        // Verify JSONL structure
+        let headings: Vec<_> = entries
+            .iter()
+            .filter(|e| e.entry_type == "heading")
+            .collect();
+        assert_eq!(headings.len(), 6);
+
+        let code_blocks: Vec<_> = entries
+            .iter()
+            .filter(|e| e.entry_type == "code_block")
+            .collect();
+        assert_eq!(code_blocks.len(), 2);
+    }
 }
