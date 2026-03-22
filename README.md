@@ -55,6 +55,81 @@ export PATH="/Users/username/w/agent-md/target/release:$PATH"
 
 Now you can use the `agent-md` command from anywhere.
 
+## Specific Usage Example
+
+### Input: Regular Markdown
+
+This is a standard markdown file that many LLMs generate:
+
+```markdown
+# My Project
+
+## **Overview**
+
+This is a **really awesome** project with many __outstanding__ features:
+
+| Feature | Description                      | Status         |
+|---------|----------------------------------|----------------|
+| API     | Complete RESTful API             | ✅ Complete    |
+| UI      | Modern user interface            | 🚧 In Progress |
+| Tests   | Unit tests and integration tests | ✅ Complete    |
+
+### Steps to Follow
+
+1. **Clone repository**
+2. **Install dependencies**: `bun i`
+3. **Run server**: `bun dev`
+
+> **Note**: Make sure you have Node.js 22+ installed!
+```
+
+### Output: AI-friendly Markdown via agent-md
+
+After processing with agent-md, the content becomes cleaner:
+
+```markdown
+# My Project
+
+## Overview
+
+This is a really awesome project with many outstanding features:
+
+- API: Complete RESTful API (Complete)
+- UI: Modern user interface (In Progress)
+- Tests: Unit tests and integration tests (Complete)
+
+## Steps to Follow
+
+1. Clone repository
+2. Install dependencies: bun i
+3. Run server: bun dev
+
+Note: Make sure you have Node.js 22+ installed.
+```
+
+### Efficiency Comparison
+
+```bash
+# Lint regular markdown file
+agent-md lint regular-markdown.md
+# {"valid":false,"errors":[
+#   {"line":3,"message":"No bold text allowed","rule":"no-bold"},
+#   {"line":6,"message":"Complex table detected","rule":"simple-table"},
+#   {"line":15,"message":"No bold text allowed","rule":"no-bold"}
+# ]}
+
+# Lint agent-md file
+agent-md lint agent-md-markdown.md
+# {"valid":true,"errors":[],"warnings":[]}
+```
+
+**Benefits:**
+
+- Reduces ~20% unnecessary tokens
+- Faster LLM reading and processing
+- Maintains full information content
+- Easy section extraction
+
 ## Add a rule or command for LLM/Agents to follow
 
 For example, when adding a new rule, add it to the `AGENTS.md` file.

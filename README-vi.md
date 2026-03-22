@@ -51,6 +51,82 @@ export PATH="/Users/username/w/agent-md/target/release:$PATH"
 
 Bây giờ bạn có thể sử dụng lệnh `agent-md` từ bất cứ đâu.
 
+## Ví dụ sử dụng cụ thể
+
+### Đầu vào: Markdown thông thường
+
+Đây là một file markdown tiêu chuẩn mà nhiều LLM tạo ra:
+
+```markdown
+# Dự án Của Tôi
+
+## **Tổng quan**
+
+Đây là một dự án **rất tuyệt vời** với nhiều tính năng __nổi bật__:
+
+| Tính năng | Mô tả                           | Trạng thái         |
+|-----------|---------------------------------|--------------------|
+| API       | RESTful API hoàn chỉnh          | ✅ Hoàn thành       |
+| UI        | Giao diện người dùng hiện đại   | 🚧 Đang phát triển  |
+| Tests     | Unit tests và integration tests | ✅ Hoàn thành       |
+
+### Các bước thực hiện
+
+1. **Clone repository**
+2. **Cài đặt dependencies**: `bun i`
+3. **Chạy server**: `bun dev`
+
+> **Lưu ý**: Đảm bảo bạn có Node.js phiên bản 22+ được cài đặt!
+
+```
+
+### Đầu ra: Markdown thân thiện với AI qua agent-md
+
+Sau khi xử lý với agent-md, nội dung trở nên gọn gàng hơn:
+
+```markdown
+# Dự án Của Tôi
+
+## Tổng quan
+
+Đây là một dự án tuyệt vời với nhiều tính năng nổi bật:
+
+- API: RESTful API hoàn chỉnh (Hoàn thành)
+- UI: Giao diện người dùng hiện đại (Đang phát triển)
+- Tests: Unit tests và integration tests (Hoàn thành)
+
+## Các bước thực hiện
+
+1. Clone repository
+2. Cài đặt dependencies: bun i
+3. Chạy server: bun dev
+
+Lưu ý: Đảm bảo bạn có Node.js phiên bản 22+ được cài đặt.
+```
+
+### So sánh hiệu quả
+
+```bash
+# Kiểm tra file markdown thông thường
+agent-md lint regular-markdown.md
+# {"valid":false,"errors":[
+#   {"line":3,"message":"No bold text allowed","rule":"no-bold"},
+#   {"line":6,"message":"Complex table detected","rule":"simple-table"},
+#   {"line":15,"message":"No bold text allowed","rule":"no-bold"}
+# ]}
+
+# Kiểm tra file agent-md
+agent-md lint agent-md-markdown.md
+# {"valid":true,"errors":[],"warnings":[]}
+```
+
+Lợi ích:
+
+- Giảm ~20% số token không cần thiết
+- LLM đọc và xử lý nhanh hơn
+- Vẫn giữ được thông tin đầy đủ
+- Dễ dàng trích xuất phần cụ thể
+
 ## Thêm quy tắc hoặc lệnh cho LLM/Agents tuân theo
 
 Ví dụ, khi thêm quy tắc mới, thêm vào tệp `AGENTS.md`.
