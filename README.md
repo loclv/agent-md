@@ -101,8 +101,8 @@ This is a really awesome project with many outstanding features:
 ## Steps to Follow
 
 1. Clone repository
-2. Install dependencies: bun i
-3. Run server: bun dev
+2. Install dependencies: `bun i`
+3. Run server: `bun dev`
 
 Note: Make sure you have Node.js 22+ installed.
 ```

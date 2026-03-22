@@ -98,8 +98,8 @@ Sau khi xử lý với agent-md, nội dung trở nên gọn gàng hơn:
 ## Các bước thực hiện
 
 1. Clone repository
-2. Cài đặt dependencies: bun i
-3. Chạy server: bun dev
+2. Cài đặt dependencies: `bun i`
+3. Chạy server: `bun dev`
 
 Lưu ý: Đảm bảo bạn có Node.js phiên bản 22+ được cài đặt.
 ```
