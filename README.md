@@ -382,6 +382,23 @@ agent-md lint --content "# Title\nContent with **bold** text"
 agent-md write document.md "# Title\nValid content without bold"
 ```
 
+Example output when use "--human" flag:
+
+```json
+{
+  "valid": false,
+  "errors": [
+    {
+      "line": 9,
+      "column": 27,
+      "message": "ASCII graph detected in code block. Use LLM-readable formats instead: Structured CSV, JSON, Mermaid Diagram, Numbered List with Conditions, ZON format, or simple progress indicators",
+      "rule": "no-ascii-graph"
+    }
+  ],
+  "warnings": []
+}
+```
+
 ## Development
 
 See `docs/DEV.md` for complete development setup and guidelines.
