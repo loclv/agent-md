@@ -250,6 +250,14 @@ agent-md lint-file <path>
 # Returns: Human-readable linting output with errors, warnings, and summary
 ```
 
+### Format markdown
+
+```bash
+agent-md fmt <path>
+# Formats the markdown file in-place, removing useless trailing spaces in table cells
+# Returns: {success, message, document}
+```
+
 ## Validation Rules
 
 The linter enforces AI-friendly markdown standards.

@@ -1248,6 +1248,10 @@ enum Commands {
         #[arg(help = "Markdown file path to lint")]
         path: String,
     },
+    Fmt {
+        #[arg(help = "Markdown file path to format")]
+        path: String,
+    },
 }
 
 fn main() {
@@ -1284,6 +1288,7 @@ fn main() {
         Some(Commands::ToJsonl { path }) => cmd_to_jsonl(&path, cli.human),
         Some(Commands::Lint { path, content }) => cmd_lint(&path, content, cli.human),
         Some(Commands::LintFile { path }) => cmd_lint_file(&path, cli.human),
+        Some(Commands::Fmt { path }) => format::cmd_fmt(&path, cli.human),
         None => {
             // If no command and not version, show help
             eprintln!("Usage: agent-md <COMMAND>");
@@ -2117,10 +2122,11 @@ fn cmd_lint(path: &str, is_content: bool, human: bool) {
     println!("{}", json_output(&result, human));
 }
 
-fn cmd_lint_file(path: &str, _human: bool) {
+fn cmd_lint_file(path: &str, human: bool) {
     match fs::read_to_string(path) {
         Ok(content) => {
             let result = validate_markdown(&content);
+            println!("{}", json_output(&result, human));
 
             // Print file path
             println!("Linting file: {}", path);
@@ -2281,5 +2287,5 @@ pub fn parse_markdown_to_jsonl(content: &str) -> Vec<JsonlEntry> {
     entries
 }
 
-#[cfg(test)]
+mod format;
 mod tests;

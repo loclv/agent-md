@@ -1,4 +1,5 @@
 use crate::*;
+use crate::format::format_markdown;
 
 #[cfg(test)]
 mod tests {
@@ -2011,7 +2012,8 @@ Please contribute to the project.
     // Tests for table trailing spaces validation
     #[test]
     fn test_validate_table_trailing_spaces_no_trailing_spaces() {
-        let content = "# Test\n\n| Name | Description |\n|---|---|\n| Item | Value |\n| Test | Data |\n";
+        let content =
+            "# Test\n\n| Name | Description |\n|---|---|\n| Item | Value |\n| Test | Data |\n";
         let result = validate_markdown(content);
         assert!(result.valid);
         assert_eq!(result.errors.len(), 0);
@@ -2019,7 +2021,8 @@ Please contribute to the project.
 
     #[test]
     fn test_validate_table_trailing_spaces_single_trailing_space() {
-        let content = "# Test\n\n| Name | Description |\n|---|---|\n| Item | Value |\n| Test | Data |\n";
+        let content =
+            "# Test\n\n| Name | Description |\n|---|---|\n| Item | Value |\n| Test | Data |\n";
         let result = validate_markdown(content);
         assert!(result.valid);
         assert_eq!(result.errors.len(), 0);
@@ -2044,7 +2047,10 @@ Please contribute to the project.
         // Should fail due to incorrect separator (5 dashes instead of 3)
         assert!(!result.valid);
         // But no trailing spaces errors
-        assert!(!result.errors.iter().any(|e| e.rule == "table-trailing-spaces"));
+        assert!(!result
+            .errors
+            .iter()
+            .any(|e| e.rule == "table-trailing-spaces"));
     }
 
     #[test]
@@ -2053,7 +2059,8 @@ Please contribute to the project.
         let result = validate_markdown(content);
         assert!(!result.valid);
         // Should have 2 trailing space errors (one per line with issues)
-        let trailing_space_errors: Vec<_> = result.errors
+        let trailing_space_errors: Vec<_> = result
+            .errors
             .iter()
             .filter(|e| e.rule == "table-trailing-spaces")
             .collect();
@@ -2066,7 +2073,8 @@ Please contribute to the project.
         let result = validate_markdown(content);
         assert!(!result.valid);
         // Should only have one trailing space error from the actual table
-        let trailing_space_errors: Vec<_> = result.errors
+        let trailing_space_errors: Vec<_> = result
+            .errors
             .iter()
             .filter(|e| e.rule == "table-trailing-spaces")
             .collect();
@@ -2079,7 +2087,8 @@ Please contribute to the project.
         let result = validate_markdown(content);
         assert!(!result.valid);
         // Should have errors for cells with trailing spaces
-        let trailing_space_errors: Vec<_> = result.errors
+        let trailing_space_errors: Vec<_> = result
+            .errors
             .iter()
             .filter(|e| e.rule == "table-trailing-spaces")
             .collect();
@@ -2088,7 +2097,8 @@ Please contribute to the project.
 
     #[test]
     fn test_validate_table_trailing_spaces_leading_spaces_ok() {
-        let content = "# Test\n\n| Name | Description |\n|---|---|\n| Item | Value |\n| Test | Data |\n";
+        let content =
+            "# Test\n\n| Name | Description |\n|---|---|\n| Item | Value |\n| Test | Data |\n";
         let result = validate_markdown(content);
         assert!(result.valid);
         // Leading spaces in cells should be OK
@@ -2111,7 +2121,8 @@ Please contribute to the project.
         let result = validate_markdown(content);
         assert!(!result.valid);
         // Should have trailing space errors
-        let trailing_space_errors: Vec<_> = result.errors
+        let trailing_space_errors: Vec<_> = result
+            .errors
             .iter()
             .filter(|e| e.rule == "table-trailing-spaces")
             .collect();
@@ -2124,7 +2135,8 @@ Please contribute to the project.
         let result = validate_markdown(content);
         assert!(!result.valid);
         // Should have trailing space errors but no warnings (inline code is allowed)
-        let trailing_space_errors: Vec<_> = result.errors
+        let trailing_space_errors: Vec<_> = result
+            .errors
             .iter()
             .filter(|e| e.rule == "table-trailing-spaces")
             .collect();
@@ -2137,7 +2149,8 @@ Please contribute to the project.
         let content = "# Test\n\n| Value |\n|---|\n| Item       |\n| Test |\n| Data       |\n";
         let result = validate_markdown(content);
         assert!(!result.valid);
-        let trailing_space_errors: Vec<_> = result.errors
+        let trailing_space_errors: Vec<_> = result
+            .errors
             .iter()
             .filter(|e| e.rule == "table-trailing-spaces")
             .collect();
@@ -2151,5 +2164,111 @@ Please contribute to the project.
         assert!(result.valid);
         // Tables in code blocks should be ignored
         assert_eq!(result.errors.len(), 0);
+    }
+
+    // Tests for format_markdown - table trailing spaces handling
+    #[test]
+    fn test_format_markdown_removes_excess_trailing_spaces() {
+        let content = "# Test\n\n| Name | Description |\n|---|---|\n| Item       | Value     |\n";
+        let formatted = format_markdown(content);
+        let result = validate_markdown(&formatted);
+        // Should have no trailing space errors after formatting
+        let trailing_space_errors: Vec<_> = result
+            .errors
+            .iter()
+            .filter(|e| e.rule == "table-trailing-spaces")
+            .collect();
+        assert_eq!(trailing_space_errors.len(), 0);
+    }
+
+    #[test]
+    fn test_format_markdown_removes_all_trailing_spaces() {
+        let content = "# Test\n\n| Name | Description |\n|---|---|\n| Item  | Value  |\n";
+        let formatted = format_markdown(content);
+        // Should remove ALL trailing spaces (leading space preserved for readability)
+        assert!(
+            formatted.contains("| Item|"),
+            "Expected no trailing spaces in: {}",
+            formatted
+        );
+        assert!(
+            formatted.contains("| Value|"),
+            "Expected no trailing spaces in: {}",
+            formatted
+        );
+    }
+
+    #[test]
+    fn test_format_markdown_handles_non_table_lines() {
+        let content = "# Hello\n\nThis is regular text.\n\n- List item";
+        let formatted = format_markdown(content);
+        assert_eq!(formatted, content);
+    }
+
+    #[test]
+    fn test_format_markdown_handles_separator_rows() {
+        let content =
+            "# Test\n\n| Name | Description |\n|------|-------------|\n| Item | Value |\n";
+        let formatted = format_markdown(content);
+        // Separator rows should be preserved as-is
+        assert!(formatted.contains("|------|-------------|"));
+    }
+
+    #[test]
+    fn test_format_markdown_multiple_excess_trailing_spaces() {
+        let content = "# Test\n\n| Col1 | Col2 | Col3 |\n|------|------|------|\n| Data1       | Data2     | Data3       |\n";
+        let formatted = format_markdown(content);
+        eprintln!("Formatted:\n{}\n---", formatted);
+
+        // Debug: check each cell's trailing spaces
+        for (i, line) in formatted.lines().enumerate() {
+            let trimmed = line.trim();
+            if trimmed.starts_with('|') && trimmed.ends_with('|') {
+                let is_sep = trimmed
+                    .chars()
+                    .all(|c| c == '|' || c == '-' || c == ' ' || c == ':');
+                if !is_sep {
+                    let cells: Vec<&str> = trimmed.split('|').collect();
+                    for (j, cell) in cells.iter().enumerate() {
+                        if j > 0 && j < cells.len() - 1 {
+                            let trimmed_cell = cell.trim();
+                            let trailing = cell.len() - cell.trim_end().len();
+                            eprintln!(
+                                "Line {}, Cell {} '{}': len={}, trimmed_len={}, trailing={}",
+                                i + 1,
+                                j,
+                                cell,
+                                cell.len(),
+                                trimmed_cell.len(),
+                                trailing
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        let result = validate_markdown(&formatted);
+        eprintln!("Errors: {:?}", result.errors);
+        let trailing_space_errors: Vec<_> = result
+            .errors
+            .iter()
+            .filter(|e| e.rule == "table-trailing-spaces")
+            .collect();
+        assert_eq!(trailing_space_errors.len(), 0);
+    }
+
+    #[test]
+    fn test_format_markdown_mixed_trailing_spaces() {
+        let content =
+            "# Test\n\n| Col1 | Col2 | Col3 |\n|------|------|------|\n| A    | B        | C |\n";
+        let formatted = format_markdown(content);
+        let result = validate_markdown(&formatted);
+        let trailing_space_errors: Vec<_> = result
+            .errors
+            .iter()
+            .filter(|e| e.rule == "table-trailing-spaces")
+            .collect();
+        assert_eq!(trailing_space_errors.len(), 0);
     }
 }
