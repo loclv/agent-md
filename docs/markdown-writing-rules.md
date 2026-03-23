@@ -774,6 +774,52 @@ Excessive indentation (more than 2 spaces) in regular text can cause parsing iss
 
 ---
 
+## Rule 11: No Trailing Spaces in Table Cells
+
+Rule ID: `table-trailing-spaces`
+Severity: Error
+Description: Table cells should not have trailing spaces, except for a single optional space.
+
+### Rule 11 Invalid Examples
+
+ Invalid - Multiple trailing spaces in table cells
+
+| Name | Description |
+|---|---|
+| Item      | This is an item  |
+
+ Invalid - Many trailing spaces in cells
+
+| Column 1 | Column 2 | Column 3 |
+|---|---|---|
+| Value 1    | Value 2     | Value 3   |
+
+### Rule 11 Recommended Alternatives
+
+ Valid - No trailing spaces in cells
+
+| Name | Description |
+|---|---|
+| Item | This is an item |
+
+ Valid - Single trailing space in cells (allowed but not recommended)
+
+| Name | Description |
+|---|---|
+| Item | This is an item |
+
+ Valid - Table separator rows are ignored
+
+| Name | Description |
+|---|---|
+| Item | This is an item |
+
+### Rationale for Table Trailing Spaces Rule
+
+Trailing spaces in table cells are unnecessary and can cause formatting inconsistencies. They add visual noise without any semantic value and may cause issues with markdown parsers and version control systems.
+
+---
+
 ## Validation Output Format
 
 When using the `agent-md lint` command, validation results are returned in JSON format:
@@ -814,16 +860,17 @@ When using the `agent-md lint` command, validation results are returned in JSON 
 
 ## Best Practices Summary
 
-1. Use plain text instead of bold formatting
-2. Keep tables simple with ≤5 columns and no complex attributes
-3. Write descriptive link text rather than repeating URLs
-4. Use structured formats (JSON, CSV, Mermaid) instead of ASCII art
-5. Maintain proper heading hierarchy without skipping levels
-6. Specify code block languages when possible
-7. Format lists consistently with proper spacing and structure
-8. Avoid duplicate headings with the same content
-9. Use only one H1 heading per document
-10. Limit text indentation to 2 spaces or fewer (code blocks exempt)
+- Use plain text instead of bold formatting
+- Keep tables simple with ≤5 columns and no complex attributes
+- Write descriptive link text rather than repeating URLs
+- Use structured formats (JSON, CSV, Mermaid) instead of ASCII art
+- Maintain proper heading hierarchy without skipping levels
+- Specify code block languages when possible
+- Format lists consistently with proper spacing and structure
+- Avoid duplicate headings with the same content
+- Use only one H1 heading per document
+- Limit text indentation to 2 spaces or fewer (code blocks exempt)
+- Avoid trailing spaces in table cells (0 or 1 space maximum)
 
 ---
 

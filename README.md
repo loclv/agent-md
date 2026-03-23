@@ -256,15 +256,16 @@ The linter enforces AI-friendly markdown standards.
 
 ### Error Rules (block content)
 
-- No bold text: `**bold**` and `__bold__` are rejected (errors), except in code blocks
-- Heading structure: Multiple H1 headings and skipped heading levels are rejected (errors)
-- Table syntax: Complex table attributes and incorrect separator format are rejected (errors)
-- Simple table syntax: Very wide tables and inline formatting in cells are rejected (errors)
-- No ASCII graphs: Box drawing characters and visual patterns are rejected, even in code blocks (errors)
-- Code block best practices: Code blocks without language specification are rejected (errors)
-- List formatting: Inconsistent list markers and numbering are rejected (errors)
-- Space indentation: Excessive indentation (more than 2 spaces) in regular text is rejected (errors) (code blocks exempt)
-- No useless links: Links where text equals the URL are rejected (errors)
+- "no-bold": No bold text: `**bold**` and `__bold__` are rejected, except in code blocks
+- "heading-structure": Heading structure: Multiple H1 headings and skipped heading levels are rejected
+- "table-syntax": Table syntax: Complex table attributes and incorrect separator format are rejected
+- "simple-table-syntax": Simple table syntax: Very wide tables and inline formatting in cells are rejected
+- "table-trailing-spaces": Table trailing spaces: Table cells with more than 1 trailing space are rejected
+- "no-ascii-graphs": No ASCII graphs: Box drawing characters and visual patterns are rejected, even in code blocks
+- "code-block-best-practices": Code block best practices: Code blocks without language specification are rejected
+- "list-formatting": List formatting: Inconsistent list markers and numbering are rejected
+- "space-indentation": Space indentation: Excessive indentation (more than 2 spaces) in regular text is rejected (code blocks exempt)
+- "no-useless-links": No useless links: Links where text equals the URL are rejected
 
 ### Warning Rules (style guidelines)
 

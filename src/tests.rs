@@ -686,9 +686,9 @@ function example() {
 }
 ```
 
-| Column 1 | Column 2 |
-|---|---|---|
-| Value 1 | Value 2 |
+| Column 1| Column 2|
+|---|---|
+| Value 1| Value 2|
 
 [Link text](https://example.com)
 
@@ -2006,5 +2006,150 @@ Please contribute to the project.
             .filter(|e| e.entry_type == "code_block")
             .collect();
         assert_eq!(code_blocks.len(), 2);
+    }
+
+    // Tests for table trailing spaces validation
+    #[test]
+    fn test_validate_table_trailing_spaces_no_trailing_spaces() {
+        let content = "# Test\n\n| Name | Description |\n|---|---|\n| Item | Value |\n| Test | Data |\n";
+        let result = validate_markdown(content);
+        assert!(result.valid);
+        assert_eq!(result.errors.len(), 0);
+    }
+
+    #[test]
+    fn test_validate_table_trailing_spaces_single_trailing_space() {
+        let content = "# Test\n\n| Name | Description |\n|---|---|\n| Item | Value |\n| Test | Data |\n";
+        let result = validate_markdown(content);
+        assert!(result.valid);
+        assert_eq!(result.errors.len(), 0);
+    }
+
+    #[test]
+    fn test_validate_table_trailing_spaces_multiple_trailing_spaces() {
+        let content = "# Test\n\n| Name | Description |\n|---|---|\n| Item       | Value |\n| Test     | Data     |\n";
+        let result = validate_markdown(content);
+        assert!(!result.valid);
+        assert_eq!(result.errors.len(), 2);
+        assert_eq!(result.errors[0].rule, "table-trailing-spaces");
+        assert_eq!(result.errors[1].rule, "table-trailing-spaces");
+        assert!(result.errors[0].message.contains("found 8 trailing spaces"));
+        assert!(result.errors[1].message.contains("found 6 trailing spaces"));
+    }
+
+    #[test]
+    fn test_validate_table_trailing_spaces_separator_row_ignored() {
+        let content = "# Test\n\n| Name | Description |\n|-----|-----|\n| Item | Value |\n";
+        let result = validate_markdown(content);
+        // Should fail due to incorrect separator (5 dashes instead of 3)
+        assert!(!result.valid);
+        // But no trailing spaces errors
+        assert!(!result.errors.iter().any(|e| e.rule == "table-trailing-spaces"));
+    }
+
+    #[test]
+    fn test_validate_table_trailing_spaces_mixed_cells() {
+        let content = "# Test\n\n| Column 1 | Column 2 | Column 3 |\n|---|---|---|\n| Value 1 | Value 2       | Value 3 |\n| Test       | Data | Test       |\n";
+        let result = validate_markdown(content);
+        assert!(!result.valid);
+        // Should have 2 trailing space errors (one per line with issues)
+        let trailing_space_errors: Vec<_> = result.errors
+            .iter()
+            .filter(|e| e.rule == "table-trailing-spaces")
+            .collect();
+        assert_eq!(trailing_space_errors.len(), 2);
+    }
+
+    #[test]
+    fn test_validate_table_trailing_spaces_non_table_lines_ignored() {
+        let content = "# Test\n\n> This is not a table | but has pipes\nSome text | with pipes | that's not a table\n| Not a table row\n\n| Name | Description |\n|---|---|\n| Item       | Value |\n";
+        let result = validate_markdown(content);
+        assert!(!result.valid);
+        // Should only have one trailing space error from the actual table
+        let trailing_space_errors: Vec<_> = result.errors
+            .iter()
+            .filter(|e| e.rule == "table-trailing-spaces")
+            .collect();
+        assert_eq!(trailing_space_errors.len(), 1);
+    }
+
+    #[test]
+    fn test_validate_table_trailing_spaces_empty_cells() {
+        let content = "# Test\n\n| Name | Description | Value |\n|---|---|---|\n| Item |       | Data |\n| Test | Value     |       |\n";
+        let result = validate_markdown(content);
+        assert!(!result.valid);
+        // Should have errors for cells with trailing spaces
+        let trailing_space_errors: Vec<_> = result.errors
+            .iter()
+            .filter(|e| e.rule == "table-trailing-spaces")
+            .collect();
+        assert_eq!(trailing_space_errors.len(), 2);
+    }
+
+    #[test]
+    fn test_validate_table_trailing_spaces_leading_spaces_ok() {
+        let content = "# Test\n\n| Name | Description |\n|---|---|\n| Item | Value |\n| Test | Data |\n";
+        let result = validate_markdown(content);
+        assert!(result.valid);
+        // Leading spaces in cells should be OK
+        assert_eq!(result.errors.len(), 0);
+    }
+
+    #[test]
+    fn test_validate_table_trailing_spaces_no_pipes_at_ends() {
+        let content = "# Test\n\nName | Description\n---|---\nItem | Value\nTest | Data\n";
+        let result = validate_markdown(content);
+        // These are not valid table rows (don't start and end with |)
+        // So trailing spaces validation should not apply
+        assert!(result.valid);
+        assert_eq!(result.errors.len(), 0);
+    }
+
+    #[test]
+    fn test_validate_table_trailing_spaces_complex_table() {
+        let content = "# Test\n\n| ID | Name | Description | Status | Priority | Assignee |\n|---|---|---|---|---|---|\n| 1 | Task 1      | Implement feature | In Progress | High | John      |\n| 2 | Task 2 | Fix bug  | Done | Low | Jane |\n| 3 | Task 3     | Write tests | To Do | Medium | Bob       |\n";
+        let result = validate_markdown(content);
+        assert!(!result.valid);
+        // Should have trailing space errors
+        let trailing_space_errors: Vec<_> = result.errors
+            .iter()
+            .filter(|e| e.rule == "table-trailing-spaces")
+            .collect();
+        assert_eq!(trailing_space_errors.len(), 3);
+    }
+
+    #[test]
+    fn test_validate_table_trailing_spaces_with_inline_code() {
+        let content = "# Test\n\n| Name | Code | Description |\n|---|---|---|\n| Item | `test`      | Value with `code` |\n| Test | `example` | Data       |\n";
+        let result = validate_markdown(content);
+        assert!(!result.valid);
+        // Should have trailing space errors but no warnings (inline code is allowed)
+        let trailing_space_errors: Vec<_> = result.errors
+            .iter()
+            .filter(|e| e.rule == "table-trailing-spaces")
+            .collect();
+        assert_eq!(trailing_space_errors.len(), 2);
+        assert_eq!(result.warnings.len(), 0);
+    }
+
+    #[test]
+    fn test_validate_table_trailing_spaces_single_column() {
+        let content = "# Test\n\n| Value |\n|---|\n| Item       |\n| Test |\n| Data       |\n";
+        let result = validate_markdown(content);
+        assert!(!result.valid);
+        let trailing_space_errors: Vec<_> = result.errors
+            .iter()
+            .filter(|e| e.rule == "table-trailing-spaces")
+            .collect();
+        assert_eq!(trailing_space_errors.len(), 2);
+    }
+
+    #[test]
+    fn test_validate_table_trailing_spaces_in_code_block() {
+        let content = "# Test\n\n```text\n| Name | Description |\n|---|---|\n| Item       | Value |\n| Test     | Data      |\n```\n\n| Name | Description |\n|---|---|\n| Item | Value |\n";
+        let result = validate_markdown(content);
+        assert!(result.valid);
+        // Tables in code blocks should be ignored
+        assert_eq!(result.errors.len(), 0);
     }
 }

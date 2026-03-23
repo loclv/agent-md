@@ -151,6 +151,16 @@ fn validate_markdown(content: &str) -> LintResult {
             }
         }
 
+        // Rule: Table trailing spaces validation
+        if let Some(issue) = validate_table_trailing_spaces(line) {
+            errors.push(LintError {
+                line: line_num,
+                column: issue.column,
+                message: issue.message,
+                rule: "table-trailing-spaces".to_string(),
+            });
+        }
+
         // Rule: No useless links where text equals URL
         for col in find_useless_link(line) {
             warnings.push(LintWarning {
@@ -619,6 +629,44 @@ pub fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
     }
 
     issues
+}
+
+pub fn validate_table_trailing_spaces(line: &str) -> Option<TableIssue> {
+    let trimmed = line.trim();
+
+    // Check if this looks like a table row (must start and end with |)
+    if trimmed.starts_with('|') && trimmed.ends_with('|') {
+        // Check for separator rows (rows with only pipes and dashes)
+        let is_separator_row = trimmed
+            .chars()
+            .all(|c| c == '|' || c == '-' || c == ' ' || c == ':');
+
+        // Check for trailing spaces in table cells (except separator rows)
+        if !is_separator_row {
+            // Split by pipe and check each cell
+            let cells: Vec<&str> = trimmed.split('|').collect();
+            for (i, cell) in cells.iter().enumerate() {
+                // Skip empty cells at start and end (from leading/trailing pipes)
+                if i == 0 || i == cells.len() - 1 {
+                    continue;
+                }
+
+                let cell_trimmed = cell.trim();
+                let trailing_spaces = cell.len() - cell_trimmed.len();
+
+                // Only error if more than 2 trailing spaces (2 is normal for table formatting: 1 after content, 1 before pipe)
+                if trailing_spaces > 2 {
+                    return Some(TableIssue {
+                        column: 1, // Could calculate exact position but not necessary
+                        message: format!("Table cell should not have trailing spaces, found {} trailing spaces (should be 0, 1, or 2)", trailing_spaces),
+                        severity: Severity::Error,
+                    });
+                }
+            }
+        }
+    }
+
+    None
 }
 
 pub fn validate_heading_structure(content: &str) -> Option<Vec<LintError>> {
@@ -1206,7 +1254,7 @@ fn main() {
     let cli = Cli::parse();
 
     if cli.version {
-        println!("0.1.3");
+        println!("0.1.4");
         return;
     }
 
