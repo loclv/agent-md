@@ -2185,15 +2185,15 @@ Please contribute to the project.
     fn test_format_markdown_removes_all_trailing_spaces() {
         let content = "# Test\n\n| Name | Description |\n|---|---|\n| Item  | Value  |\n";
         let formatted = format_markdown(content);
-        // Should remove ALL trailing spaces (leading space preserved for readability)
+        // Should format with single spaces around cells for readability
         assert!(
-            formatted.contains("| Item|"),
-            "Expected no trailing spaces in: {}",
+            formatted.contains("| Item |"),
+            "Expected formatted cell with single spaces in: {}",
             formatted
         );
         assert!(
-            formatted.contains("| Value|"),
-            "Expected no trailing spaces in: {}",
+            formatted.contains("| Value |"),
+            "Expected formatted cell with single spaces in: {}",
             formatted
         );
     }

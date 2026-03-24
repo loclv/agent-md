@@ -1,10 +1,17 @@
 use crate::*;
 
 pub fn format_markdown(content: &str) -> String {
+    // Check if content ends with newline
+    let ends_with_newline = content.ends_with('\n');
+
     let mut formatted_lines = Vec::new();
 
     for line in content.lines() {
         let trimmed = line.trim();
+
+        // Calculate leading indentation (spaces/tabs before the |)
+        let leading_indent = line.len() - line.trim_start().len();
+        let indent_str = &line[..leading_indent];
 
         // Check if this looks like a table row (must start and end with |)
         if trimmed.starts_with('|') && trimmed.ends_with('|') {
@@ -15,30 +22,25 @@ pub fn format_markdown(content: &str) -> String {
 
             // Format table cells (except separator rows)
             if !is_separator_row {
-                let mut formatted_cells: Vec<String> = Vec::new();
                 let cells: Vec<&str> = trimmed.split('|').collect();
+                let mut formatted_cells = Vec::new();
 
+                // Process middle cells (skip first and last which are empty from leading/trailing pipes)
                 for (i, cell) in cells.iter().enumerate() {
-                    // Skip empty cells at start and end (from leading/trailing pipes)
                     if i == 0 || i == cells.len() - 1 {
-                        formatted_cells.push(cell.to_string());
+                        // First and last cells are empty due to leading/trailing pipes
                         continue;
                     }
-
-                    // Trim trailing spaces from cell content
-                    let cell_trimmed = cell.trim_end();
+                    // Trim both leading and trailing spaces from cell content
+                    let cell_trimmed = cell.trim();
                     formatted_cells.push(cell_trimmed.to_string());
                 }
 
-                // Reconstruct the line with formatted cells
-                let mut all_cells = Vec::new();
-                all_cells.push(cells[0].to_string());
-                all_cells.extend(formatted_cells);
-                all_cells.push(cells[cells.len()-1].to_string());
-                let formatted_line = all_cells.join("|");
+                // Reconstruct with indentation: | cell1 | cell2 | ... |
+                let formatted_line = format!("{}| {} |", indent_str, formatted_cells.join(" | "));
                 formatted_lines.push(formatted_line);
             } else {
-                // Keep separator rows as-is
+                // Keep separator rows as-is (with indentation)
                 formatted_lines.push(line.to_string());
             }
         } else {
@@ -47,7 +49,14 @@ pub fn format_markdown(content: &str) -> String {
         }
     }
 
-    formatted_lines.join("\n")
+    let mut result = formatted_lines.join("\n");
+
+    // Preserve trailing newline if original had one
+    if ends_with_newline && !result.ends_with('\n') {
+        result.push('\n');
+    }
+
+    result
 }
 
 pub fn cmd_fmt(path: &str, human: bool) {
@@ -207,6 +216,188 @@ Another paragraph.
 | John | 25 | New York | Test |
 | Jane | 30 | London |  |
 | Bob | 35 | Paris | Data |
+"#;
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_empty_content() {
+        let content = "";
+        let result = format_markdown(content);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_format_markdown_single_column_table() {
+        let content = r#"| Header |
+|---|
+| Value 1  |
+| Value 2   |
+| Value 3 |
+"#;
+        let expected = r#"| Header |
+|---|
+| Value 1 |
+| Value 2 |
+| Value 3 |
+"#;
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_no_trailing_newline() {
+        let content = "| Header |\n|---|\n| Value |";
+        let result = format_markdown(content);
+        assert!(!result.ends_with('\n'));
+        assert_eq!(result, "| Header |\n|---|\n| Value |");
+    }
+
+    #[test]
+    fn test_format_markdown_mixed_content_with_code_block() {
+        let content = r#"# Document
+
+Some text.
+
+```rust
+| Not | A | Table |
+```
+
+| Real | Table |
+|---|---|
+| Has | Spaces   |
+
+More text.
+"#;
+        let expected = r#"# Document
+
+Some text.
+
+```rust
+| Not | A | Table |
+```
+
+| Real | Table |
+|---|---|
+| Has | Spaces |
+
+More text.
+"#;
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_table_with_inline_code() {
+        let content = r#"| Function | Description |
+|---|---|
+| `test()`  | Runs tests   |
+| `main()`  | Entry point  |
+"#;
+        let expected = r#"| Function | Description |
+|---|---|
+| `test()` | Runs tests |
+| `main()` | Entry point |
+"#;
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_table_with_special_chars() {
+        let content = r#"| Symbol | Meaning |
+|---|---|
+| ->   | Arrow    |
+| =>   | Fat arrow |
+| <>   | Not equal |
+"#;
+        let expected = r#"| Symbol | Meaning |
+|---|---|
+| -> | Arrow |
+| => | Fat arrow |
+| <> | Not equal |
+"#;
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_long_cell_content() {
+        let content = r#"| Short | Long Description |
+|---|---|
+| A | This is a very long description with many words   |
+"#;
+        let expected = r#"| Short | Long Description |
+|---|---|
+| A | This is a very long description with many words |
+"#;
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_multiple_tables() {
+        let content = r#"# Tables
+
+| Table 1 | Col 2 |
+|---|---|
+| A  | B   |
+
+Some text.
+
+| Table 2 | Col 2 |
+|---|---|
+| X  | Y   |
+"#;
+        let expected = r#"# Tables
+
+| Table 1 | Col 2 |
+|---|---|
+| A | B |
+
+Some text.
+
+| Table 2 | Col 2 |
+|---|---|
+| X | Y |
+"#;
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_table_with_links() {
+        let content = r#"| Name | Link |
+|---|---|
+| Rust  | [rust-lang.org](https://rust-lang.org)  |
+"#;
+        let expected = r#"| Name | Link |
+|---|---|
+| Rust | [rust-lang.org](https://rust-lang.org) |
+"#;
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_non_table_pipes_unchanged() {
+        let content = r#"This | is | not | a | table
+Just text with | pipes
+"#;
+        let result = format_markdown(content);
+        assert_eq!(result, content);
+    }
+
+    #[test]
+    fn test_format_markdown_preserve_indentation() {
+        let content = r#"  | Indented | Table |
+  |---|---|
+  | Value 1  | Value 2   |
+"#;
+        let expected = r#"  | Indented | Table |
+  |---|---|
+  | Value 1 | Value 2 |
 "#;
         let result = format_markdown(content);
         assert_eq!(result, expected);
