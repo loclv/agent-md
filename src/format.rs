@@ -402,4 +402,107 @@ Just text with | pipes
         let result = format_markdown(content);
         assert_eq!(result, expected);
     }
+
+    // Additional comprehensive tests
+    #[test]
+    fn test_format_markdown_tab_indentation() {
+        let content = "\t| Tabbed | Table |\n\t|---|---|\n\t| Value 1  | Value 2 |\n";
+        let expected = "\t| Tabbed | Table |\n\t|---|---|\n\t| Value 1 | Value 2 |\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_only_newlines() {
+        let content = "\n\n\n";
+        let result = format_markdown(content);
+        assert_eq!(result, "\n\n");
+    }
+
+    #[test]
+    fn test_format_markdown_single_pipe_not_table() {
+        let content = "| This is not a table because it doesn't end with pipe\n";
+        let result = format_markdown(content);
+        assert_eq!(result, content);
+    }
+
+    #[test]
+    fn test_format_markdown_table_with_unicode() {
+        let content = "| Emoji | Text |\n|---|---|\n| 🎉  | Party  |\n| 🦀  | Rust |\n";
+        let expected = "| Emoji | Text |\n|---|---|\n| 🎉 | Party |\n| 🦀 | Rust |\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_table_with_numbers() {
+        let content = "| ID | Count |\n|---|---|\n| 1   | 100   |\n| 2   | 200 |\n";
+        let expected = "| ID | Count |\n|---|---|\n| 1 | 100 |\n| 2 | 200 |\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_many_columns() {
+        let content = "| A | B | C | D | E | F | G | H |\n|---|---|---|---|---|---|---|---|\n| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |\n";
+        let expected = "| A | B | C | D | E | F | G | H |\n|---|---|---|---|---|---|---|---|\n| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_table_in_blockquote() {
+        let content = "> | Quote | Table |\n> |---|---|\n> | Data 1  | Data 2 |\n";
+        let expected = "> | Quote | Table |\n> |---|---|\n> | Data 1 | Data 2 |\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_list_item_with_table() {
+        let content = "- | List | Item |\n- |---|---|\n- | Data  | Value |\n";
+        let expected = "- | List | Item |\n- |---|---|\n- | Data | Value |\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_empty_table_cells() {
+        let content = "| A | B | C |\n|---|---|---|\n|   |   |   |\n";
+        let expected = "| A | B | C |\n|---|---|---|\n|  |  |  |\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_windows_line_endings() {
+        let content = "| Header |\r\n|---|\r\n| Value  |\r\n";
+        let expected = "| Header |\n|---|\n| Value |\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_nested_pipes_in_code() {
+        let content = "| Code | Output |\n|---|---|\n| `a | b`  | Result |\n";
+        let expected = "| Code | Output |\n|---|---|\n| `a | b` | Result |\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_single_row_table() {
+        let content = "| Only | Header | Row |\n";
+        let expected = "| Only | Header | Row |\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_separator_with_colons() {
+        let content = "| Left | Center | Right |\n|:---|:---:|---:|\n| A | B | C |\n";
+        let expected = "| Left | Center | Right |\n|:---|:---:|---:|\n| A | B | C |\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
 }
