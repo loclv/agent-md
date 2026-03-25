@@ -252,11 +252,12 @@ agent-md lint-file <path>
 
 ### Format markdown
 
+- Formats the markdown file in-place, trimming leading and trailing spaces from table cells.
+- Preserves separator rows and code block content.
+
 ```bash
 agent-md fmt <path>
-# Formats the markdown file in-place, trimming leading and trailing spaces from table cells
-# Preserves separator rows and code block content
-# Returns: {success, message, document}
+# Returns JSON data: {success, message, document}
 ```
 
 ## Validation Rules
