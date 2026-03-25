@@ -1,5 +1,5 @@
-use crate::*;
 use crate::format::format_markdown;
+use crate::*;
 
 #[cfg(test)]
 mod tests {

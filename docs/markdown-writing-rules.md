@@ -814,6 +814,14 @@ Description: Table cells should not have trailing spaces, except for a single op
 |---|---|
 | Item | This is an item |
 
+### Auto-fix
+
+Use the `fmt` command to automatically remove leading and trailing spaces from all table cells:
+
+```bash
+agent-md fmt path/to/file.md
+```
+
 ### Rationale for Table Trailing Spaces Rule
 
 Trailing spaces in table cells are unnecessary and can cause formatting inconsistencies. They add visual noise without any semantic value and may cause issues with markdown parsers and version control systems.

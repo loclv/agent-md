@@ -123,7 +123,7 @@ agent-md lint agent-md-markdown.md
 # {"valid":true,"errors":[],"warnings":[]}
 ```
 
-**Benefits:**
+Benefits:
 
 - Reduces ~20% unnecessary tokens
 - Faster LLM reading and processing
@@ -254,7 +254,8 @@ agent-md lint-file <path>
 
 ```bash
 agent-md fmt <path>
-# Formats the markdown file in-place, removing useless trailing spaces in table cells
+# Formats the markdown file in-place, trimming leading and trailing spaces from table cells
+# Preserves separator rows and code block content
 # Returns: {success, message, document}
 ```
 

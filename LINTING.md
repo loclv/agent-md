@@ -120,22 +120,28 @@ The agent-md tool includes custom linting rules for Markdown content:
 
 #### useless-links
 
-- Type: Warning
+- Type: Error
 - Description: Link text should not be the same as the URL
 - Detection: Finds links where the display text equals the URL (with common prefixes stripped)
 
 #### no-ascii-graph
 
-- Type: Warning
-- Description: Human-Readable ASCII Graph detected
-- Detection: Identifies ASCII art, box drawing characters, tree structures, flow charts, and high-density special character patterns
+- Type: Error
+- Description: Human-readable ASCII Graph detected
+- Detection: Identifies ASCII art, box drawing characters, tree structures, flow charts, and high-density special character patterns. Applies to ALL content including code blocks
 - Recommendation: Use LLM-readable formats instead:
   - Structured CSV
   - JSON
-  - TOON format
   - Mermaid Diagram
   - Numbered List with Conditions
   - ZON format
+
+#### table-trailing-spaces
+
+- Type: Error
+- Description: Table cells must not have more than 1 trailing space
+- Detection: Checks table data rows (ignores separator rows and code blocks). Cells with 2 or more trailing spaces are rejected
+- Auto-fix: Use `agent-md fmt <path>` to automatically trim leading and trailing spaces from all table cells
 
 #### single-title
 

@@ -5,47 +5,80 @@ pub fn format_markdown(content: &str) -> String {
     let ends_with_newline = content.ends_with('\n');
 
     let mut formatted_lines = Vec::new();
+    let mut in_code_block = false;
 
     for line in content.lines() {
         let trimmed = line.trim();
 
-        // Calculate leading indentation (spaces/tabs before the |)
+        // Track code block boundaries
+        if trimmed.starts_with("```") {
+            in_code_block = !in_code_block;
+            formatted_lines.push(line.to_string());
+            continue;
+        }
+
+        // Inside code blocks, preserve content as-is
+        if in_code_block {
+            formatted_lines.push(line.to_string());
+            continue;
+        }
+
+        // Calculate leading indentation (spaces/tabs before content)
         let leading_indent = line.len() - line.trim_start().len();
         let indent_str = &line[..leading_indent];
 
-        // Check if this looks like a table row (must start and end with |)
-        if trimmed.starts_with('|') && trimmed.ends_with('|') {
-            // Check for separator rows (rows with only pipes and dashes)
-            let is_separator_row = trimmed
+        // Check for table rows - either direct |...| or prefixed like > |...| or - |...|
+        let (prefix, table_content) = if trimmed.starts_with('|') && trimmed.ends_with('|') {
+            // Direct table row
+            (indent_str, trimmed)
+        } else if (trimmed.starts_with("> |") || trimmed.starts_with("- |"))
+            && trimmed.ends_with('|')
+        {
+            // Table row with blockquote or list prefix
+            let table_start = trimmed.find('|').unwrap_or(0);
+            let prefix_part = &trimmed[..table_start];
+            let table_part = &trimmed[table_start..];
+            (&line[..leading_indent + prefix_part.len()], table_part)
+        } else {
+            // Not a table row
+            ("", "")
+        };
+
+        if !table_content.is_empty() {
+            // Check for separator rows (rows with pipes, dashes, and optional colons - must have at least one dash)
+            let is_separator_row = table_content
                 .chars()
-                .all(|c| c == '|' || c == '-' || c == ' ' || c == ':');
+                .all(|c| c == '|' || c == '-' || c == ' ' || c == ':')
+                && table_content.contains('-');
 
             // Format table cells (except separator rows)
             if !is_separator_row {
-                let cells: Vec<&str> = trimmed.split('|').collect();
+                let cells: Vec<&str> = table_content.split('|').collect();
                 let mut formatted_cells = Vec::new();
 
                 // Process middle cells (skip first and last which are empty from leading/trailing pipes)
                 for (i, cell) in cells.iter().enumerate() {
                     if i == 0 || i == cells.len() - 1 {
-                        // First and last cells are empty due to leading/trailing pipes
+                        // Example: "| cell1 | cell2 |" splits to ["", " cell1 ", " cell2 ", ""]
                         continue;
                     }
                     // Trim both leading and trailing spaces from cell content
                     let cell_trimmed = cell.trim();
+                    // Push trimmed content (empty string "" becomes "  |" after format)
                     formatted_cells.push(cell_trimmed.to_string());
                 }
 
-                // Reconstruct with indentation: | cell1 | cell2 | ... |
-                let formatted_line = format!("{}| {} |", indent_str, formatted_cells.join(" | "));
+                // Reconstruct with indentation and prefix: prefix| cell1 | cell2 | ... |
+                let formatted_line = format!("{}| {} |", prefix, formatted_cells.join(" | "));
                 formatted_lines.push(formatted_line);
             } else {
                 // Keep separator rows as-is (with indentation)
                 formatted_lines.push(line.to_string());
             }
         } else {
-            // Non-table lines, keep as-is
-            formatted_lines.push(line.to_string());
+            // Non-table lines: remove bold markers while preserving content
+            let line_without_bold = remove_bold_markers(line);
+            formatted_lines.push(line_without_bold);
         }
     }
 
@@ -54,6 +87,84 @@ pub fn format_markdown(content: &str) -> String {
     // Preserve trailing newline if original had one
     if ends_with_newline && !result.ends_with('\n') {
         result.push('\n');
+    }
+
+    result
+}
+
+/// Remove bold markers (** and __) from a line while preserving the content inside.
+/// This skips markers inside inline code spans.
+fn remove_bold_markers(line: &str) -> String {
+    let mut result = String::new();
+    let chars: Vec<char> = line.chars().collect();
+    let mut i = 0;
+
+    while i < chars.len() {
+        // Check for inline code start
+        if chars[i] == '`' {
+            // Find the end of the inline code
+            let mut code_end = i + 1;
+            while code_end < chars.len() {
+                if chars[code_end] == '`' {
+                    break;
+                }
+                code_end += 1;
+            }
+            // Copy the entire code span as-is
+            for j in i..=code_end {
+                if j < chars.len() {
+                    result.push(chars[j]);
+                }
+            }
+            i = code_end + 1;
+            continue;
+        }
+
+        // Check for **bold** pattern
+        if i + 1 < chars.len() && chars[i] == '*' && chars[i + 1] == '*' {
+            // Find the closing **
+            let mut j = i + 2;
+            while j + 1 < chars.len() {
+                if chars[j] == '*' && chars[j + 1] == '*' {
+                    // Found closing marker, copy content between markers
+                    chars[i + 2..j].iter().for_each(|&c| result.push(c));
+                    i = j + 2;
+                    break;
+                }
+                j += 1;
+            }
+            // If no closing marker found, copy the ** as-is
+            if i <= j {
+                result.push(chars[i]);
+                i += 1;
+            }
+            continue;
+        }
+
+        // Check for __bold__ pattern
+        if i + 1 < chars.len() && chars[i] == '_' && chars[i + 1] == '_' {
+            // Find the closing __
+            let mut j = i + 2;
+            while j + 1 < chars.len() {
+                if chars[j] == '_' && chars[j + 1] == '_' {
+                    // Found closing marker, copy content between markers
+                    chars[i + 2..j].iter().for_each(|&c| result.push(c));
+                    i = j + 2;
+                    break;
+                }
+                j += 1;
+            }
+            // If no closing marker found, copy the __ as-is
+            if i <= j {
+                result.push(chars[i]);
+                i += 1;
+            }
+            continue;
+        }
+
+        // Regular character, just copy it
+        result.push(chars[i]);
+        i += 1;
     }
 
     result
@@ -494,6 +605,56 @@ Just text with | pipes
     fn test_format_markdown_single_row_table() {
         let content = "| Only | Header | Row |\n";
         let expected = "| Only | Header | Row |\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_bold_in_code_block_preserved() {
+        let content = r#"```
+This has **bold** text
+Also has __bold__ markers
+```
+
+Regular text with **bold** and __bold__ should be removed.
+"#;
+        let expected = r#"```
+This has **bold** text
+Also has __bold__ markers
+```
+
+Regular text with bold and bold should be removed.
+"#;
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_bold_in_inline_code_preserved() {
+        let content = r#"Use `**bold**` for emphasis or `__bold__` syntax.
+
+But **remove** these __markers__ outside code.
+"#;
+        let expected = r#"Use `**bold**` for emphasis or `__bold__` syntax.
+
+But remove these markers outside code.
+"#;
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_bold_in_table_inline_code_preserved() {
+        let content = r#"| Syntax | Example |
+|---|---|
+| Bold | `**text**` |
+| Underline | `__text__` |
+"#;
+        let expected = r#"| Syntax | Example |
+|---|---|
+| Bold | `**text**` |
+| Underline | `__text__` |
+"#;
         let result = format_markdown(content);
         assert_eq!(result, expected);
     }

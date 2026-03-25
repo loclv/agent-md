@@ -2288,4 +2288,5 @@ pub fn parse_markdown_to_jsonl(content: &str) -> Vec<JsonlEntry> {
 }
 
 mod format;
+#[cfg(test)]
 mod tests;
