@@ -1251,6 +1251,24 @@ enum Commands {
     Fmt {
         #[arg(help = "Markdown file path to format")]
         path: String,
+        #[arg(
+            long,
+            help = "Remove bold markers (** and __)",
+            default_value = "false"
+        )]
+        remove_bold: bool,
+        #[arg(
+            long,
+            help = "Compact blank lines (remove multiples)",
+            default_value = "false"
+        )]
+        compact_blank_lines: bool,
+        #[arg(
+            long,
+            help = "Use token-saving preset (all compact rules)",
+            default_value = "false"
+        )]
+        token_saver: bool,
     },
 }
 
@@ -1258,7 +1276,7 @@ fn main() {
     let cli = Cli::parse();
 
     if cli.version {
-        println!("0.1.4");
+        println!("0.1.5");
         return;
     }
 
@@ -1288,7 +1306,26 @@ fn main() {
         Some(Commands::ToJsonl { path }) => cmd_to_jsonl(&path, cli.human),
         Some(Commands::Lint { path, content }) => cmd_lint(&path, content, cli.human),
         Some(Commands::LintFile { path }) => cmd_lint_file(&path, cli.human),
-        Some(Commands::Fmt { path }) => format::cmd_fmt(&path, cli.human),
+        Some(Commands::Fmt {
+            path,
+            remove_bold,
+            compact_blank_lines,
+            token_saver,
+        }) => {
+            let options = if token_saver {
+                format::FormatOptions::token_saver()
+            } else {
+                format::FormatOptions {
+                    remove_bold,
+                    compact_blank_lines,
+                    trim_trailing_whitespace: true,
+                    collapse_spaces: false,
+                    remove_horizontal_rules: false,
+                    remove_emphasis: false,
+                }
+            };
+            format::cmd_fmt(&path, cli.human, options)
+        }
         None => {
             // If no command and not version, show help
             eprintln!("Usage: agent-md <COMMAND>");
