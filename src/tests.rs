@@ -5,6 +5,7 @@ use crate::*;
 mod tests {
     #![allow(clippy::module_inception)]
     use super::*;
+    use crate::rules::*;
 
     // Tests for JsonlEntry serialization
     #[test]

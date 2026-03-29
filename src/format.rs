@@ -131,7 +131,10 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
                 if let Some(prev) = formatted_lines.last() {
                     if !prev.is_empty() {
                         // Check if next non-empty line is a heading - if so, preserve blank line
-                        let next_is_heading = lines[i + 1..].iter().find(|l| !l.trim().is_empty()).map_or(false, |l| l.trim().starts_with('#'));
+                        let next_is_heading = lines[i + 1..]
+                            .iter()
+                            .find(|l| !l.trim().is_empty())
+                            .is_some_and(|l| l.trim().starts_with('#'));
                         if next_is_heading {
                             formatted_lines.push(String::new());
                             continue;

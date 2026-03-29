@@ -5,6 +5,9 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 
+mod rules;
+use crate::rules::extract_heading_level;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct JsonlEntry {
     #[serde(rename = "type")]
@@ -90,17 +93,14 @@ fn validate_markdown(content: &str) -> LintResult {
     let mut in_code_block = false;
 
     for (line_num, line) in content.lines().enumerate() {
-        let line_num = line_num + 1; // Convert to 1-based indexing
+        let line_num = line_num + 1;
 
-        // Track code block boundaries
         if line.trim().starts_with("```") {
             in_code_block = !in_code_block;
             continue;
         }
 
-        // Rule: No ASCII Graphs - check on ALL lines including inside code blocks
-        // This is an error even in code blocks per the specification
-        if let Some(col) = find_ascii_graph(line) {
+        if let Some(col) = rules::find_ascii_graph(line) {
             if in_code_block {
                 errors.push(LintError {
                     line: line_num,
@@ -118,13 +118,11 @@ fn validate_markdown(content: &str) -> LintResult {
             }
         }
 
-        // Skip all other checks inside code blocks
         if in_code_block {
             continue;
         }
 
-        // Rule: No bold text (detect **text** or __text__)
-        for col in find_bold_text(line) {
+        for col in rules::find_bold_text(line) {
             errors.push(LintError {
                 line: line_num,
                 column: col,
@@ -133,16 +131,15 @@ fn validate_markdown(content: &str) -> LintResult {
             });
         }
 
-        // Rule: Simple table syntax validation
-        for issue in validate_table_syntax(line) {
+        for issue in rules::validate_table_syntax(line) {
             match issue.severity {
-                Severity::Error => errors.push(LintError {
+                rules::Severity::Error => errors.push(LintError {
                     line: line_num,
                     column: issue.column,
                     message: issue.message,
                     rule: "simple-tables".to_string(),
                 }),
-                Severity::Warning => warnings.push(LintWarning {
+                rules::Severity::Warning => warnings.push(LintWarning {
                     line: line_num,
                     column: issue.column,
                     message: issue.message,
@@ -151,8 +148,7 @@ fn validate_markdown(content: &str) -> LintResult {
             }
         }
 
-        // Rule: Table trailing spaces validation
-        if let Some(issue) = validate_table_trailing_spaces(line) {
+        if let Some(issue) = rules::validate_table_trailing_spaces(line) {
             errors.push(LintError {
                 line: line_num,
                 column: issue.column,
@@ -161,8 +157,7 @@ fn validate_markdown(content: &str) -> LintResult {
             });
         }
 
-        // Rule: No useless links where text equals URL
-        for col in find_useless_link(line) {
+        for col in rules::find_useless_link(line) {
             warnings.push(LintWarning {
                 line: line_num,
                 column: col,
@@ -173,8 +168,7 @@ fn validate_markdown(content: &str) -> LintResult {
             });
         }
 
-        // Rule: Limited Space Indentation
-        if let Some(col) = validate_space_indentation(line) {
+        if let Some(col) = rules::validate_space_indentation(line) {
             warnings.push(LintWarning {
                 line: line_num,
                 column: col,
@@ -184,14 +178,11 @@ fn validate_markdown(content: &str) -> LintResult {
         }
     }
 
-    // Rule: Proper heading structure validation
-    if let Some(heading_errors) = validate_heading_structure(content) {
+    if let Some(heading_errors) = rules::validate_heading_structure(content) {
         errors.extend(heading_errors);
     }
 
-    // Rule: Code block best practices validation
-    if let Some(code_block_issues) = validate_code_blocks(content) {
-        // Convert code block errors to warnings since they're suggestions
+    if let Some(code_block_issues) = rules::validate_code_blocks(content) {
         for issue in code_block_issues {
             warnings.push(LintWarning {
                 line: issue.line,
@@ -202,9 +193,7 @@ fn validate_markdown(content: &str) -> LintResult {
         }
     }
 
-    // Rule: List formatting validation
-    if let Some(list_issues) = validate_list_formatting(content) {
-        // Convert list errors to warnings since they're formatting suggestions
+    if let Some(list_issues) = rules::validate_list_formatting(content) {
         for issue in list_issues {
             warnings.push(LintWarning {
                 line: issue.line,
@@ -219,872 +208,6 @@ fn validate_markdown(content: &str) -> LintResult {
         valid: errors.is_empty(),
         errors,
         warnings,
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Severity {
-    Error,
-    Warning,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct TableIssue {
-    pub column: usize,
-    pub message: String,
-    pub severity: Severity,
-}
-
-pub fn find_bold_text(line: &str) -> Vec<usize> {
-    let mut results = Vec::new();
-
-    // Find all inline code blocks and exclude them
-    let mut code_ranges = Vec::new();
-    let chars: Vec<char> = line.chars().collect();
-    let mut in_code = false;
-    let mut code_start = 0;
-
-    // Find all inline code blocks
-    for (i, &ch) in chars.iter().enumerate() {
-        if ch == '`' && (i == 0 || chars[i - 1] != '\\') {
-            if !in_code {
-                in_code = true;
-                code_start = i;
-            } else {
-                in_code = false;
-                code_ranges.push((code_start, i)); // inclusive range
-            }
-        }
-    }
-
-    // If unclosed code block, treat from start to end as code
-    if in_code {
-        code_ranges.push((code_start, line.len() - 1));
-    }
-
-    // Check for **bold** pattern, skipping code ranges
-    let mut search_start = 0;
-    while search_start < line.len() {
-        if let Some(start) = line[search_start..].find("**") {
-            let abs_start = search_start + start;
-
-            // Check if this bold is inside any code range
-            let in_code_range = code_ranges
-                .iter()
-                .any(|&(start, end)| abs_start >= start && abs_start <= end);
-
-            if !in_code_range {
-                if let Some(end_offset) = line[abs_start + 2..].find("**") {
-                    let abs_end = abs_start + 2 + end_offset;
-
-                    // Check if the end is also outside code ranges
-                    let end_in_code_range = code_ranges
-                        .iter()
-                        .any(|&(start, end)| abs_end >= start && abs_end <= end);
-
-                    if !end_in_code_range {
-                        results.push(abs_start + 1); // Return 1-based column
-                        search_start = abs_end + 2;
-                        continue;
-                    }
-                }
-            }
-            search_start = abs_start + 2;
-        } else {
-            break;
-        }
-    }
-
-    // Check for __bold__ pattern, skipping code ranges
-    search_start = 0;
-    while search_start < line.len() {
-        if let Some(start) = line[search_start..].find("__") {
-            let abs_start = search_start + start;
-
-            // Check if this bold is inside any code range
-            let in_code_range = code_ranges
-                .iter()
-                .any(|&(start, end)| abs_start >= start && abs_start <= end);
-
-            if !in_code_range {
-                if let Some(end_offset) = line[abs_start + 2..].find("__") {
-                    let abs_end = abs_start + 2 + end_offset;
-
-                    // Check if the end is also outside code ranges
-                    let end_in_code_range = code_ranges
-                        .iter()
-                        .any(|&(start, end)| abs_end >= start && abs_end <= end);
-
-                    if !end_in_code_range {
-                        results.push(abs_start + 1); // Return 1-based column
-                        search_start = abs_end + 2;
-                        continue;
-                    }
-                }
-            }
-            search_start = abs_start + 2;
-        } else {
-            break;
-        }
-    }
-
-    results
-}
-
-pub fn find_useless_link(line: &str) -> Vec<usize> {
-    let mut results = Vec::new();
-    let chars: Vec<char> = line.chars().collect();
-    let mut i = 0;
-
-    while i < chars.len() {
-        if chars[i] == '[' {
-            let bracket_start = i;
-            // Find the closing bracket
-            let mut bracket_end = i + 1;
-            let mut bracket_content = String::new();
-            let mut found_closing_bracket = false;
-
-            while bracket_end < chars.len() {
-                let ch = chars[bracket_end];
-                if ch == ']' {
-                    found_closing_bracket = true;
-                    break;
-                }
-                bracket_content.push(ch);
-                bracket_end += 1;
-            }
-
-            if found_closing_bracket && bracket_end + 1 < chars.len() {
-                // Check for opening parenthesis
-                if chars[bracket_end + 1] == '(' {
-                    let mut paren_start = bracket_end + 2;
-                    let mut url = String::new();
-                    let mut found_closing_paren = false;
-                    let mut paren_depth = 1;
-
-                    while paren_start < chars.len() {
-                        let ch = chars[paren_start];
-                        if ch == '(' {
-                            paren_depth += 1;
-                            url.push(ch);
-                        } else if ch == ')' {
-                            paren_depth -= 1;
-                            if paren_depth == 0 {
-                                found_closing_paren = true;
-                                break;
-                            }
-                            url.push(ch);
-                        } else {
-                            url.push(ch);
-                        }
-                        paren_start += 1;
-                    }
-
-                    if found_closing_paren {
-                        // Check if link text is the same as URL
-                        let link_text = bracket_content.trim();
-                        let url_trimmed = url.trim();
-
-                        // Remove common URL prefixes for comparison
-                        let url_without_protocol = url_trimmed
-                            .trim_start_matches("http://")
-                            .trim_start_matches("https://");
-
-                        // Remove trailing slash before removing www.
-                        let url_without_slash = url_without_protocol.trim_end_matches('/');
-
-                        // Remove www. prefix for comparison
-                        let url_without_www = url_without_slash.trim_start_matches("www.");
-
-                        // Check if link text matches the URL in any form
-                        if link_text == url_trimmed
-                            || link_text == url_without_protocol
-                            || link_text == url_without_slash
-                            || link_text == url_without_www
-                        {
-                            results.push(bracket_start + 1); // Return 1-based column
-                        }
-                        i = paren_start + 1;
-                        continue;
-                    }
-                }
-            }
-        }
-        i += 1;
-    }
-
-    results
-}
-
-pub fn find_ascii_graph(line: &str) -> Option<usize> {
-    // Skip table separator lines (lines with only |, -, :, and spaces)
-    let trimmed = line.trim();
-    let is_table_separator = trimmed
-        .chars()
-        .all(|c| c == '|' || c == '-' || c == ' ' || c == ':');
-    if is_table_separator {
-        return None;
-    }
-
-    // Common ASCII graph patterns to detect
-    let ascii_graph_patterns = [
-        // Box drawing characters (more specific)
-        "┌─┐",
-        "└─┘",
-        "├─┤",
-        "│ │",
-        "├──",
-        "└──",
-        "│  ",
-        // Tree structures (more specific)
-        "├── ",
-        "└── ",
-        "│   ",
-        // Simple graph patterns
-        "->",
-        "<-",
-        "<->",
-        "==",
-        "=>",
-        "<=",
-        // Progress bars (more specific)
-        "[",
-        "]",
-        // Flow indicators
-        "flow:",
-        "Flow:",
-        "FLOW:",
-        "diagram:",
-        "Diagram:",
-        "DIAGRAM:",
-        "chart:",
-        "Chart:",
-        "CHART:",
-        "graph:",
-        "Graph:",
-        "GRAPH:",
-        "tree:",
-        "Tree:",
-        "TREE:",
-        // Common graph elements
-        "+---+",
-        "+---",
-        "---+",
-        "|   |",
-    ];
-
-    // Check for common ASCII graph indicators
-    let graph_indicators = ["graph:", "chart:", "diagram:", "flow:", "tree:"];
-
-    // First check for explicit graph indicators
-    let line_lower = line.to_lowercase();
-    for indicator in &graph_indicators {
-        if let Some(pos) = line_lower.find(indicator) {
-            return Some(pos + 1); // Return 1-based column
-        }
-    }
-
-    // Then check for ASCII graph patterns
-    for pattern in &ascii_graph_patterns {
-        if let Some(pos) = line.find(pattern) {
-            // Additional heuristic: if the line contains multiple such patterns,
-            // it's more likely to be an ASCII graph
-            let pattern_count = line.matches(pattern).count();
-            if pattern_count >= 2
-                || line.contains("┌")
-                || line.contains("└")
-                || line.contains("├")
-                || line.contains("┤")
-            {
-                return Some(pos + 1); // Return 1-based column
-            }
-
-            // For single patterns, be more selective
-            if *pattern == "├──"
-                || *pattern == "└──"
-                || *pattern == "│  "
-                || *pattern == "┌─┐"
-                || *pattern == "└─┘"
-                || *pattern == "├─┤"
-            {
-                // Tree/box patterns are strong indicators
-                return Some(pos + 1);
-            } else if *pattern == "[ ]"
-                || *pattern == "( )"
-                || *pattern == "{ }"
-                || *pattern == "->"
-                || *pattern == "<-"
-            {
-                // Check if there are multiple such patterns or other graph indicators
-                if line.matches("->").count() + line.matches("<-").count() >= 2
-                    || line.matches("[ ]").count() + line.matches("( )").count() >= 2
-                {
-                    return Some(pos + 1);
-                }
-            } else {
-                // For other patterns, check if the line is mostly special characters
-                let special_chars = line
-                    .chars()
-                    .filter(|c| !c.is_alphabetic() && !c.is_whitespace() && *c != '.')
-                    .count();
-
-                let total_chars = line.chars().filter(|c| !c.is_whitespace()).count();
-
-                // If more than 40% of non-whitespace characters are special characters,
-                // and the line has at least 5 such characters, it's likely an ASCII graph
-                if total_chars >= 5 && special_chars as f64 / total_chars as f64 > 0.4 {
-                    return Some(pos + 1);
-                }
-            }
-        }
-    }
-
-    // Check for lines that look like ASCII art/graphs (high density of special chars)
-    let special_chars = line
-        .chars()
-        .filter(|c| !c.is_alphabetic() && !c.is_whitespace() && *c != '.')
-        .count();
-
-    let total_chars = line.chars().filter(|c| !c.is_whitespace()).count();
-
-    // If more than 40% of non-whitespace characters are special characters,
-    // and the line has at least 5 such characters, it's likely an ASCII graph
-    if total_chars >= 5 && special_chars as f64 / total_chars as f64 > 0.4 {
-        // Find the first special character position
-        for (i, c) in line.chars().enumerate() {
-            if !c.is_alphabetic() && !c.is_whitespace() && c != '.' {
-                return Some(i + 1); // Return 1-based column
-            }
-        }
-    }
-
-    None
-}
-
-pub fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
-    let mut issues = Vec::new();
-    let trimmed = line.trim();
-
-    // Check if this looks like a table row
-    if trimmed.contains('|') {
-        // Check for separator rows (rows with only pipes and dashes)
-        let is_separator_row = trimmed
-            .chars()
-            .all(|c| c == '|' || c == '-' || c == ' ' || c == ':');
-
-        if is_separator_row {
-            // Check for exactly 3 dash separators between pipes
-            let parts: Vec<&str> = trimmed.split('|').collect();
-            for part in parts {
-                let part_trimmed = part.trim();
-                if !part_trimmed.is_empty() {
-                    // Count dashes in this separator part
-                    let dash_count = part_trimmed.chars().filter(|&c| c == '-').count();
-                    if dash_count != 3 {
-                        issues.push(TableIssue {
-                            column: 1,
-                            message:
-                                "Table separator should use exactly 3 dashes (---) between pipes"
-                                    .to_string(),
-                            severity: Severity::Error,
-                        });
-                    }
-                }
-            }
-            if !issues.is_empty() {
-                return issues;
-            }
-        }
-
-        // Check for complex table syntax that should be avoided
-        if trimmed.contains("colspan") || trimmed.contains("rowspan") {
-            issues.push(TableIssue {
-                column: 1,
-                message: "Complex table attributes (colspan/rowspan) are not allowed".to_string(),
-                severity: Severity::Error,
-            });
-            return issues;
-        }
-
-        // Check for inline formatting in table cells
-        if trimmed.contains("**") || trimmed.contains("__") || trimmed.contains("*") {
-            issues.push(TableIssue {
-                column: 1,
-                message: "inline formatting in table cells should be avoided".to_string(),
-                severity: Severity::Warning,
-            });
-            return issues;
-        }
-
-        // Warn about very complex tables
-        let pipe_count = trimmed.matches('|').count();
-        if pipe_count > 6 {
-            // More than 5 columns
-            issues.push(TableIssue {
-                column: 1,
-                message: "Very wide tables should be simplified".to_string(),
-                severity: Severity::Warning,
-            });
-        }
-    }
-
-    issues
-}
-
-pub fn validate_table_trailing_spaces(line: &str) -> Option<TableIssue> {
-    let trimmed = line.trim();
-
-    // Check if this looks like a table row (must start and end with |)
-    if trimmed.starts_with('|') && trimmed.ends_with('|') {
-        // Check for separator rows (rows with only pipes and dashes)
-        let is_separator_row = trimmed
-            .chars()
-            .all(|c| c == '|' || c == '-' || c == ' ' || c == ':');
-
-        // Check for trailing spaces in table cells (except separator rows)
-        if !is_separator_row {
-            // Split by pipe and check each cell
-            let cells: Vec<&str> = trimmed.split('|').collect();
-            for (i, cell) in cells.iter().enumerate() {
-                // Skip empty cells at start and end (from leading/trailing pipes)
-                if i == 0 || i == cells.len() - 1 {
-                    continue;
-                }
-
-                let cell_trimmed = cell.trim();
-                let trailing_spaces = cell.len() - cell_trimmed.len();
-
-                // Only error if more than 2 trailing spaces (2 is normal for table formatting: 1 after content, 1 before pipe)
-                if trailing_spaces > 2 {
-                    return Some(TableIssue {
-                        column: 1, // Could calculate exact position but not necessary
-                        message: format!("Table cell should not have trailing spaces, found {} trailing spaces (should be 0, 1, or 2)", trailing_spaces),
-                        severity: Severity::Error,
-                    });
-                }
-            }
-        }
-    }
-
-    None
-}
-
-pub fn validate_heading_structure(content: &str) -> Option<Vec<LintError>> {
-    let mut heading_levels = Vec::new();
-    let mut h1_count = 0;
-    let mut h1_locations = Vec::new();
-    let mut in_code_block = false;
-
-    for (line_num, line) in content.lines().enumerate() {
-        let line_num = line_num + 1; // Convert to 1-based indexing
-
-        // Track code block boundaries
-        if line.trim().starts_with("```") {
-            in_code_block = !in_code_block;
-            continue;
-        }
-
-        // Skip headings inside code blocks
-        if in_code_block {
-            continue;
-        }
-
-        // Check for heading levels (lines starting with #)
-        if let Some(level) = extract_heading_level(line) {
-            heading_levels.push((level, line_num));
-
-            if level == 1 {
-                h1_count += 1;
-                h1_locations.push(line_num);
-            }
-        }
-    }
-
-    let mut errors = Vec::new();
-
-    // Check for multiple H1 headings
-    if h1_count > 1 {
-        for &location in &h1_locations[1..] {
-            // Skip the first H1
-            errors.push(LintError {
-                line: location,
-                column: 1,
-                message:
-                    "Multiple H1 headings found. Documents should have only one top-level heading"
-                        .to_string(),
-                rule: "heading-structure".to_string(),
-            });
-        }
-    }
-
-    // Check for skipped heading levels
-    if heading_levels.len() > 1 {
-        for i in 1..heading_levels.len() {
-            let (current_level, current_line) = heading_levels[i];
-            let (prev_level, _) = heading_levels[i - 1];
-
-            // Check if we skipped more than one level
-            if current_level > prev_level + 1 {
-                errors.push(LintError {
-                    line: current_line,
-                    column: 1,
-                    message: format!(
-                        "Heading level skipped: H{} follows H{}. Use sequential heading levels.",
-                        current_level, prev_level
-                    ),
-                    rule: "heading-structure".to_string(),
-                });
-            }
-        }
-    }
-
-    if errors.is_empty() {
-        None
-    } else {
-        Some(errors)
-    }
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum ListType {
-    Ordered,
-    Unordered,
-}
-
-pub fn validate_list_formatting(content: &str) -> Option<Vec<LintError>> {
-    let mut errors = Vec::new();
-    let mut list_items = Vec::new();
-    let mut in_code_block = false;
-
-    for (line_num, line) in content.lines().enumerate() {
-        let line_num = line_num + 1; // Convert to 1-based indexing
-
-        // Track code block boundaries
-        if line.trim().starts_with("```") {
-            in_code_block = !in_code_block;
-            continue;
-        }
-
-        // Skip list items inside code blocks
-        if in_code_block {
-            continue;
-        }
-
-        let trimmed = line.trim();
-
-        // Check for list items (ordered or unordered)
-        if let Some(list_info) = detect_list_item(trimmed) {
-            list_items.push((list_info, line_num));
-        }
-    }
-
-    // Check for inconsistent list formatting
-    if list_items.len() > 1 {
-        let mut current_list_type: Option<ListType> = None;
-        let mut _current_list_marker: Option<String> = None;
-        let mut expected_next_number: Option<u32> = None;
-
-        for (i, ((list_type, marker), line_num)) in list_items.iter().enumerate() {
-            // Skip if this is the first item or if there's a blank line between lists
-            if i > 0 {
-                let prev_line_num = list_items[i - 1].1;
-                if *line_num > prev_line_num + 1 {
-                    // New list, reset tracking
-                    current_list_type = None;
-                    _current_list_marker = None;
-                    expected_next_number = None;
-                }
-            }
-
-            // Update current list tracking first
-            if current_list_type.is_none() {
-                current_list_type = Some(*list_type);
-                _current_list_marker = Some(marker.to_string());
-
-                // For ordered lists, set up expected next number
-                if *list_type == ListType::Ordered {
-                    if let Some(current_num) = extract_number_from_marker(marker) {
-                        expected_next_number = Some(current_num + 1);
-                    }
-                }
-            } else {
-                // Check for consistency within the same list
-                if current_list_type != Some(*list_type) {
-                    errors.push(LintError {
-                        line: *line_num,
-                        column: 1,
-                        message: "inconsistent list formatting detected. Use consistent list markers within the same list".to_string(),
-                        rule: "list-formatting".to_string(),
-                    });
-                    break; // Stop after first inconsistency
-                } else if *list_type == ListType::Unordered
-                    && _current_list_marker.as_ref() != Some(marker)
-                {
-                    // For unordered lists, also check for consistent markers
-                    errors.push(LintError {
-                        line: *line_num,
-                        column: 1,
-                        message: "inconsistent list formatting detected. Use consistent list markers within the same list".to_string(),
-                        rule: "list-formatting".to_string(),
-                    });
-                    break; // Stop after first inconsistency
-                }
-
-                // For ordered lists, check for sequential numbering
-                if *list_type == ListType::Ordered {
-                    // Check if current marker matches expected sequence
-                    if let Some(expected_num) = expected_next_number {
-                        let expected_marker = format!("{}.", expected_num);
-                        if *marker != expected_marker {
-                            errors.push(LintError {
-                                line: *line_num,
-                                column: 1,
-                                message:
-                                    "Inconsistent ordered list numbering. Use sequential numbers"
-                                        .to_string(),
-                                rule: "list-formatting".to_string(),
-                            });
-                        }
-                    }
-
-                    // Update tracking for next iteration
-                    if let Some(current_num) = extract_number_from_marker(marker) {
-                        _current_list_marker = Some(marker.to_string());
-                        expected_next_number = Some(current_num + 1);
-                    }
-                }
-            }
-        }
-    }
-
-    if errors.is_empty() {
-        None
-    } else {
-        Some(errors)
-    }
-}
-
-pub fn extract_number_from_marker(marker: &str) -> Option<u32> {
-    // Find the separator (. or ))
-    let mut separator_pos = None;
-    for (i, c) in marker.chars().enumerate() {
-        if c == '.' || c == ')' {
-            separator_pos = Some(i);
-            break;
-        }
-    }
-
-    if let Some(pos) = separator_pos {
-        if pos == 0 {
-            return None; // Separator at start, no digits
-        }
-
-        let num_part = &marker[..pos];
-        // Check if all characters before separator are digits
-        if num_part.chars().all(|c| c.is_ascii_digit()) {
-            num_part.parse::<u32>().ok()
-        } else {
-            None
-        }
-    } else {
-        None // No separator found
-    }
-}
-
-pub fn detect_list_item(line: &str) -> Option<(ListType, String)> {
-    // Check for unordered lists: -, *, or + followed by space
-    if line.len() >= 2 {
-        let first_char = line.chars().next().unwrap();
-        let second_char = line.chars().nth(1).unwrap();
-
-        if (first_char == '-' || first_char == '*' || first_char == '+') && second_char == ' ' {
-            return Some((ListType::Unordered, first_char.to_string()));
-        }
-    }
-
-    // Check for ordered lists: number followed by . or ) and space
-    if line.len() >= 3 {
-        let mut i = 0;
-        let mut has_digits = false;
-
-        // Extract digits at the start
-        while i < line.len() && line.chars().nth(i).unwrap().is_ascii_digit() {
-            has_digits = true;
-            i += 1;
-        }
-
-        if has_digits && i < line.len() {
-            let separator = line.chars().nth(i).unwrap();
-            if (separator == '.' || separator == ')') && i + 1 < line.len() {
-                let next_char = line.chars().nth(i + 1).unwrap();
-                if next_char == ' ' {
-                    let marker = line[..i + 1].to_string();
-                    return Some((ListType::Ordered, marker));
-                }
-            }
-        }
-    }
-
-    None
-}
-
-pub fn validate_code_blocks(content: &str) -> Option<Vec<LintError>> {
-    let mut errors = Vec::new();
-    let mut in_code_block = false;
-    let mut code_block_start_line = 0;
-
-    for (line_num, line) in content.lines().enumerate() {
-        let line_num = line_num + 1; // Convert to 1-based indexing
-
-        // Check for code block start
-        if line.trim().starts_with("```") {
-            if !in_code_block {
-                // Starting a new code block
-                in_code_block = true;
-                code_block_start_line = line_num;
-
-                // Check if language is specified
-                let trimmed = line.trim();
-                let has_language = if trimmed.len() > 3 {
-                    // Has content after the backticks
-                    let lang_part = &trimmed[3..];
-                    !lang_part.trim().is_empty()
-                } else {
-                    false
-                };
-
-                // Store the language info for this code block
-                if !has_language {
-                    // We'll check at the end if this was never closed properly
-                }
-            } else {
-                // Ending code block
-                in_code_block = false;
-
-                // Check if this code block didn't have a language
-                let trimmed = line.trim();
-                let _has_language = if trimmed.len() > 3 {
-                    let lang_part = &trimmed[3..];
-                    !lang_part.trim().is_empty()
-                } else {
-                    false
-                };
-
-                // Actually, we need to check the start line, not the end line
-                // Let's get the content from the start line
-                if let Some(start_line_content) = content.lines().nth(code_block_start_line - 1) {
-                    let start_trimmed = start_line_content.trim();
-                    let start_has_language = if start_trimmed.len() > 3 {
-                        let lang_part = &start_trimmed[3..];
-                        !lang_part.trim().is_empty()
-                    } else {
-                        false
-                    };
-
-                    if !start_has_language {
-                        errors.push(LintError {
-                            line: code_block_start_line,
-                            column: 1,
-                            message: "Code block should specify language for better parsing. Use 'text' if no specific language applies".to_string(),
-                            rule: "code-blocks".to_string(),
-                        });
-                    }
-                }
-            }
-        }
-    }
-
-    if errors.is_empty() {
-        None
-    } else {
-        Some(errors)
-    }
-}
-
-pub fn validate_space_indentation(line: &str) -> Option<usize> {
-    // Check for leading spaces in regular text (not code blocks or list items)
-    let trimmed = line.trim_end();
-    if trimmed.is_empty() {
-        return None;
-    }
-
-    // Skip if this looks like a list item (including nested ones)
-    if trimmed.starts_with("- ") || trimmed.starts_with("* ") || trimmed.starts_with("+ ") {
-        return None;
-    }
-
-    // Skip if this looks like an ordered list item (including nested ones)
-    // Check both at start and after indentation
-    let line_without_leading_spaces = line.trim_start();
-    if line_without_leading_spaces.len() >= 3 {
-        let mut i = 0;
-        let mut has_digits = false;
-        while i < line_without_leading_spaces.len()
-            && line_without_leading_spaces
-                .chars()
-                .nth(i)
-                .unwrap()
-                .is_ascii_digit()
-        {
-            has_digits = true;
-            i += 1;
-        }
-        if has_digits && i < line_without_leading_spaces.len() {
-            let separator = line_without_leading_spaces.chars().nth(i).unwrap();
-            if (separator == '.' || separator == ')') && i + 1 < line_without_leading_spaces.len() {
-                let next_char = line_without_leading_spaces.chars().nth(i + 1).unwrap();
-                if next_char == ' ' {
-                    return None;
-                }
-            }
-        }
-    }
-
-    // Skip if this looks like a heading
-    if trimmed.starts_with('#') {
-        return None;
-    }
-
-    // Skip if this looks like a blockquote
-    if trimmed.starts_with('>') {
-        return None;
-    }
-
-    // Count leading spaces
-    let leading_spaces = line.len() - line.trim_start().len();
-
-    // Only check spaces, not tabs
-    if leading_spaces > 2 && line.starts_with("   ") {
-        // Check if the line starts with spaces (not tabs)
-        let has_leading_spaces = line.chars().take(leading_spaces).all(|c| c == ' ');
-        if has_leading_spaces {
-            return Some(1); // Return column 1 for the indentation issue
-        }
-    }
-
-    None
-}
-
-fn extract_heading_level(line: &str) -> Option<u32> {
-    let trimmed = line.trim_start();
-    if trimmed.starts_with('#') {
-        let mut level = 0;
-        for ch in trimmed.chars() {
-            if ch == '#' {
-                level += 1;
-            } else {
-                break;
-            }
-        }
-
-        // Only count as heading if followed by space
-        if matches!(trimmed.chars().nth(level as usize), Some(' ') | Some('\t')) {
-            Some(level)
-        } else {
-            None
-        }
-    } else {
-        None
     }
 }
 
