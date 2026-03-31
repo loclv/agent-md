@@ -256,13 +256,13 @@ agent-md lint-file <path>
 - Preserves separator rows and code block content.
 
 ```bash
-agent-md fmt <path> [--token-saver]
+agent-md fmt <path>
 # Returns JSON data: {success, message, document}
 ```
 
 #### Format Options
 
-Use `--token-saver` to enable all compact rules that reduce token count:
+The formatter applies compact rules by default to reduce token count:
 
 | Option | Description |
 |---|---|
@@ -275,7 +275,7 @@ Use `--token-saver` to enable all compact rules that reduce token count:
 Example:
 
 ```bash
-agent-md fmt document.md --token-saver
+agent-md fmt document.md
 ```
 
 ## Validation Rules

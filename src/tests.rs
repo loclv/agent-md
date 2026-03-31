@@ -1,4 +1,5 @@
 use crate::format::format_markdown;
+use crate::format::format_markdown_with_options;
 use crate::*;
 
 #[cfg(test)]
@@ -2202,7 +2203,14 @@ Please contribute to the project.
     #[test]
     fn test_format_markdown_handles_non_table_lines() {
         let content = "# Hello\n\nThis is regular text.\n\n- List item";
-        let formatted = format_markdown(content);
+        let formatted = format_markdown_with_options(content, crate::format::FormatOptions {
+            remove_bold: true,
+            compact_blank_lines: false,
+            trim_trailing_whitespace: true,
+            collapse_spaces: false,
+            remove_horizontal_rules: false,
+            remove_emphasis: false,
+        });
         assert_eq!(formatted, content);
     }
 

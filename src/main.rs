@@ -377,21 +377,33 @@ enum Commands {
         #[arg(
             long,
             help = "Remove bold markers (** and __)",
-            default_value = "false"
+            default_value = "true"
         )]
         remove_bold: bool,
         #[arg(
             long,
             help = "Compact blank lines (remove multiples)",
-            default_value = "false"
+            default_value = "true"
         )]
         compact_blank_lines: bool,
         #[arg(
             long,
-            help = "Use token-saving preset (all compact rules)",
-            default_value = "false"
+            help = "Collapse multiple spaces between words",
+            default_value = "true"
         )]
-        token_saver: bool,
+        collapse_spaces: bool,
+        #[arg(
+            long,
+            help = "Remove horizontal rules (---, ***, ___)",
+            default_value = "true"
+        )]
+        remove_horizontal_rules: bool,
+        #[arg(
+            long,
+            help = "Remove emphasis markers (* and _)",
+            default_value = "true"
+        )]
+        remove_emphasis: bool,
     },
 }
 
@@ -433,19 +445,17 @@ fn main() {
             path,
             remove_bold,
             compact_blank_lines,
-            token_saver,
+            collapse_spaces,
+            remove_horizontal_rules,
+            remove_emphasis,
         }) => {
-            let options = if token_saver {
-                format::FormatOptions::token_saver()
-            } else {
-                format::FormatOptions {
-                    remove_bold,
-                    compact_blank_lines,
-                    trim_trailing_whitespace: true,
-                    collapse_spaces: false,
-                    remove_horizontal_rules: false,
-                    remove_emphasis: false,
-                }
+            let options = format::FormatOptions {
+                remove_bold,
+                compact_blank_lines,
+                trim_trailing_whitespace: true,
+                collapse_spaces,
+                remove_horizontal_rules,
+                remove_emphasis,
             };
             format::cmd_fmt(&path, cli.human, options)
         }
