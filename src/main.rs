@@ -374,11 +374,7 @@ enum Commands {
     Fmt {
         #[arg(help = "Markdown file path to format")]
         path: String,
-        #[arg(
-            long,
-            help = "Remove bold markers (** and __)",
-            default_value = "true"
-        )]
+        #[arg(long, help = "Remove bold markers (** and __)", default_value = "true")]
         remove_bold: bool,
         #[arg(
             long,
@@ -411,7 +407,7 @@ fn main() {
     let cli = Cli::parse();
 
     if cli.version {
-        println!("0.1.6");
+        println!("0.1.7");
         return;
     }
 
@@ -593,7 +589,7 @@ fn find_section_end(lines: &[&str], start: usize, parent_level: u32) -> usize {
     lines.len()
 }
 
-fn unescape_content(s: &str) -> String {
+pub fn unescape_content(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     let mut chars = s.chars().peekable();
     while let Some(ch) = chars.next() {

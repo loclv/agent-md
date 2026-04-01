@@ -11,6 +11,7 @@ pub struct FormatOptions {
 }
 
 impl FormatOptions {
+    #[allow(dead_code)]
     pub fn token_saver() -> Self {
         Self {
             remove_bold: true,
@@ -480,14 +481,17 @@ This is a paragraph.
 
 Another paragraph.
 "#;
-        let result = format_markdown_with_options(content, FormatOptions {
-            remove_bold: true,
-            compact_blank_lines: false,
-            trim_trailing_whitespace: true,
-            collapse_spaces: false,
-            remove_horizontal_rules: false,
-            remove_emphasis: false,
-        });
+        let result = format_markdown_with_options(
+            content,
+            FormatOptions {
+                remove_bold: true,
+                compact_blank_lines: false,
+                trim_trailing_whitespace: true,
+                collapse_spaces: false,
+                remove_horizontal_rules: false,
+                remove_emphasis: false,
+            },
+        );
         assert_eq!(result, expected);
     }
 
@@ -588,14 +592,17 @@ Some text.
 
 More text.
 "#;
-        let result = format_markdown_with_options(content, FormatOptions {
-            remove_bold: true,
-            compact_blank_lines: false,
-            trim_trailing_whitespace: true,
-            collapse_spaces: false,
-            remove_horizontal_rules: false,
-            remove_emphasis: false,
-        });
+        let result = format_markdown_with_options(
+            content,
+            FormatOptions {
+                remove_bold: true,
+                compact_blank_lines: false,
+                trim_trailing_whitespace: true,
+                collapse_spaces: false,
+                remove_horizontal_rules: false,
+                remove_emphasis: false,
+            },
+        );
         assert_eq!(result, expected);
     }
 
@@ -673,14 +680,17 @@ Some text.
 |---|---|
 | X | Y |
 "#;
-        let result = format_markdown_with_options(content, FormatOptions {
-            remove_bold: true,
-            compact_blank_lines: false,
-            trim_trailing_whitespace: true,
-            collapse_spaces: false,
-            remove_horizontal_rules: false,
-            remove_emphasis: false,
-        });
+        let result = format_markdown_with_options(
+            content,
+            FormatOptions {
+                remove_bold: true,
+                compact_blank_lines: false,
+                trim_trailing_whitespace: true,
+                collapse_spaces: false,
+                remove_horizontal_rules: false,
+                remove_emphasis: false,
+            },
+        );
         assert_eq!(result, expected);
     }
 
@@ -733,14 +743,17 @@ Just text with | pipes
     #[test]
     fn test_format_markdown_only_newlines() {
         let content = "\n\n\n";
-        let result = format_markdown_with_options(content, FormatOptions {
-            remove_bold: true,
-            compact_blank_lines: false,
-            trim_trailing_whitespace: true,
-            collapse_spaces: false,
-            remove_horizontal_rules: false,
-            remove_emphasis: false,
-        });
+        let result = format_markdown_with_options(
+            content,
+            FormatOptions {
+                remove_bold: true,
+                compact_blank_lines: false,
+                trim_trailing_whitespace: true,
+                collapse_spaces: false,
+                remove_horizontal_rules: false,
+                remove_emphasis: false,
+            },
+        );
         assert_eq!(result, "\n\n");
     }
 

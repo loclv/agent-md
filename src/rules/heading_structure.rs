@@ -90,3 +90,153 @@ pub fn extract_heading_level(line: &str) -> Option<u32> {
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_heading_level_valid() {
+        assert_eq!(extract_heading_level("# Heading"), Some(1));
+        assert_eq!(extract_heading_level("## Heading"), Some(2));
+        assert_eq!(extract_heading_level("### Heading"), Some(3));
+        assert_eq!(extract_heading_level("###### Heading"), Some(6));
+    }
+
+    #[test]
+    fn test_extract_heading_level_invalid() {
+        assert_eq!(extract_heading_level("Heading"), None);
+        assert_eq!(extract_heading_level("#No space"), None);
+        assert_eq!(extract_heading_level("#\tHeading"), Some(1)); // Tab counts as space
+        assert_eq!(extract_heading_level("####### Heading"), Some(7)); // 7 levels
+    }
+
+    #[test]
+    fn test_extract_heading_level_edge_cases() {
+        assert_eq!(extract_heading_level(""), None);
+        assert_eq!(extract_heading_level("#"), None);
+        assert_eq!(extract_heading_level(" # Heading"), Some(1)); // Leading space
+        assert_eq!(extract_heading_level("   # Heading"), Some(1)); // Multiple leading spaces
+    }
+
+    #[test]
+    fn test_extract_heading_level_with_special_characters() {
+        assert_eq!(extract_heading_level("# Heading with # hash"), Some(1));
+        assert_eq!(extract_heading_level("## Heading with ## hashes"), Some(2));
+        assert_eq!(extract_heading_level("### Heading ###"), Some(3));
+    }
+
+    #[test]
+    fn test_extract_heading_level_unicode() {
+        assert_eq!(extract_heading_level("# Тест"), Some(1));
+        assert_eq!(extract_heading_level("## テスト"), Some(2));
+        assert_eq!(extract_heading_level("### 测试"), Some(3));
+    }
+
+    #[test]
+    fn test_validate_heading_structure_single_heading() {
+        let content = "# Single Heading\n\nSome content.";
+        let result = validate_heading_structure(content);
+        assert!(result.is_none()); // Should be valid
+    }
+
+    #[test]
+    fn test_validate_heading_structure_multiple_headings() {
+        let content = "# First Heading\n\n## Second Heading\n\n### Third Heading";
+        let result = validate_heading_structure(content);
+        assert!(result.is_none()); // Should be valid (proper sequence)
+    }
+
+    #[test]
+    fn test_validate_heading_structure_multiple_h1() {
+        let content = "# First H1\n\nSome content.\n\n# Second H1\n\nMore content.";
+        let result = validate_heading_structure(content);
+        assert!(result.is_some());
+        let errors = result.unwrap();
+        assert_eq!(errors.len(), 1); // One error for second H1
+        assert_eq!(errors[0].line, 5); // Second H1 is on line 5
+        assert!(errors[0].message.contains("Multiple H1"));
+    }
+
+    #[test]
+    fn test_validate_heading_structure_skipped_levels() {
+        let content = "# H1\n\n### H3 (skipped H2)";
+        let result = validate_heading_structure(content);
+        assert!(result.is_some());
+        let errors = result.unwrap();
+        assert_eq!(errors.len(), 1); // One error for skipped level
+        assert_eq!(errors[0].line, 3); // H3 is on line 3
+        assert!(errors[0].message.contains("skipped"));
+    }
+
+    #[test]
+    fn test_validate_heading_structure_three_headings() {
+        let content = "# First\n\n## Second\n\n### Third";
+        let result = validate_heading_structure(content);
+        assert!(result.is_none()); // Should be valid
+    }
+
+    #[test]
+    fn test_validate_heading_structure_mixed_headings() {
+        let content = "# H1\n\n## H2\n\n# Another H1\n\n## H2";
+        let result = validate_heading_structure(content);
+        assert!(result.is_some());
+        let errors = result.unwrap();
+        assert_eq!(errors.len(), 1); // One error for second H1
+        assert_eq!(errors[0].line, 5); // Second H1 is on line 5
+    }
+
+    #[test]
+    fn test_validate_heading_structure_valid_sequence() {
+        let content = "# H1\n\n## H2\n\n### H3\n\n#### H4\n\n##### H5\n\n###### H6";
+        let result = validate_heading_structure(content);
+        assert!(result.is_none()); // Should be valid
+    }
+
+    #[test]
+    fn test_validate_heading_structure_other_heading_levels() {
+        let content = "## H2\n\n### H3\n\n#### H4";
+        let result = validate_heading_structure(content);
+        assert!(result.is_none()); // Should be valid (no H1 conflicts)
+    }
+
+    #[test]
+    fn test_validate_heading_structure_no_headings() {
+        let content = "Just some text\n\nwith no headings.";
+        let result = validate_heading_structure(content);
+        assert!(result.is_none()); // Should be valid
+    }
+
+    #[test]
+    fn test_validate_heading_structure_false_positives() {
+        let content = "This is not a heading\n\n# This is a heading\n\nNot a heading: #";
+        let result = validate_heading_structure(content);
+        assert!(result.is_none()); // Should be valid (only one real heading)
+    }
+
+    #[test]
+    fn test_validate_heading_structure_ignores_code_blocks() {
+        let content = r#"# Main Heading
+
+```javascript
+// This is not a heading in a code block
+# Not a heading
+```
+
+## Real Heading
+"#;
+        let result = validate_heading_structure(content);
+        assert!(result.is_none()); // Should be valid (ignores code block)
+    }
+
+    #[test]
+    fn test_validate_heading_structure_multiple_skipped_levels() {
+        let content = "# H1\n\n#### H4 (skipped H2 and H3)";
+        let result = validate_heading_structure(content);
+        assert!(result.is_some());
+        let errors = result.unwrap();
+        assert_eq!(errors.len(), 1); // One error for skipped levels
+        assert_eq!(errors[0].line, 3); // H4 is on line 3
+        assert!(errors[0].message.contains("skipped"));
+    }
+}

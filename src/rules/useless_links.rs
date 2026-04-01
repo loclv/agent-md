@@ -76,3 +76,131 @@ pub fn find_useless_link(line: &str) -> Vec<usize> {
 
     results
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_find_useless_link_exact_url() {
+        let line = "Visit [https://example.com](https://example.com) for more";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], 7); // Position of [
+    }
+
+    #[test]
+    fn test_find_useless_link_valid_link() {
+        let line = "Visit [Example](https://example.com) for more";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 0);
+    }
+
+    #[test]
+    fn test_find_useless_link_no_links() {
+        let line = "This has no links at all";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 0);
+    }
+
+    #[test]
+    fn test_find_useless_link_with_www() {
+        let line = "Visit [www.example.com](https://www.example.com) for more";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 1); // Should detect www.example.com == www.example.com
+        assert_eq!(result[0], 7);
+    }
+
+    #[test]
+    fn test_find_useless_link_without_protocol() {
+        let line = "Visit [example.com](https://example.com) for more";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 1); // Should detect example.com == example.com
+        assert_eq!(result[0], 7);
+    }
+
+    #[test]
+    fn test_find_useless_link_malformed_link() {
+        let line = "This has [broken(link](https://example.com)";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 0); // Malformed link, no detection
+    }
+
+    #[test]
+    fn test_find_useless_link_with_trailing_slash() {
+        let line = "Visit [example.com](https://example.com/) for more";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 1); // Should detect example.com == example.com/
+        assert_eq!(result[0], 7);
+    }
+
+    #[test]
+    fn test_find_useless_link_with_path() {
+        let line = "Visit [example.com/path](https://example.com/path) for more";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 1); // Should detect exact match with path
+        assert_eq!(result[0], 7);
+    }
+
+    #[test]
+    fn test_find_useless_link_http_protocol() {
+        let line = "Visit [http://example.com](http://example.com) for more";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 1); // Should detect with http protocol
+        assert_eq!(result[0], 7);
+    }
+
+    #[test]
+    fn test_find_useless_link_mixed_protocol() {
+        let line = "Visit [example.com](http://example.com) for more";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 1); // Should detect example.com == example.com
+        assert_eq!(result[0], 7);
+    }
+
+    #[test]
+    fn test_find_useless_link_multiple_links() {
+        let line = "[https://example.com](https://example.com) and [https://test.com](https://test.com)";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 2); // Should detect both useless links
+        assert_eq!(result[0], 1); // First [
+        assert_eq!(result[1], 48); // Second [
+    }
+
+    #[test]
+    fn test_find_useless_link_empty_text() {
+        let line = "Visit [](https://example.com) for more";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 0); // Empty text is not considered useless
+    }
+
+    #[test]
+    fn test_find_useless_link_nested_parentheses() {
+        let line = "Visit [example](https://example.com/path(to/file)) for more";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 0); // Should handle nested parentheses correctly
+    }
+
+    #[test]
+    fn test_find_useless_link_with_query_params() {
+        let line = "[example.com?query=1](https://example.com?query=1)";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 1); // Should detect with query params
+        assert_eq!(result[0], 1);
+    }
+
+    #[test]
+    fn test_find_useless_link_partial_match() {
+        let line = "Visit [example](https://example.com) for more";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 0); // Partial match should not trigger
+    }
+
+    #[test]
+    fn test_find_useless_link_whitespace_variations() {
+        let line = "Visit [ example.com ]( https://example.com ) for more";
+        let result = find_useless_link(line);
+        assert_eq!(result.len(), 1); // Should trim whitespace
+        assert_eq!(result[0], 7);
+    }
+}

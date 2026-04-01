@@ -61,3 +61,103 @@ pub fn validate_code_blocks(content: &str) -> Option<Vec<LintError>> {
         Some(errors)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_code_blocks_with_language() {
+        let content = "```javascript\nconsole.log('hello');\n```";
+        let result = validate_code_blocks(content);
+        assert!(result.is_none()); // Should be valid (has language)
+    }
+
+    #[test]
+    fn test_validate_code_blocks_no_language() {
+        let content = "```\nconsole.log('hello');\n```";
+        let result = validate_code_blocks(content);
+        assert!(result.is_some());
+        let warnings = result.unwrap();
+        assert_eq!(warnings.len(), 1); // One warning for missing language
+        assert_eq!(warnings[0].line, 1); // Warning on opening line
+        assert!(warnings[0].message.contains("language"));
+    }
+
+    #[test]
+    fn test_validate_code_blocks_multiple_blocks() {
+        let content = "```javascript\n// Has language\n```\n\n```\n// No language\n```";
+        let result = validate_code_blocks(content);
+        assert!(result.is_some());
+        let warnings = result.unwrap();
+        assert_eq!(warnings.len(), 1); // One warning for second block
+        assert_eq!(warnings[0].line, 5); // Second block starts on line 5
+    }
+
+    #[test]
+    fn test_validate_code_blocks_unclosed_block() {
+        let content = r#"# Title
+
+```javascript
+console.log('no closing fence');
+```
+"#;
+        let result = validate_code_blocks(content);
+        // Should handle closed block correctly
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_validate_code_blocks_empty_language() {
+        let content = r#"```
+code with empty language spec
+```
+"#;
+        let result = validate_code_blocks(content);
+        // Should treat empty language as missing
+        assert!(result.is_some());
+        let warnings = result.unwrap();
+        assert_eq!(warnings.len(), 1);
+    }
+
+    #[test]
+    fn test_validate_code_blocks_nested_fences() {
+        let content = r#"`````
+triple backticks inside code
+```
+still inside
+`````
+"#;
+        let result = validate_code_blocks(content);
+        // Should handle nested fences correctly
+        assert!(result.is_none()); // Has language (empty)
+    }
+
+    #[test]
+    fn test_validate_code_blocks_with_text_language() {
+        let content = "```text\nThis is plain text\n```";
+        let result = validate_code_blocks(content);
+        assert!(result.is_none()); // Should be valid (has language)
+    }
+
+    #[test]
+    fn test_validate_code_blocks_language_with_spaces() {
+        let content = "```  javascript  \nconsole.log('hello');\n```";
+        let result = validate_code_blocks(content);
+        assert!(result.is_none()); // Should be valid (has language after trimming)
+    }
+
+    #[test]
+    fn test_validate_code_blocks_no_code_blocks() {
+        let content = "# Heading\n\nJust regular text\n\nNo code blocks here.";
+        let result = validate_code_blocks(content);
+        assert!(result.is_none()); // Should be valid (no code blocks)
+    }
+
+    #[test]
+    fn test_validate_code_blocks_inline_code() {
+        let content = "This has `inline code` but no fenced code blocks.";
+        let result = validate_code_blocks(content);
+        assert!(result.is_none()); // Should be valid (no fenced code blocks)
+    }
+}

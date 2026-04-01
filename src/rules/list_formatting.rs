@@ -157,3 +157,193 @@ pub fn detect_list_item(line: &str) -> Option<(ListType, String)> {
 
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_detect_list_item_unordered() {
+        assert_eq!(
+            detect_list_item("- Item"),
+            Some((ListType::Unordered, "-".to_string()))
+        );
+        assert_eq!(
+            detect_list_item("* Item"),
+            Some((ListType::Unordered, "*".to_string()))
+        );
+        assert_eq!(
+            detect_list_item("+ Item"),
+            Some((ListType::Unordered, "+".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_detect_list_item_ordered() {
+        assert_eq!(
+            detect_list_item("1. Item"),
+            Some((ListType::Ordered, "1.".to_string()))
+        );
+        assert_eq!(
+            detect_list_item("2) Item"),
+            Some((ListType::Ordered, "2)".to_string()))
+        );
+        assert_eq!(
+            detect_list_item("123. Item"),
+            Some((ListType::Ordered, "123.".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_detect_list_item_invalid() {
+        assert_eq!(detect_list_item("Item"), None);
+        assert_eq!(detect_list_item("-Item"), None); // No space after marker
+        assert_eq!(detect_list_item("1.Item"), None); // No space after number
+        assert_eq!(detect_list_item("1 .Item"), None); // Space before dot
+        assert_eq!(detect_list_item(""), None);
+    }
+
+    #[test]
+    fn test_detect_list_item_edge_cases() {
+        assert_eq!(
+            detect_list_item("- "),
+            Some((ListType::Unordered, "-".to_string()))
+        ); // Empty item
+        assert_eq!(
+            detect_list_item("1. "),
+            Some((ListType::Ordered, "1.".to_string()))
+        ); // Empty item
+        assert_eq!(detect_list_item("-Item with no space"), None);
+        assert_eq!(detect_list_item("1.No space"), None);
+    }
+
+    #[test]
+    fn test_extract_number_from_marker_valid() {
+        assert_eq!(extract_number_from_marker("1."), Some(1));
+        assert_eq!(extract_number_from_marker("2)"), Some(2));
+        assert_eq!(extract_number_from_marker("123."), Some(123));
+    }
+
+    #[test]
+    fn test_extract_number_from_marker_invalid() {
+        assert_eq!(extract_number_from_marker("a."), None);
+        assert_eq!(extract_number_from_marker("1a."), None);
+        assert_eq!(extract_number_from_marker(""), None);
+        assert_eq!(extract_number_from_marker("."), None);
+    }
+
+    #[test]
+    fn test_validate_list_formatting_consistent_unordered() {
+        let content = "- First item\n- Second item\n- Third item";
+        let result = validate_list_formatting(content);
+        assert!(result.is_none()); // Should be valid
+    }
+
+    #[test]
+    fn test_validate_list_formatting_ordered_sequential() {
+        let content = "1. First item\n2. Second item\n3. Third item";
+        let result = validate_list_formatting(content);
+        assert!(result.is_none()); // Should be valid
+    }
+
+    #[test]
+    fn test_validate_list_formatting_ordered_nonsequential() {
+        let content = "1. First item\n3. Third item\n4. Fourth item";
+        let result = validate_list_formatting(content);
+        assert!(result.is_some());
+        let warnings = result.unwrap();
+        assert_eq!(warnings.len(), 1); // One warning for non-sequential numbering
+        assert_eq!(warnings[0].line, 2); // Third item is on line 2
+        assert!(warnings[0].message.contains("sequential"));
+    }
+
+    #[test]
+    fn test_validate_list_formatting_inconsistent_markers() {
+        let content = "- First item\n* Second item\n- Third item";
+        let result = validate_list_formatting(content);
+        assert!(result.is_some());
+        let warnings = result.unwrap();
+        assert_eq!(warnings.len(), 1); // One warning for inconsistent marker
+        assert_eq!(warnings[0].line, 2); // Second item is on line 2
+        assert!(warnings[0].message.contains("inconsistent"));
+    }
+
+    #[test]
+    fn test_validate_list_formatting_separate_lists() {
+        let content = "- First list\n- Second list\n\n1. New list\n2. Second item";
+        let result = validate_list_formatting(content);
+        assert!(result.is_none()); // Should be valid (separate lists)
+    }
+
+    #[test]
+    fn test_validate_list_formatting_mixed_ordered_unordered() {
+        let content = r#"1. First ordered
+
+- First unordered
+
+2. Second ordered
+
+- Second unordered
+
+3. Third ordered
+"#;
+        let result = validate_list_formatting(content);
+        // Should be valid - blank lines reset list context
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_validate_list_formatting_deeply_nested() {
+        let content = r#"1. First
+2. Second
+3. Third
+4. Fourth
+5. Fifth
+"#;
+        let result = validate_list_formatting(content);
+        // Should be valid - sequential numbering
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_validate_list_formatting_single_item() {
+        let content = "- Single item";
+        let result = validate_list_formatting(content);
+        assert!(result.is_none()); // Should be valid (single item)
+    }
+
+    #[test]
+    fn test_validate_list_formatting_with_code_block() {
+        let content = r#"- Item 1
+- Item 2
+
+```
+- Not a list item in code block
+1. Also not a list item
+```
+
+- Item 3
+"#;
+        let result = validate_list_formatting(content);
+        assert!(result.is_none()); // Should be valid (ignores code blocks)
+    }
+
+    #[test]
+    fn test_validate_list_formatting_ordered_with_parentheses() {
+        let content = "1) First item\n2) Second item\n3) Third item";
+        let result = validate_list_formatting(content);
+        assert!(result.is_some()); // Should error (parentheses not supported in numbering check)
+        let errors = result.unwrap();
+        assert_eq!(errors.len(), 2); // Lines 2 and 3
+    }
+
+    #[test]
+    fn test_validate_list_formatting_mixed_separators() {
+        let content = "1. First item\n2) Second item\n3. Third item";
+        let result = validate_list_formatting(content);
+        assert!(result.is_some()); // Should error (mixed separators)
+        let errors = result.unwrap();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].line, 2);
+    }
+}
