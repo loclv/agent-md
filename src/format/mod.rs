@@ -1,3 +1,5 @@
+mod tables;
+
 use crate::*;
 
 #[derive(Clone)]
@@ -68,47 +70,17 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
             continue;
         }
 
-        let leading_indent = line.len() - line.trim_start().len();
-        let indent_str = &line[..leading_indent];
-
-        let (prefix, table_content) = if trimmed.starts_with('|') && trimmed.ends_with('|') {
-            (indent_str, trimmed)
-        } else if (trimmed.starts_with("> |") || trimmed.starts_with("- |"))
-            && trimmed.ends_with('|')
-        {
-            let table_start = trimmed.find('|').unwrap_or(0);
-            let prefix_part = &trimmed[..table_start];
-            let table_part = &trimmed[table_start..];
-            (&line[..leading_indent + prefix_part.len()], table_part)
-        } else {
-            ("", "")
-        };
-
         let is_heading = trimmed.starts_with('#');
 
+        let (prefix, table_content) = tables::parse_table_line(line);
+
         if !table_content.is_empty() {
-            let is_separator_row = table_content
-                .chars()
-                .all(|c| c == '|' || c == '-' || c == ' ' || c == ':')
-                && table_content.contains('-');
-
-            if !is_separator_row {
-                let cells: Vec<&str> = table_content.split('|').collect();
-                let mut formatted_cells = Vec::new();
-
-                for (i, cell) in cells.iter().enumerate() {
-                    if i == 0 || i == cells.len() - 1 {
-                        continue;
-                    }
-                    let cell_trimmed = cell.trim();
-                    formatted_cells.push(cell_trimmed.to_string());
-                }
-
-                let formatted_line = format!("{}| {} |", prefix, formatted_cells.join(" | "));
-                formatted_lines.push(formatted_line);
-            } else {
-                let compacted = compact_separator_row(table_content);
+            if tables::is_separator_row(table_content) {
+                let compacted = tables::compact_separator_row(table_content);
                 formatted_lines.push(format!("{}{}", prefix, compacted));
+            } else {
+                let formatted_line = tables::format_table_row(prefix, table_content);
+                formatted_lines.push(formatted_line);
             }
         } else {
             let mut processed_line = if options.remove_bold {
@@ -274,40 +246,6 @@ fn remove_bold_markers(line: &str) -> String {
 fn is_horizontal_rule(line: &str) -> bool {
     let trimmed = line.trim();
     trimmed == "---" || trimmed == "***" || trimmed == "___"
-}
-
-/// Compact separator row dashes to exactly 3, preserving alignment colons.
-/// |----|-----| becomes |---|---|
-/// |:---|:--:|--:| becomes |:---|:--:|--:|
-fn compact_separator_row(table_content: &str) -> String {
-    let cells: Vec<&str> = table_content.split('|').collect();
-    let mut formatted_cells = Vec::new();
-
-    for (i, cell) in cells.iter().enumerate() {
-        if i == 0 || i == cells.len() - 1 {
-            continue;
-        }
-        let cell_trimmed = cell.trim();
-        let has_left_colon = cell_trimmed.starts_with(':');
-        let has_right_colon = cell_trimmed.ends_with(':');
-
-        let compacted = if has_left_colon && has_right_colon {
-            // Center alignment: :---:
-            ":---:"
-        } else if has_left_colon {
-            // Left alignment: :---
-            ":---"
-        } else if has_right_colon {
-            // Right alignment: ---:
-            "---:"
-        } else {
-            // No alignment: ---
-            "---"
-        };
-        formatted_cells.push(compacted.to_string());
-    }
-
-    format!("|{}|", formatted_cells.join("|"))
 }
 
 fn remove_emphasis_markers(line: &str) -> String {
