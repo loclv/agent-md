@@ -6,6 +6,7 @@ edition = "2021"
 
 # Width settings
 max_width = 100
+# better for LLM, less tokens
 hard_tabs = true
 newline_style = "Unix"
 
