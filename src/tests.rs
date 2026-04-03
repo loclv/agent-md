@@ -1382,4 +1382,390 @@ Please contribute to the project.
 			.collect();
 		assert_eq!(trailing_space_errors.len(), 0);
 	}
+
+	// Tests for basic Markdown syntax - Headers
+	#[test]
+	fn test_basic_headers_h1() {
+		let content = "# This is a Heading h1";
+		let doc = parse_markdown(content);
+		assert_eq!(doc.headings.len(), 1);
+		assert_eq!(doc.headings[0].level, 1);
+		assert_eq!(doc.headings[0].text, "This is a Heading h1");
+	}
+
+	#[test]
+	fn test_basic_headers_h2() {
+		let content = "## This is a Heading h2";
+		let doc = parse_markdown(content);
+		assert_eq!(doc.headings.len(), 1);
+		assert_eq!(doc.headings[0].level, 2);
+		assert_eq!(doc.headings[0].text, "This is a Heading h2");
+	}
+
+	#[test]
+	fn test_basic_headers_h6() {
+		let content = "###### This is a Heading h6";
+		let doc = parse_markdown(content);
+		assert_eq!(doc.headings.len(), 1);
+		assert_eq!(doc.headings[0].level, 6);
+		assert_eq!(doc.headings[0].text, "This is a Heading h6");
+	}
+
+	#[test]
+	fn test_basic_headers_multiple() {
+		let content = "# H1\n## H2\n###### H6";
+		let doc = parse_markdown(content);
+		assert_eq!(doc.headings.len(), 3);
+		assert_eq!(doc.headings[0].level, 1);
+		assert_eq!(doc.headings[1].level, 2);
+		assert_eq!(doc.headings[2].level, 6);
+	}
+
+	// Tests for basic Markdown syntax - Emphasis
+	#[test]
+	fn test_basic_emphasis_italic_asterisk() {
+		let content = "*This text will be italic*";
+		let result = validate_markdown(content);
+		assert!(result.valid);
+		assert_eq!(result.errors.len(), 0);
+	}
+
+	#[test]
+	fn test_basic_emphasis_italic_underscore() {
+		let content = "_This will also be italic_";
+		let result = validate_markdown(content);
+		assert!(result.valid);
+		assert_eq!(result.errors.len(), 0);
+	}
+
+	#[test]
+	fn test_basic_emphasis_bold_asterisk() {
+		let content = "**This text will be bold**";
+		let result = validate_markdown(content);
+		assert!(!result.valid);
+		assert_eq!(result.errors.len(), 1);
+		assert_eq!(result.errors[0].rule, "no-bold");
+	}
+
+	#[test]
+	fn test_basic_emphasis_bold_underscore() {
+		let content = "__This will also be bold__";
+		let result = validate_markdown(content);
+		assert!(!result.valid);
+		assert_eq!(result.errors.len(), 1);
+		assert_eq!(result.errors[0].rule, "no-bold");
+	}
+
+	#[test]
+	fn test_basic_emphasis_combined() {
+		let content = "_You **can** combine them_";
+		let result = validate_markdown(content);
+		assert!(!result.valid);
+		let bold_errors: Vec<_> = result
+			.errors
+			.iter()
+			.filter(|e| e.rule == "no-bold")
+			.collect();
+		assert_eq!(bold_errors.len(), 1);
+	}
+
+	// Tests for basic Markdown syntax - Lists
+	#[test]
+	fn test_basic_lists_unordered() {
+		let content = r#"* Item 1
+* Item 2
+* Item 2a
+* Item 2b"#;
+		let doc = parse_markdown(content);
+		// Word count includes asterisks and item numbers as separate tokens
+		assert!(doc.word_count >= 8);
+		let result = validate_markdown(content);
+		assert!(result.valid);
+	}
+
+	#[test]
+	fn test_basic_lists_unordered_nested() {
+		let content = r#"* Item 1
+* Item 2
+    * Item 3a
+    * Item 3b"#;
+		let result = validate_markdown(content);
+		assert!(result.valid);
+	}
+
+	#[test]
+	fn test_basic_lists_ordered() {
+		let content = r#"1. Item 1
+2. Item 2
+3. Item 3"#;
+		let doc = parse_markdown(content);
+		// Word count includes numbers as separate tokens
+		assert!(doc.word_count >= 6);
+		let result = validate_markdown(content);
+		assert!(result.valid);
+	}
+
+	#[test]
+	fn test_basic_lists_ordered_nested() {
+		let content = r#"1. Item 1
+2. Item 2
+3. Item 3
+    1. Item 3a
+    2. Item 3b"#;
+		let result = validate_markdown(content);
+		assert!(result.valid);
+	}
+
+	// Tests for basic Markdown syntax - Images
+	#[test]
+	fn test_basic_images_with_alt_text() {
+		let content = r#"![This is an alt text.](/image/Markdown-mark.svg)"#;
+		let doc = parse_markdown(content);
+		assert!(doc.content.contains("![This is an alt text.]"));
+		let result = validate_markdown(content);
+		assert!(result.valid);
+	}
+
+	#[test]
+	fn test_basic_images_with_title() {
+		let content =
+			r#"![This is an alt text.](/image/Markdown-mark.svg "This is a sample image.")"#;
+		let doc = parse_markdown(content);
+		assert!(doc.content.contains("This is a sample image"));
+		let result = validate_markdown(content);
+		assert!(result.valid);
+	}
+
+	// Tests for basic Markdown syntax - Links
+	#[test]
+	fn test_basic_links() {
+		let content = r#"[Markdown Live Preview](https://markdownlivepreview.com/)"#;
+		let doc = parse_markdown(content);
+		assert!(doc.content.contains("Markdown Live Preview"));
+		let result = validate_markdown(content);
+		assert!(result.valid);
+	}
+
+	#[test]
+	fn test_basic_links_useless() {
+		let content = r#"[https://example.com](https://example.com)"#;
+		let result = validate_markdown(content);
+		assert!(result.valid); // Warning only
+		assert_eq!(result.warnings.len(), 1);
+		assert_eq!(result.warnings[0].rule, "useless-links");
+	}
+
+	#[test]
+	fn test_basic_links_meaningful_text() {
+		let content = r#"[Click here for more info](https://example.com)"#;
+		let result = validate_markdown(content);
+		assert!(result.valid);
+		assert_eq!(result.warnings.len(), 0);
+	}
+
+	// Tests for basic Markdown syntax - Blockquotes
+	#[test]
+	fn test_basic_blockquotes_single() {
+		let content =
+			r#"> Markdown is a lightweight markup language with plain-text-formatting syntax."#;
+		let doc = parse_markdown(content);
+		assert!(doc.content.starts_with(">"));
+		let result = validate_markdown(content);
+		assert!(result.valid);
+	}
+
+	#[test]
+	fn test_basic_blockquotes_multi_line() {
+		let content = r#"> Markdown is a lightweight markup language.
+>
+> Created in 2004 by John Gruber."#;
+		let doc = parse_markdown(content);
+		assert!(doc.content.contains(">"));
+		let result = validate_markdown(content);
+		assert!(result.valid);
+	}
+
+	#[test]
+	fn test_basic_blockquotes_nested() {
+		let content = r#"> Markdown is a lightweight markup language.
+>
+>> Markdown is often used to format readme files."#;
+		let doc = parse_markdown(content);
+		assert!(doc.content.contains(">>"));
+		let result = validate_markdown(content);
+		assert!(result.valid);
+	}
+
+	// Tests for basic Markdown syntax - Tables
+	#[test]
+	fn test_basic_tables_simple() {
+		let content = r#"| Left columns | Right columns |
+| --- | --- |
+| left foo | right foo |
+| left bar | right bar |
+| left baz | right baz |"#;
+		let result = validate_markdown(content);
+		assert!(result.valid);
+	}
+
+	#[test]
+	fn test_basic_tables_alignment() {
+		let content = r#"| Left | Center | Right |
+|:---|:---:|---:|
+| L1 | C1 | R1 |"#;
+		let result = validate_markdown(content);
+		assert!(result.valid);
+	}
+
+	#[test]
+	fn test_basic_tables_five_columns() {
+		let content = r#"| C1 | C2 | C3 | C4 | C5 |
+|---|---|---|---|---|
+| V1 | V2 | V3 | V4 | V5 |"#;
+		let result = validate_markdown(content);
+		assert!(result.valid);
+	}
+
+	#[test]
+	fn test_basic_tables_six_columns_warning() {
+		let content = r#"| C1 | C2 | C3 | C4 | C5 | C6 |
+|---|---|---|---|---|---|
+| V1 | V2 | V3 | V4 | V5 | V6 |"#;
+		let result = validate_markdown(content);
+		assert!(result.valid); // Warning only
+		let table_warnings: Vec<_> = result
+			.warnings
+			.iter()
+			.filter(|w| w.rule == "simple-tables")
+			.collect();
+		// Multiple lines trigger warnings for tables > 5 columns
+		assert!(!table_warnings.is_empty());
+	}
+
+	// Tests for basic Markdown syntax - Code blocks
+	#[test]
+	fn test_basic_code_blocks_fenced() {
+		let content = r#"```
+let message = 'Hello world';
+alert(message);
+```"#;
+		let entries = parse_markdown_to_jsonl(content);
+		assert_eq!(entries.len(), 1);
+		assert_eq!(entries[0].entry_type, "code_block");
+		assert_eq!(entries[0].language, None);
+		assert!(entries[0].content.contains("Hello world"));
+	}
+
+	#[test]
+	fn test_basic_code_blocks_with_language() {
+		let content = r#"```javascript
+let message = 'Hello world';
+alert(message);
+```"#;
+		let entries = parse_markdown_to_jsonl(content);
+		assert_eq!(entries.len(), 1);
+		assert_eq!(entries[0].entry_type, "code_block");
+		assert_eq!(entries[0].language, Some("javascript".to_string()));
+	}
+
+	#[test]
+	fn test_basic_code_blocks_no_language_warning() {
+		let content = r#"```
+some code without language
+```"#;
+		let result = validate_markdown(content);
+		assert!(result.valid);
+		let code_warnings: Vec<_> = result
+			.warnings
+			.iter()
+			.filter(|w| w.rule == "code-blocks")
+			.collect();
+		assert_eq!(code_warnings.len(), 1);
+	}
+
+	// Tests for basic Markdown syntax - Inline code
+	#[test]
+	fn test_basic_inline_code() {
+		let content = r#"This web site is using `markedjs/marked`."#;
+		let doc = parse_markdown(content);
+		assert!(doc.content.contains("`markedjs/marked`"));
+		let result = validate_markdown(content);
+		assert!(result.valid);
+	}
+
+	#[test]
+	fn test_basic_inline_code_with_bold_inside() {
+		let content = r#"Code with `**bold**` inside is allowed."#;
+		let result = validate_markdown(content);
+		assert!(result.valid);
+		assert_eq!(result.errors.len(), 0);
+	}
+
+	// Integration test for complete basic.md syntax
+	#[test]
+	fn test_basic_syntax_complete_document() {
+		let content = r#"# Markdown syntax guide
+
+## Headers
+
+### H3 Example
+
+#### H4 Example
+
+## Emphasis
+
+*This text will be italic*
+_This will also be italic_
+
+## Lists
+
+### Unordered
+
+* Item 1
+* Item 2
+
+### Ordered
+
+1. Item 1
+2. Item 2
+
+## Images
+
+![This is an alt text.](/image/Markdown-mark.svg "sample")
+
+## Links
+
+[Markdown Live Preview](https://markdownlivepreview.com/)
+
+## Blockquotes
+
+> Markdown is a lightweight markup language.
+
+## Tables
+
+| Left columns | Right columns |
+| --- | --- |
+| left foo | right foo |
+
+## Blocks of code
+
+```javascript
+let message = 'Hello world';
+```
+
+## Inline code
+
+This web site is using `markedjs/marked`.
+"#;
+		let doc = parse_markdown(content);
+		// Headings include all section headings
+		assert!(doc.headings.len() >= 10);
+		assert!(doc.word_count > 50);
+
+		let entries = parse_markdown_to_jsonl(content);
+		assert!(entries.len() > 10);
+
+		let result = validate_markdown(content);
+		assert!(result.valid);
+	}
 }
