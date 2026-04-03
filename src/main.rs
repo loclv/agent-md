@@ -6,6 +6,8 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 
 mod rules;
+mod html_tests;
+
 use crate::rules::extract_heading_level;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
