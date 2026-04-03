@@ -96,10 +96,7 @@ mod tests {
 
     #[test]
     fn test_collapse_spaces_before_comment_no_comment() {
-        assert_eq!(
-            collapse_spaces_before_comment("echo hello"),
-            "echo hello"
-        );
+        assert_eq!(collapse_spaces_before_comment("echo hello"), "echo hello");
     }
 
     #[test]

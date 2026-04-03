@@ -49,9 +49,7 @@ pub fn parse_table_line(line: &str) -> (&str, &str) {
 
     if trimmed.starts_with('|') && trimmed.ends_with('|') {
         (indent_str, trimmed)
-    } else if (trimmed.starts_with("> |") || trimmed.starts_with("- |"))
-        && trimmed.ends_with('|')
-    {
+    } else if (trimmed.starts_with("> |") || trimmed.starts_with("- |")) && trimmed.ends_with('|') {
         let table_start = trimmed.find('|').unwrap_or(0);
         let prefix_part = &trimmed[..table_start];
         let table_part = &trimmed[table_start..];

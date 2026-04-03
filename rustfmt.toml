@@ -13,14 +13,14 @@ newline_style = "Unix"
 # Imports
 reorder_imports = true
 
-# Trailing commas
-trailing_comma = "Vertical"
+# Trailing commas (requires nightly)
+# trailing_comma = "Vertical"
 
-# Blank lines
-blank_lines_upper_bound = 1
+# Blank lines (requires nightly)
+# blank_lines_upper_bound = 1
 
-# Spaces
-spaces_around_ranges = false
+# Spaces (requires nightly)
+# spaces_around_ranges = false
 
 # Misc
 remove_nested_parens = true
