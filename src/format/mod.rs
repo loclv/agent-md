@@ -1,3 +1,4 @@
+mod code_blocks;
 mod tables;
 
 use crate::*;
@@ -51,17 +52,32 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
     let lines: Vec<&str> = content.lines().collect();
     let mut formatted_lines = Vec::new();
     let mut in_code_block = false;
+    let mut code_block_lang: Option<String> = None;
 
     for (i, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
 
         if trimmed.starts_with("```") {
             in_code_block = !in_code_block;
+            if in_code_block {
+                // Extract language from the opening fence
+                code_block_lang = trimmed.strip_prefix("```").map(|s| s.to_lowercase());
+            } else {
+                code_block_lang = None;
+            }
             formatted_lines.push(line.to_string());
             continue;
         }
 
         if in_code_block {
+            // For bash/sh code blocks, collapse spaces before # comments
+            if let Some(ref lang) = code_block_lang {
+                if code_blocks::is_shell_language(lang) {
+                    let processed = code_blocks::collapse_spaces_before_comment(line);
+                    formatted_lines.push(processed);
+                    continue;
+                }
+            }
             formatted_lines.push(line.to_string());
             continue;
         }
@@ -1094,6 +1110,36 @@ But remove these markers outside code.
     fn test_format_markdown_preserve_nested_list_indentation() {
         let content = "- Level 1\n  - Level 2\n    - Level 3\n";
         let expected = "- Level 1\n  - Level 2\n    - Level 3\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_bash_comment_space_collapse() {
+        let content = r#"```bash
+cd              # goto
+agent-md # format
+```
+"#;
+        let expected = r#"```bash
+cd # goto
+agent-md # format
+```
+"#;
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_sh_comment_space_collapse() {
+        let content = r#"```sh
+echo "hello"   # comment
+```
+"#;
+        let expected = r#"```sh
+echo "hello" # comment
+```
+"#;
         let result = format_markdown(content);
         assert_eq!(result, expected);
     }
