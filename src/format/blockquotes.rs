@@ -78,4 +78,18 @@ mod tests {
 		// Leading spaces before > should be preserved (indentation)
 		assert_eq!(normalize_blockquote("  > text"), "  >text");
 	}
+
+	#[test]
+	fn test_normalize_blockquote_preserves_underscores() {
+		// Underscores in identifiers should be preserved, not treated as emphasis
+		assert_eq!(normalize_blockquote("> A_cat_meow"), ">A_cat_meow");
+		assert_eq!(normalize_blockquote("> A_cat_meow"), ">A_cat_meow");
+	}
+
+	#[test]
+	fn test_normalize_blockquote_removes_spaces_after_marker() {
+		// Spaces after > marker should be removed
+		assert_eq!(normalize_blockquote("> A*cat*meow"), ">A*cat*meow");
+		assert_eq!(normalize_blockquote("> A_cat_meow"), ">A_cat_meow");
+	}
 }

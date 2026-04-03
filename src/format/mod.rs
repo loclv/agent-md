@@ -310,11 +310,37 @@ fn remove_emphasis_markers(line: &str) -> String {
 				|| (chars[i] == '_' && chars[i + 1] != '_'))
 		{
 			let marker = chars[i];
+
+			// For underscore, check if it's part of an identifier (e.g., A_cat_meow)
+			// Only skip if BOTH sides are alphanumeric (underscore within a word)
+			// _word_ at boundaries should still be treated as emphasis
+			if marker == '_' {
+				let prev_is_word = i > 0 && chars[i - 1].is_alphanumeric();
+				let next_is_word = i + 1 < chars.len() && chars[i + 1].is_alphanumeric();
+				if prev_is_word && next_is_word {
+					// This underscore is within a word (identifier), skip it
+					result.push(chars[i]);
+					i += 1;
+					continue;
+				}
+			}
+
 			let mut j = i + 1;
 			while j < chars.len() && chars[j] != marker {
 				j += 1;
 			}
 			if j < chars.len() && chars[j] == marker {
+				// For underscore, also check the closing marker isn't within a word
+				if marker == '_' {
+					let prev_is_word = j > 0 && chars[j - 1].is_alphanumeric();
+					let next_is_word = j + 1 < chars.len() && chars[j + 1].is_alphanumeric();
+					if prev_is_word && next_is_word {
+						// Closing underscore is within a word (identifier), skip this match
+						result.push(chars[i]);
+						i += 1;
+						continue;
+					}
+				}
 				chars[i + 1..j].iter().for_each(|&c| result.push(c));
 				i = j + 1;
 			} else {
@@ -1201,6 +1227,29 @@ echo "hello" # comment
 >>Nested quote
 "#;
 		let result = format_markdown(content);
+		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_format_markdown_blockquote_with_emphasis_and_underscores() {
+		// Only spaces after > marker removed
+		// Emphasis markers (*cat*) preserved
+		// Underscores in identifiers (A_cat_meow) preserved
+		let content = r#"> A*cat*meow
+> A_cat_meow
+"#;
+		let expected = r#">A*cat*meow
+>A_cat_meow
+"#;
+		let options = FormatOptions {
+			remove_bold: true,
+			compact_blank_lines: true,
+			trim_trailing_whitespace: true,
+			collapse_spaces: true,
+			remove_horizontal_rules: true,
+			remove_emphasis: false, // Preserve emphasis markers
+		};
+		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, expected);
 	}
 }
