@@ -673,6 +673,53 @@ End of document.
         }
     }
 
+    // Tests for implicit fmt via path argument
+    #[test]
+    fn test_cli_parsing_path_without_command() {
+        // Test parsing with path but no command - should trigger implicit fmt
+        let args = vec!["agent-md", "test.md"];
+        let cli = Cli::try_parse_from(&args).expect("Should parse path without command");
+        assert!(!cli.version);
+        assert!(cli.command.is_none());
+        assert!(cli.path.is_some());
+        assert_eq!(cli.path.unwrap(), "test.md");
+    }
+
+    #[test]
+    fn test_cli_parsing_path_with_human_flag() {
+        // Test path with human flag
+        let args = vec!["agent-md", "--human", "test.md"];
+        let cli = Cli::try_parse_from(&args).expect("Should parse path with human flag");
+        assert!(cli.human);
+        assert!(cli.command.is_none());
+        assert_eq!(cli.path.unwrap(), "test.md");
+    }
+
+    #[test]
+    fn test_cli_parsing_explicit_fmt_command() {
+        // Test explicit fmt command still works
+        let args = vec!["agent-md", "fmt", "test.md"];
+        let cli = Cli::try_parse_from(&args).expect("Should parse explicit fmt command");
+        assert!(cli.command.is_some());
+
+        match cli.command.unwrap() {
+            Commands::Fmt { path, .. } => {
+                assert_eq!(path, "test.md");
+            }
+            _ => panic!("Expected Fmt command"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parsing_path_vs_command_priority() {
+        // When both path and command are provided, command takes priority
+        let args = vec!["agent-md", "read", "test.md"];
+        let cli = Cli::try_parse_from(&args).expect("Should parse with command");
+        assert!(cli.command.is_some());
+        // Path should be None since "read" is parsed as command, not as path
+        assert!(cli.path.is_none());
+    }
+
     // Tests for ASCII graph detection in code blocks (now errors, not warnings)
     #[test]
     fn test_validate_markdown_ascii_graph_in_code_block_error() {

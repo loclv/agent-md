@@ -277,6 +277,10 @@ struct Cli {
     #[arg(long = "human", help = "Pretty print JSON output")]
     human: bool,
 
+    /// Markdown file path (implies fmt command if no subcommand given)
+    #[arg(value_name = "PATH")]
+    path: Option<String>,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -456,10 +460,23 @@ fn main() {
             format::cmd_fmt(&path, cli.human, options)
         }
         None => {
-            // If no command and not version, show help
-            eprintln!("Usage: agent-md <COMMAND>");
-            eprintln!("For more information, try '--help'.");
-            std::process::exit(1);
+            // If path provided without command, treat as fmt
+            if let Some(path) = cli.path {
+                let options = format::FormatOptions {
+                    remove_bold: true,
+                    compact_blank_lines: true,
+                    trim_trailing_whitespace: true,
+                    collapse_spaces: true,
+                    remove_horizontal_rules: true,
+                    remove_emphasis: true,
+                };
+                format::cmd_fmt(&path, cli.human, options)
+            } else {
+                // If no command and not version, show help
+                eprintln!("Usage: agent-md <COMMAND>");
+                eprintln!("For more information, try '--help'.");
+                std::process::exit(1);
+            }
         }
     }
 }
