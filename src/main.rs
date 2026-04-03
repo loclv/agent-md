@@ -5,8 +5,8 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 
-mod rules;
 mod html_tests;
+mod rules;
 
 use crate::rules::extract_heading_level;
 

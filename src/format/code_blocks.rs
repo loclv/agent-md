@@ -45,7 +45,12 @@ pub fn collapse_spaces_before_comment(line: &str) -> String {
 
 		// Collapse trailing spaces before the comment
 		let before_trimmed = before.trim_end();
-		format!("{} {}", before_trimmed, comment)
+		// If nothing before the comment, return it as-is (no leading space)
+		if before_trimmed.is_empty() {
+			comment.to_string()
+		} else {
+			format!("{} {}", before_trimmed, comment)
+		}
 	} else {
 		line.to_string()
 	}
@@ -107,5 +112,54 @@ mod tests {
 		assert!(is_shell_language("zsh"));
 		assert!(!is_shell_language("python"));
 		assert!(!is_shell_language("rust"));
+	}
+
+	#[test]
+	fn test_collapse_spaces_before_comment_install_command() {
+		// Test case from test-md/format/code-block.md
+		// Input: "cargo install cargo-generate"
+		// This line has no comment, so it should remain unchanged
+		assert_eq!(
+			collapse_spaces_before_comment("cargo install cargo-generate"),
+			"cargo install cargo-generate"
+		);
+	}
+
+	#[test]
+	fn test_collapse_spaces_before_comment_with_added_comment() {
+		// Test case from test-md/format/code-block.md
+		// Expected behavior: format can add comments to bash code blocks
+		// This tests the formatted output with a comment added
+		assert_eq!(
+			collapse_spaces_before_comment("# Install cargo-generate if you haven't already"),
+			"# Install cargo-generate if you haven't already"
+		);
+		assert_eq!(
+			collapse_spaces_before_comment("cargo install cargo-generate"),
+			"cargo install cargo-generate"
+		);
+	}
+
+	#[test]
+	fn test_bash_code_block_unchanged() {
+		// Test case from test-md/format/code-block.md
+		// Input and expected output are identical - nothing should change
+		let comment_line = "# Install cargo-generate if you haven't already";
+		let command_line = "cargo install cargo-generate";
+
+		// Comment line should remain unchanged
+		assert_eq!(collapse_spaces_before_comment(comment_line), comment_line);
+		// Command line without comment should remain unchanged
+		assert_eq!(collapse_spaces_before_comment(command_line), command_line);
+	}
+
+	#[test]
+	fn test_bash_code_block_remove_leading_spaces_before_comment() {
+		// Test case from test-md/format/code-block-comment.md
+		// Input has leading space before comment: " # Install..."
+		// Expected output should have no leading space: "# Install..."
+		let input = " # Install cargo-generate if you haven't already";
+		let expected = "# Install cargo-generate if you haven't already";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
 	}
 }
