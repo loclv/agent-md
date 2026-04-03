@@ -160,7 +160,8 @@ mod tests {
 
     #[test]
     fn test_find_useless_link_multiple_links() {
-        let line = "[https://example.com](https://example.com) and [https://test.com](https://test.com)";
+        let line =
+            "[https://example.com](https://example.com) and [https://test.com](https://test.com)";
         let result = find_useless_link(line);
         assert_eq!(result.len(), 2); // Should detect both useless links
         assert_eq!(result[0], 1); // First [

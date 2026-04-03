@@ -1,12 +1,15 @@
 use crate::format::format_markdown;
 use crate::format::format_markdown_with_options;
-use crate::{parse_markdown, validate_markdown, LintError, LintWarning, find_section_range};
+use crate::{find_section_range, parse_markdown, validate_markdown, LintError, LintWarning};
 
 #[cfg(test)]
 mod tests {
     #![allow(clippy::module_inception)]
     use super::*;
-    use crate::{JsonlEntry, Document, Heading, EditResult, SearchResult, Match, parse_markdown_to_jsonl, extract_section_content, Cli, Commands, unescape_content};
+    use crate::{
+        extract_section_content, parse_markdown_to_jsonl, unescape_content, Cli, Commands,
+        Document, EditResult, Heading, JsonlEntry, Match, SearchResult,
+    };
     use clap::Parser;
 
     // Tests for JsonlEntry serialization
@@ -114,9 +117,6 @@ mod tests {
         assert!(json.contains("1"));
     }
 
-
-
-
     #[test]
     fn test_validate_markdown_bold_allowed_in_code_blocks() {
         let content = r#"# Document Title
@@ -174,11 +174,6 @@ Regular text with **bold** again should be an error.
         assert_eq!(bold_errors[0].line, 3); // First bold text
         assert_eq!(bold_errors[1].line, 9); // Second bold text
     }
-
-
-
-
-
 
     // Tests for overall markdown validation
     #[test]
@@ -820,7 +815,6 @@ More regular text.
         }
     }
 
-
     // Tests for content unescaping
     #[test]
     fn test_unescape_content_basic() {
@@ -1280,8 +1274,8 @@ Please contribute to the project.
         let content =
             "# Test\n\n| Name | Description |\n|------|-------------|\n| Item | Value |\n";
         let formatted = format_markdown(content);
-        // Separator rows should be preserved as-is
-        assert!(formatted.contains("|------|-------------|"));
+        // Separator rows should be compacted to 3 dashes
+        assert!(formatted.contains("|---|---|"));
     }
 
     #[test]

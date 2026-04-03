@@ -107,7 +107,8 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
                 let formatted_line = format!("{}| {} |", prefix, formatted_cells.join(" | "));
                 formatted_lines.push(formatted_line);
             } else {
-                formatted_lines.push(line.to_string());
+                let compacted = compact_separator_row(table_content);
+                formatted_lines.push(format!("{}{}", prefix, compacted));
             }
         } else {
             let mut processed_line = if options.remove_bold {
@@ -273,6 +274,40 @@ fn remove_bold_markers(line: &str) -> String {
 fn is_horizontal_rule(line: &str) -> bool {
     let trimmed = line.trim();
     trimmed == "---" || trimmed == "***" || trimmed == "___"
+}
+
+/// Compact separator row dashes to exactly 3, preserving alignment colons.
+/// |----|-----| becomes |---|---|
+/// |:---|:--:|--:| becomes |:---|:--:|--:|
+fn compact_separator_row(table_content: &str) -> String {
+    let cells: Vec<&str> = table_content.split('|').collect();
+    let mut formatted_cells = Vec::new();
+
+    for (i, cell) in cells.iter().enumerate() {
+        if i == 0 || i == cells.len() - 1 {
+            continue;
+        }
+        let cell_trimmed = cell.trim();
+        let has_left_colon = cell_trimmed.starts_with(':');
+        let has_right_colon = cell_trimmed.ends_with(':');
+
+        let compacted = if has_left_colon && has_right_colon {
+            // Center alignment: :---:
+            ":---:"
+        } else if has_left_colon {
+            // Left alignment: :---
+            ":---"
+        } else if has_right_colon {
+            // Right alignment: ---:
+            "---:"
+        } else {
+            // No alignment: ---
+            "---"
+        };
+        formatted_cells.push(compacted.to_string());
+    }
+
+    format!("|{}|", formatted_cells.join("|"))
 }
 
 fn remove_emphasis_markers(line: &str) -> String {
@@ -520,7 +555,7 @@ Another paragraph.
 | Bob  | 35  | Paris     | Data  |
 "#;
         let expected = r#"| Name | Age | City | Notes |
-|------|-----|-----------|-------|
+|---|---|---|---|
 | John | 25 | New York | Test |
 | Jane | 30 | London |  |
 | Bob | 35 | Paris | Data |
@@ -1086,5 +1121,21 @@ But remove these markers outside code.
         assert!(result.contains("Text with emphasis"));
         assert!(!result.contains("---"));
         assert!(result.contains("More text"));
+    }
+
+    #[test]
+    fn test_format_markdown_compact_separator_dashes() {
+        let content = "| Real | Table |\n|----|----|\n| Has | dashes |\n";
+        let expected = "| Real | Table |\n|---|---|\n| Has | dashes |\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_compact_separator_preserve_alignment() {
+        let content = "| Left | Center | Right |\n|:-----|:------:|------:|\n| A | B | C |\n";
+        let expected = "| Left | Center | Right |\n|:---|:---:|---:|\n| A | B | C |\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
     }
 }
