@@ -1,5 +1,3 @@
-use crate::*;
-
 /// Compact separator row dashes to exactly 3, preserving alignment colons.
 /// |----|-----| becomes |---|---|
 /// |:---|:--:|--:| becomes |:---|:--:|--:|
