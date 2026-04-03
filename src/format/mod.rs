@@ -312,10 +312,15 @@ fn remove_emphasis_markers(line: &str) -> String {
 }
 
 fn collapse_multiple_spaces(line: &str) -> String {
-    let mut result = String::new();
+    // Preserve leading whitespace (indentation)
+    let leading_len = line.chars().take_while(|&c| c == ' ').count();
+    let leading = &line[..leading_len];
+    let rest = &line[leading_len..];
+
+    let mut result = String::from(leading);
     let mut prev_was_space = false;
 
-    for c in line.chars() {
+    for c in rest.chars() {
         if c == ' ' {
             if !prev_was_space {
                 result.push(c);
@@ -1073,6 +1078,22 @@ But remove these markers outside code.
     fn test_format_markdown_compact_separator_preserve_alignment() {
         let content = "| Left | Center | Right |\n|:-----|:------:|------:|\n| A | B | C |\n";
         let expected = "| Left | Center | Right |\n|:---|:---:|---:|\n| A | B | C |\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_preserve_list_indentation() {
+        let content = "lists:\n  - 2 spaces\n  - 2 spaces\n";
+        let expected = "lists:\n  - 2 spaces\n  - 2 spaces\n";
+        let result = format_markdown(content);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_format_markdown_preserve_nested_list_indentation() {
+        let content = "- Level 1\n  - Level 2\n    - Level 3\n";
+        let expected = "- Level 1\n  - Level 2\n    - Level 3\n";
         let result = format_markdown(content);
         assert_eq!(result, expected);
     }
