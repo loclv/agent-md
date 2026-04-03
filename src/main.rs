@@ -410,7 +410,7 @@ fn main() {
 	let cli = Cli::parse();
 
 	if cli.version {
-		println!("0.1.7");
+		println!("0.1.8");
 		return;
 	}
 
