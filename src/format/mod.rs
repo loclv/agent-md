@@ -1,3 +1,4 @@
+mod blockquotes;
 mod code_blocks;
 mod tables;
 
@@ -112,6 +113,9 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
 			if options.collapse_spaces && !is_heading {
 				processed_line = collapse_multiple_spaces(&processed_line);
 			}
+
+			// Normalize blockquote lines (remove extra spaces after > markers)
+			processed_line = blockquotes::normalize_blockquote(&processed_line);
 
 			if options.trim_trailing_whitespace {
 				processed_line = processed_line.trim_end().to_string();
@@ -1139,6 +1143,62 @@ echo "hello"   # comment
 		let expected = r#"```sh
 echo "hello" # comment
 ```
+"#;
+		let result = format_markdown(content);
+		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_format_markdown_highlight_syntax_preserved() {
+		let content = "I need to highlight these ==very important words==.";
+		let result = format_markdown(content);
+		assert_eq!(result, content);
+	}
+
+	#[test]
+	fn test_format_markdown_highlight_multiple_instances() {
+		let content = "This ==highlighted text== and ==this too== should stay.";
+		let result = format_markdown(content);
+		assert_eq!(result, content);
+	}
+
+	#[test]
+	fn test_format_markdown_highlight_in_code_block_preserved() {
+		let content = r#"```
+==highlight in code==
+```
+"#;
+		let result = format_markdown(content);
+		assert_eq!(result, content);
+	}
+
+	#[test]
+	fn test_format_markdown_blockquote_normalize_spaces() {
+		let content = r#"> 1
+>     2
+>> 3
+>>4
+>>> 5
+>>>  6
+"#;
+		let expected = r#">1
+>2
+>>3
+>>4
+>>>5
+>>>6
+"#;
+		let result = format_markdown(content);
+		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_format_markdown_blockquote_with_text() {
+		let content = r#">  This is a quote
+>>  Nested quote
+"#;
+		let expected = r#">This is a quote
+>>Nested quote
 "#;
 		let result = format_markdown(content);
 		assert_eq!(result, expected);

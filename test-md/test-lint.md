@@ -23,3 +23,19 @@ This is another H1 title which should cause an error.
 | Name | Description with **bold** | More columns |
 |------|---------------------------|--------------|
 | Item | This is an item | Extra |
+
+> 1  a
+>     2
+>> 3
+>>4
+>>> 5
+>>>  6
+
+should be
+
+>1  a
+>2
+>>3
+>>4
+>>>5
+>>>6

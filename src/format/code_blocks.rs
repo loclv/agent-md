@@ -14,19 +14,19 @@ pub fn collapse_spaces_before_comment(line: &str) -> String {
 				let mut single_quotes = 0;
 				let mut double_quotes = 0;
 				let mut escaped = false;
-				for j in 0..i {
+				for &c in chars.iter().take(i) {
 					if escaped {
 						escaped = false;
 						continue;
 					}
-					if chars[j] == '\\' {
+					if c == '\\' {
 						escaped = true;
 						continue;
 					}
-					if chars[j] == '\'' && double_quotes % 2 == 0 {
+					if c == '\'' && double_quotes % 2 == 0 {
 						single_quotes += 1;
 					}
-					if chars[j] == '"' && single_quotes % 2 == 0 {
+					if c == '"' && single_quotes % 2 == 0 {
 						double_quotes += 1;
 					}
 				}
