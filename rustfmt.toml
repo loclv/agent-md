@@ -6,8 +6,7 @@ edition = "2021"
 
 # Width settings
 max_width = 100
-hard_tabs = false
-tab_spaces = 4
+hard_tabs = true
 newline_style = "Unix"
 
 # Imports

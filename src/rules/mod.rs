@@ -11,7 +11,7 @@ pub use code_blocks::validate_code_blocks;
 pub use heading_structure::{extract_heading_level, validate_heading_structure};
 #[allow(unused_imports)]
 pub use list_formatting::{
-    detect_list_item, extract_number_from_marker, validate_list_formatting, ListType,
+	detect_list_item, extract_number_from_marker, validate_list_formatting, ListType,
 };
 pub use no_ascii_graph::find_ascii_graph;
 pub use no_bold::find_bold_text;
