@@ -1,0 +1,77 @@
+{
+  "name": "agent-md-formatter",
+  "displayName": "Agent-MD Formatter",
+  "description": "Format Markdown files using agent-md CLI",
+  "version": "0.1.0",
+  "scripts": {
+    "vscode:prepublish": "bun run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "typescript": "^6"
+  },
+  "publisher": "agent-md",
+  "engines": {
+    "vscode": "^0.10.5"
+  },
+  "categories": [
+    "Formatters"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Agent-MD Formatter",
+      "properties": {
+        "agentMd.path": {
+          "type": "string",
+          "default": "agent-md",
+          "description": "Path to the agent-md executable"
+        },
+        "agentMd.format.removeBold": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remove bold markers (** and __)"
+        },
+        "agentMd.format.compactBlankLines": {
+          "type": "boolean",
+          "default": true,
+          "description": "Compact blank lines (remove multiples)"
+        },
+        "agentMd.format.collapseSpaces": {
+          "type": "boolean",
+          "default": true,
+          "description": "Collapse multiple spaces between words"
+        },
+        "agentMd.format.removeHorizontalRules": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remove horizontal rules (---, ***, ___)"
+        },
+        "agentMd.format.removeEmphasis": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remove emphasis markers (* and _)"
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "markdown",
+        "extensions": [
+          ".md",
+          ".markdown"
+        ]
+      }
+    ]
+  }
+}
