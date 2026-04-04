@@ -8,5 +8,6 @@
 	"blanks-around-lists": false,
 	"blanks-around-headings": false,
 	"blanks-around-tables": false,
-	"first-line-heading": false
+	"first-line-heading": false,
+	"no-duplicate-heading": false
 }
