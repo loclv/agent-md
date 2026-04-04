@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::module_inception)]
-	use super::*;
+	use crate::{parse_markdown, parse_markdown_to_jsonl, validate_markdown};
 
 	// Tests for HTML tags inside markdown
 	#[test]

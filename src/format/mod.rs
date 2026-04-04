@@ -1,5 +1,6 @@
 mod blockquotes;
 mod code_blocks;
+mod frontmatter;
 mod tables;
 
 use crate::*;
@@ -54,9 +55,22 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
 	let mut formatted_lines = Vec::new();
 	let mut in_code_block = false;
 	let mut code_block_lang: Option<String> = None;
+	// YAML frontmatter detection: starts with --- at line 0
+	let mut in_frontmatter = frontmatter::is_frontmatter_start(&lines);
 
 	for (i, line) in lines.iter().enumerate() {
 		let trimmed = line.trim();
+
+		// Handle YAML frontmatter block
+		if in_frontmatter {
+			// Preserve all lines in frontmatter block as-is
+			formatted_lines.push(line.to_string());
+			// Check for closing delimiter (--- on its own line, after the opening)
+			if frontmatter::is_frontmatter_end(trimmed, i) {
+				in_frontmatter = false;
+			}
+			continue;
+		}
 
 		if trimmed.starts_with("```") {
 			in_code_block = !in_code_block;
@@ -1250,6 +1264,72 @@ echo "hello" # comment
 			remove_emphasis: false, // Preserve emphasis markers
 		};
 		let result = format_markdown_with_options(content, options);
+		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_format_markdown_frontmatter_preserved() {
+		let content = r#"---
+trigger: always_on
+---
+
+Should not change, --- should not be remove by format
+"#;
+		let expected = r#"---
+trigger: always_on
+---
+
+Should not change, --- should not be remove by format
+"#;
+		let result = format_markdown(content);
+		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_format_markdown_frontmatter_with_content() {
+		let content = r#"---
+title: Test Document
+author: Author Name
+---
+
+# Heading
+
+Content here.
+"#;
+		let expected = r#"---
+title: Test Document
+author: Author Name
+---
+
+# Heading
+
+Content here.
+"#;
+		let result = format_markdown(content);
+		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_format_markdown_horizontal_rule_after_frontmatter_removed() {
+		let content = r#"---
+title: Test
+---
+
+Text above
+
+---
+
+Text below
+"#;
+		// When horizontal rule is removed, blank lines get compacted
+		let expected = r#"---
+title: Test
+---
+
+Text above
+Text below
+"#;
+		let result = format_markdown(content);
 		assert_eq!(result, expected);
 	}
 }
