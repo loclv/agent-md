@@ -26,14 +26,14 @@ function getAgentMdPath(): string {
 }
 
 function formatWithAgentMd(
-	document: vscode.TextDocument,
+	content: string,
 	options: FormatOptions
 ): Promise<string> {
 	return new Promise((resolve, reject) => {
 		const agentMdPath = getAgentMdPath();
-		const filePath = document.fileName;
 
-		const args: string[] = ['fmt', filePath];
+		// Use --stdin for Prettier-style formatting (avoids file sync conflicts)
+		const args: string[] = ['fmt', '--stdin'];
 
 		if (!options.removeBold) {
 			args.push('--remove-bold=false');
@@ -64,15 +64,9 @@ function formatWithAgentMd(
 			stderr += data.toString();
 		});
 
-		process.on('close', async (code) => {
+		process.on('close', (code) => {
 			if (code === 0) {
-				// Read the formatted file content
-				try {
-					const doc = await vscode.workspace.openTextDocument(filePath);
-					resolve(doc.getText());
-				} catch (err) {
-					reject(err);
-				}
+				resolve(stdout);
 			} else {
 				reject(new Error(`agent-md fmt failed with code ${code}: ${stderr}`));
 			}
@@ -85,6 +79,10 @@ function formatWithAgentMd(
 				reject(err);
 			}
 		});
+
+		// Write content to stdin
+		process.stdin.write(content);
+		process.stdin.end();
 	});
 }
 
@@ -98,11 +96,7 @@ class AgentMdFormatter implements vscode.DocumentFormattingEditProvider {
 
 		try {
 			const originalContent = document.getText();
-			await formatWithAgentMd(document, formatOptions);
-
-			// Re-read the document to get formatted content
-			const formattedDoc: vscode.TextDocument = await vscode.workspace.openTextDocument(document.fileName);
-			const formattedContent = formattedDoc.getText();
+			const formattedContent = await formatWithAgentMd(originalContent, formatOptions);
 
 			if (formattedContent === originalContent) {
 				return undefined;

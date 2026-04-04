@@ -378,7 +378,9 @@ enum Commands {
 	},
 	Fmt {
 		#[arg(help = "Markdown file path to format")]
-		path: String,
+		path: Option<String>,
+		#[arg(long, help = "Read from stdin, write to stdout")]
+		stdin: bool,
 		#[arg(long, help = "Remove bold markers (** and __)", default_value = "true")]
 		remove_bold: bool,
 		#[arg(
@@ -444,6 +446,7 @@ fn main() {
 		Some(Commands::LintFile { path }) => cmd_lint_file(&path, cli.human),
 		Some(Commands::Fmt {
 			path,
+			stdin,
 			remove_bold,
 			compact_blank_lines,
 			collapse_spaces,
@@ -458,7 +461,14 @@ fn main() {
 				remove_horizontal_rules,
 				remove_emphasis,
 			};
-			format::cmd_fmt(&path, cli.human, options)
+			if stdin {
+				format::cmd_fmt_stdin(options)
+			} else if let Some(p) = path {
+				format::cmd_fmt(&p, cli.human, options)
+			} else {
+				eprintln!("Error: Either --stdin or a file path is required");
+				std::process::exit(1);
+			}
 		}
 		None => {
 			// If path provided without command, treat as fmt

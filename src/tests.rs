@@ -704,7 +704,7 @@ End of document.
 
 		match cli.command.unwrap() {
 			Commands::Fmt { path, .. } => {
-				assert_eq!(path, "test.md");
+				assert_eq!(path, Some("test.md".to_string()));
 			}
 			_ => panic!("Expected Fmt command"),
 		}

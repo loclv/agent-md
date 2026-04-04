@@ -447,6 +447,28 @@ pub fn cmd_fmt(path: &str, human: bool, options: FormatOptions) {
 	}
 }
 
+/// Format markdown from stdin and write to stdout (Prettier-style).
+/// This is used by editor integrations to avoid file sync conflicts.
+///
+/// # Example
+///
+/// ```bash
+/// echo '# Hello\n\n**bold** text' | agent-md fmt --stdin
+/// # Output: # Hello\n\nbold text
+/// ```
+pub fn cmd_fmt_stdin(options: FormatOptions) {
+	use std::io::Read;
+
+	let mut input = String::new();
+	if let Err(e) = std::io::stdin().read_to_string(&mut input) {
+		eprintln!("Error reading stdin: {}", e);
+		std::process::exit(1);
+	}
+
+	let formatted = format_markdown_with_options(&input, options);
+	print!("{}", formatted);
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -1172,6 +1194,46 @@ agent-md # format
 "#;
 		let result = format_markdown(content);
 		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_cmd_fmt_stdin_basic() {
+		// Test that cmd_fmt_stdin produces correct output via format_markdown_with_options
+		let input = "# Test\n\nThis has **bold** text.\n";
+		let options = FormatOptions::default();
+		let result = format_markdown_with_options(input, options);
+		assert!(result.contains("# Test"));
+		assert!(!result.contains("**bold**"));
+		assert!(result.contains("bold"));
+	}
+
+	#[test]
+	fn test_cmd_fmt_stdin_preserves_code_blocks() {
+		// Code block content should be preserved
+		let input = r#"```markdown
+**bold** should stay
+```
+
+**bold** should go
+"#;
+		let options = FormatOptions::default();
+		let result = format_markdown_with_options(input, options);
+		assert!(result.contains("**bold** should stay"));
+		assert!(result.contains("bold should go"));
+	}
+
+	#[test]
+	fn test_cmd_fmt_stdin_options_respected() {
+		// Test that options are properly applied
+		let input = "Text with *emphasis* and **bold**.\n";
+		let options = FormatOptions {
+			remove_bold: false,
+			remove_emphasis: false,
+			..FormatOptions::default()
+		};
+		let result = format_markdown_with_options(input, options);
+		assert!(result.contains("**bold**"));
+		assert!(result.contains("*emphasis*"));
 	}
 
 	#[test]

@@ -43,13 +43,23 @@ pub fn collapse_spaces_before_comment(line: &str) -> String {
 		let before = &line[..pos];
 		let comment = &line[pos..];
 
-		// Collapse trailing spaces before the comment
-		let before_trimmed = before.trim_end();
-		// If nothing before the comment, return it as-is (no leading space)
+		// Preserve leading indentation (spaces/tabs at the start)
+		let leading_indent: String = before
+			.chars()
+			.take_while(|&c| c == ' ' || c == '\t')
+			.collect();
+		// Collapse trailing spaces before the comment, and remove leading indent (we'll add it back)
+		let before_trimmed = before.trim();
+		// If nothing before the comment (except indentation), preserve the indentation
 		if before_trimmed.is_empty() {
-			comment.to_string()
+			format!("{}{}", leading_indent, comment)
 		} else {
-			format!("{} {}", before_trimmed, comment)
+			format!(
+				"{}{} {}",
+				leading_indent,
+				before_trimmed.trim_start(),
+				comment
+			)
 		}
 	} else {
 		line.to_string()
@@ -157,9 +167,35 @@ mod tests {
 	fn test_bash_code_block_remove_leading_spaces_before_comment() {
 		// Test case from test-md/format/code-block-comment.md
 		// Input has leading space before comment: " # Install..."
-		// Expected output should have no leading space: "# Install..."
+		// This is a comment at the START of a line (no command before it)
+		// Leading spaces should be preserved for indentation purposes
 		let input = " # Install cargo-generate if you haven't already";
-		let expected = "# Install cargo-generate if you haven't already";
+		let expected = " # Install cargo-generate if you haven't already";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_indented_comment_preserved() {
+		// Indented comment inside a code block should preserve indentation
+		// e.g., inside a for loop
+		let input = "    # Search for TODOs";
+		let expected = "    # Search for TODOs";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_indented_command_with_comment() {
+		// Indented command with comment should preserve indentation
+		let input = "    agent-md search \"$file\" \"TODO\"";
+		let expected = "    agent-md search \"$file\" \"TODO\"";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_indented_command_with_inline_comment() {
+		// Indented command with inline comment - collapse extra spaces but preserve indent
+		let input = "    echo test      # comment";
+		let expected = "    echo test # comment";
 		assert_eq!(collapse_spaces_before_comment(input), expected);
 	}
 }
