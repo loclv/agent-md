@@ -7,7 +7,8 @@
     "vscode:prepublish": "bun run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src --ext ts",
+    "package": "vsce package --no-dependencies"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
@@ -19,7 +20,7 @@
   },
   "publisher": "agent-md",
   "engines": {
-    "vscode": "^0.10.5"
+    "vscode": "^1.85.0"
   },
   "categories": [
     "Formatters"
