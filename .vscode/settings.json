@@ -1,30 +1,44 @@
 {
-    "rust-analyzer.checkOnSave.command": "clippy",
-    "rust-analyzer.checkOnSave.extraArgs": [
-        "--all-targets",
-        "--all-features",
-        "--",
-        "-D",
-        "warnings"
-    ],
-    "rust-analyzer.cargo.loadOutDirsFromCheck": true,
-    "rust-analyzer.cargo.features": "all",
-    "rust-analyzer.procMacro.enable": true,
-    "rust-analyzer.diagnostics.enable": true,
-    "rust-analyzer.inlayHints.typeHints.enable": true,
-    "rust-analyzer.inlayHints.parameterHints.enable": true,
-    "rust-analyzer.inlayHints.chainingHints.enable": true,
-    "files.watcherExclude": {
-        "**/target/**": true,
-        "**/Cargo.lock": true
-    },
+  "rust-analyzer.checkOnSave.command": "clippy",
+  "rust-analyzer.checkOnSave.extraArgs": [
+    "--all-targets",
+    "--all-features",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "rust-analyzer.cargo.loadOutDirsFromCheck": true,
+  "rust-analyzer.cargo.features": "all",
+  "rust-analyzer.procMacro.enable": true,
+  "rust-analyzer.diagnostics.enable": true,
+  "rust-analyzer.inlayHints.typeHints.enable": true,
+  "rust-analyzer.inlayHints.parameterHints.enable": true,
+  "rust-analyzer.inlayHints.chainingHints.enable": true,
+  "files.watcherExclude": {
+    "**/target/**": true,
+    "**/Cargo.lock": true
+  },
+  "editor.formatOnSave": true,
+  "editor.rulers": [100],
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "makefile.configureOnOpen": false,
+  "[rust]": {
     "editor.formatOnSave": true,
-    "editor.rulers": [100],
-    "files.trimTrailingWhitespace": true,
-    "files.insertFinalNewline": true,
-    "files.trimFinalNewlines": true,
-    "makefile.configureOnOpen": false,
-    "cSpell.words": [
-        "clippy"
-    ]
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+  "[markdown]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "agent-md.agent-md-formatter"
+  },
+  "[typescript]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "[json]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "cSpell.words": ["clippy"]
 }
