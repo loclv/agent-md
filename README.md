@@ -365,6 +365,7 @@ agent-md read README.md -f word_count # Short form for word count
 ```
 
 Read "Development" section - no need LLM to read entire file:
+
 ```bash
 agent-md read README.md -c="Development"
 # Nested sections: agent-md read README.md -c="Development > Build"

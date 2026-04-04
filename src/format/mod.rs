@@ -148,6 +148,16 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
 							continue;
 						}
 
+						// Check if next non-empty line is a code fence - if so, preserve blank line
+						let next_is_code_fence = lines[i + 1..]
+							.iter()
+							.find(|l| !l.trim().is_empty())
+							.is_some_and(|l| l.trim().starts_with("```"));
+						if next_is_code_fence {
+							formatted_lines.push(String::new());
+							continue;
+						}
+
 						// Check if previous line was a heading - if so, preserve blank line
 						let prev_was_heading = prev.trim().starts_with('#');
 						if prev_was_heading {
@@ -1390,6 +1400,43 @@ title: Test
 
 Text above
 Text below
+"#;
+		let result = format_markdown(content);
+		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_format_markdown_blank_line_before_code_fence_preserved() {
+		let content = r#"run:
+
+```bash
+ls
+```
+"#;
+		// Blank line before code fence should be preserved
+		let expected = r#"run:
+
+```bash
+ls
+```
+"#;
+		let result = format_markdown(content);
+		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_format_markdown_blank_line_before_code_fence_with_text() {
+		let content = r#"Some text here.
+
+```rust
+fn main() {}
+```
+"#;
+		let expected = r#"Some text here.
+
+```rust
+fn main() {}
+```
 "#;
 		let result = format_markdown(content);
 		assert_eq!(result, expected);
