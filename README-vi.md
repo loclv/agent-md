@@ -8,7 +8,6 @@ agent-md lint README.md
 ## Tại sao công cụ này tồn tại
 
 Nhiều file markdown hiện nay được viết bởi LLM hoặc AI agents đang lãng phí rất nhiều token. Khi một LLM khác đọc lại những file này, nó tiếp tục tốn thêm token không cần thiết. Thậm chí file này được đọc đi đọc lại mỗi lần chat.
-
 Nguyên nhân là markdown được thiết kế để con người dễ đọc, nên thường chứa các yếu tố như in đậm, ký tự trang trí, khoảng trắng... Những thứ này hữu ích cho người, nhưng không cần thiết với LLM.
 
 Thực tế, LLM/agents không cần đọc toàn bộ file. Chúng chỉ cần truy cập đúng phần nội dung cần thiết (ví dụ: ## Development) thay vì xử lý cả tài liệu.
@@ -16,14 +15,13 @@ Thực tế, LLM/agents không cần đọc toàn bộ file. Chúng chỉ cần 
 ### Vấn đề
 
 - Lãng phí token: Các định dạng như in đậm, bảng, ký tự trang trí làm tăng số token mà không giúp ích cho AI
-- Đọc không hiệu quả: LLM vẫn phải xử lý cả các yếu tố trình bày như *bold*, ASCII art…
+- Đọc không hiệu quả: LLM vẫn phải xử lý cả các yếu tố trình bày như bold, ASCII art…
 - Cấu trúc dư thừa: Nhiều thành phần chỉ hữu ích cho người (bảng phức tạp, layout đẹp) nhưng không cần cho AI
 - Tăng chi phí: Mỗi lần LLM đọc lại tài liệu đều phải “trả phí” cho những phần định dạng này
 
 ### Giải pháp
 
 agent-md đưa ra một cách viết markdown tối giản, thân thiện với AI, giúp:
-
 - Giảm token không cần thiết
 - Giữ nội dung rõ ràng, dễ truy cập theo từng phần
 - Vẫn đảm bảo con người có thể đọc được khi cần
@@ -33,7 +31,6 @@ Mục tiêu là: viết một lần, tối ưu cho cả người và AI, nhưng 
 ## Cài đặt
 
 Xây dựng từ mã nguồn:
-
 - Cài đặt Rust trước nếu chưa được cài đặt
 - Sau đó xây dựng phiên bản release:
 
@@ -43,7 +40,6 @@ cargo build --release
 ```
 
 - Thêm vào PATH (tùy chọn):
-
 ```bash
 # agent-md command
 export PATH="/Users/username/w/agent-md/target/release:$PATH"
@@ -56,7 +52,6 @@ Bây giờ bạn có thể sử dụng lệnh `agent-md` từ bất cứ đâu.
 ### Đầu vào: Markdown thông thường
 
 Đây là một file markdown tiêu chuẩn mà nhiều LLM tạo ra:
-
 ```markdown
 # Dự án Của Tôi
 
@@ -83,7 +78,6 @@ Bây giờ bạn có thể sử dụng lệnh `agent-md` từ bất cứ đâu.
 ### Đầu ra: Markdown thân thiện với AI qua agent-md
 
 Sau khi xử lý với agent-md, nội dung trở nên gọn gàng hơn:
-
 ```markdown
 # Dự án Của Tôi
 
@@ -121,7 +115,6 @@ agent-md lint agent-md-markdown.md
 ```
 
 Lợi ích:
-
 - Giảm ~20% số token không cần thiết
 - LLM đọc và xử lý nhanh hơn
 - Vẫn giữ được thông tin đầy đủ
@@ -130,12 +123,10 @@ Lợi ích:
 ## Thêm quy tắc hoặc lệnh cho LLM/Agents tuân theo
 
 Ví dụ, khi thêm quy tắc mới, thêm vào tệp `AGENTS.md`.
-
-> Sau khi tạo hoặc cập nhật bất kỳ tệp markdown nào, luôn chạy `agent-md lint path/to/file.md` để xác thực nội dung trước khi coi tác vụ hoàn thành.
+>Sau khi tạo hoặc cập nhật bất kỳ tệp markdown nào, luôn chạy `agent-md lint path/to/file.md` để xác thực nội dung trước khi coi tác vụ hoàn thành.
 
 Hoặc chat với LLM/Agents:
-
-> Use `agent-md` CLI to run lint
+>Use `agent-md` CLI to run lint
 
 ## Các lệnh (đầu ra JSON thân thiện với LLM)
 
@@ -280,7 +271,6 @@ cargo test
 ## Quy tắc cho LLMs/Agents: Sử dụng agent-md CLI
 
 Khi làm việc với các tệp markdown, luôn ưu tiên công cụ CLI `agent-md` hơn là chỉnh sửa tệp trực tiếp.
-
 Xem `docs/llm-agent-rule.md` để có hướng dẫn tích hợp hoàn chỉnh và các thực hành tốt nhất.
 
 ### Tại sao sử dụng agent-md?
@@ -336,16 +326,14 @@ agent-md write README.md "# Tiêu đề Mới\nNội dung hợp lệ"
 ## Đọc tệp và trích xuất trường
 
 Sử dụng tùy chọn --field (được khuyến nghị):
-
 ```bash
-agent-md read README.md --field path      # Lấy đường dẫn tệp
-agent-md read README.md --field content   # Lấy nội dung
-agent-md read README.md --field headings  # Lấy các heading
-agent-md read README.md -f word_count     # Form ngắn cho số từ
+agent-md read README.md --field path # Lấy đường dẫn tệp
+agent-md read README.md --field content # Lấy nội dung
+agent-md read README.md --field headings # Lấy các heading
+agent-md read README.md -f word_count # Form ngắn cho số từ
 ```
 
 Đọc phần "Development" - không cần LLM đọc toàn bộ tệp:
-
 ```bash
 agent-md read README.md -c="Development"
 # Các phần lồng nhau: agent-md read README.md -c="Development > Build"
