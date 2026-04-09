@@ -85,10 +85,17 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
 		}
 
 		if in_code_block {
-			// For bash/sh code blocks, collapse spaces before # comments
 			if let Some(ref lang) = code_block_lang {
+				// For bash/sh code blocks, collapse spaces before # comments
 				if code_blocks::is_shell_language(lang) {
 					let processed = code_blocks::collapse_spaces_before_comment(line);
+					formatted_lines.push(processed);
+					continue;
+				}
+				// For markdown code blocks, apply formatting rules to the content
+				if lang == "markdown" || lang == "md" {
+					// Process the line as regular markdown
+					let processed = process_markdown_line(line, &options, false);
 					formatted_lines.push(processed);
 					continue;
 				}
@@ -103,85 +110,56 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
 
 		let is_heading = trimmed.starts_with('#');
 
-		let (prefix, table_content) = tables::parse_table_line(line);
+		// Use shared function for line processing
+		let processed_line = process_markdown_line(line, &options, is_heading);
+		let processed_trimmed = processed_line.trim();
 
-		if !table_content.is_empty() {
-			if tables::is_separator_row(table_content) {
-				let compacted = tables::compact_separator_row(table_content);
-				formatted_lines.push(format!("{}{}", prefix, compacted));
-			} else {
-				let formatted_line = tables::format_table_row(prefix, table_content);
-				formatted_lines.push(formatted_line);
-			}
-		} else {
-			let mut processed_line = if options.remove_bold {
-				remove_bold_markers(line)
-			} else {
-				line.to_string()
-			};
-
-			if options.remove_emphasis && !is_heading {
-				processed_line = remove_emphasis_markers(&processed_line);
-			}
-
-			if options.collapse_spaces && !is_heading {
-				processed_line = collapse_multiple_spaces(&processed_line);
-			}
-
-			// Normalize blockquote lines (remove extra spaces after > markers)
-			processed_line = blockquotes::normalize_blockquote(&processed_line);
-
-			if options.trim_trailing_whitespace {
-				processed_line = processed_line.trim_end().to_string();
-			}
-
-			if options.compact_blank_lines && trimmed.is_empty() {
-				if let Some(prev) = formatted_lines.last() {
-					if !prev.is_empty() {
-						// Check if next non-empty line is a heading - if so, preserve blank line
-						let next_is_heading = lines[i + 1..]
-							.iter()
-							.find(|l| !l.trim().is_empty())
-							.is_some_and(|l| l.trim().starts_with('#'));
-						if next_is_heading {
-							formatted_lines.push(String::new());
-							continue;
-						}
-
-						// Check if next non-empty line is a code fence - if so, preserve blank line
-						let next_is_code_fence = lines[i + 1..]
-							.iter()
-							.find(|l| !l.trim().is_empty())
-							.is_some_and(|l| l.trim().starts_with("```"));
-						if next_is_code_fence {
-							formatted_lines.push(String::new());
-							continue;
-						}
-
-						// Check if previous line was a heading - if so, preserve blank line
-						let prev_was_heading = prev.trim().starts_with('#');
-						if prev_was_heading {
-							formatted_lines.push(String::new());
-							continue;
-						}
-
-						let needs_line = formatted_lines
-							.iter()
-							.rev()
-							.nth(1)
-							.map(|l| !l.trim().is_empty())
-							.unwrap_or(true);
-						if needs_line || !formatted_lines.iter().rev().take(2).any(|l| l.is_empty())
-						{
-							formatted_lines.push(String::new());
-						}
+		// Handle blank lines with compact_blank_lines option
+		if options.compact_blank_lines && processed_trimmed.is_empty() {
+			if let Some(prev) = formatted_lines.last() {
+				if !prev.is_empty() {
+					// Check if next non-empty line is a heading - if so, preserve blank line
+					let next_is_heading = lines[i + 1..]
+						.iter()
+						.find(|l| !l.trim().is_empty())
+						.is_some_and(|l| l.trim().starts_with('#'));
+					if next_is_heading {
+						formatted_lines.push(String::new());
 						continue;
 					}
+
+					// Check if next non-empty line is a code fence - if so, preserve blank line
+					let next_is_code_fence = lines[i + 1..]
+						.iter()
+						.find(|l| !l.trim().is_empty())
+						.is_some_and(|l| l.trim().starts_with("```"));
+					if next_is_code_fence {
+						formatted_lines.push(String::new());
+						continue;
+					}
+
+					// Check if previous line was a heading - if so, preserve blank line
+					let prev_was_heading = prev.trim().starts_with('#');
+					if prev_was_heading {
+						formatted_lines.push(String::new());
+						continue;
+					}
+
+					let needs_line = formatted_lines
+						.iter()
+						.rev()
+						.nth(1)
+						.map(|l| !l.trim().is_empty())
+						.unwrap_or(true);
+					if needs_line || !formatted_lines.iter().rev().take(2).any(|l| l.is_empty()) {
+						formatted_lines.push(String::new());
+					}
+					continue;
 				}
 			}
-
-			formatted_lines.push(processed_line);
 		}
+
+		formatted_lines.push(processed_line);
 	}
 
 	let mut result = formatted_lines.join("\n");
@@ -207,6 +185,47 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
 	}
 
 	result
+}
+
+/// Process a single markdown line with formatting options.
+/// Used for both regular lines and lines inside ```markdown code blocks.
+fn process_markdown_line(line: &str, options: &FormatOptions, is_heading: bool) -> String {
+	let trimmed = line.trim();
+
+	// Handle tables
+	let (prefix, table_content) = tables::parse_table_line(line);
+	if !table_content.is_empty() {
+		if tables::is_separator_row(table_content) {
+			let compacted = tables::compact_separator_row(table_content);
+			return format!("{}{}", prefix, compacted);
+		} else {
+			return tables::format_table_row(prefix, table_content);
+		}
+	}
+
+	// Process regular line
+	let mut processed_line = if options.remove_bold {
+		remove_bold_markers(line)
+	} else {
+		line.to_string()
+	};
+
+	if options.remove_emphasis && !is_heading {
+		processed_line = remove_emphasis_markers(&processed_line);
+	}
+
+	if options.collapse_spaces && !is_heading {
+		processed_line = collapse_multiple_spaces(&processed_line);
+	}
+
+	// Normalize blockquote lines (remove extra spaces after > markers)
+	processed_line = blockquotes::normalize_blockquote(&processed_line);
+
+	if options.trim_trailing_whitespace {
+		processed_line = processed_line.trim_end().to_string();
+	}
+
+	processed_line
 }
 
 /// Remove bold markers (** and __) from a line while preserving the content inside.
