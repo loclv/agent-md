@@ -3,6 +3,7 @@
   "displayName": "Agent-MD Formatter",
   "description": "Format Markdown files using agent-md CLI",
   "version": "0.1.0",
+  "icon": "logo.png",
   "scripts": {
     "vscode:prepublish": "bun run compile",
     "compile": "tsc -p ./",
