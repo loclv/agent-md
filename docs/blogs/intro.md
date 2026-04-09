@@ -36,6 +36,7 @@ Catches issues that hurt AI parsing:
 Format Markdown directly in VS Code.
 
 Write once, optimize for both! 🌍
+View more on GitHub: <https://github.com/loclv/agent-md>
 
 ## 🇻🇳 Tiếng Việt
 Ngừng lãng phí token! 🤖
@@ -73,3 +74,4 @@ Phát hiện các vấn đề gây khó cho AI:
 Format Markdown trực tiếp trong VS Code.
 
 Viết một lần, tối ưu cho cả người và máy! 🌍
+Xem thêm: <https://github.com/loclv/agent-md>
