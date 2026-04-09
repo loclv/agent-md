@@ -365,7 +365,6 @@ agent-md read README.md -f word_count # Short form for word count
 ```
 
 Read "Development" section - no need LLM to read entire file:
-
 ```bash
 agent-md read README.md -c="Development"
 # Nested sections: agent-md read README.md -c="Development > Build"
@@ -430,6 +429,60 @@ make audit # Security audit
 make watch # Watch for changes and rebuild
 make ci # Full CI pipeline
 make docs # Build and open documentation
+```
+
+## VS Code Extension
+
+`agent-md` includes a VS Code extension for formatting Markdown files.
+
+### Install from Source
+
+1. Build the CLI first (see Installation section)
+2. Build the extension:
+
+```bash
+cd vscode-extension
+bun install
+bun compile
+```
+
+3. Install in VS Code:
+- Open VS Code
+- Go to Extensions (Cmd+Shift+X)
+- Click "..." menu > "Install from VSIX"
+- Select `vscode-extension/agent-md-formatter-0.1.0.vsix`
+
+Or use CLI:
+```bash
+code --install-extension vscode-extension/agent-md-formatter-0.1.0.vsix
+```
+
+### Features
+
+- Format on demand or on save
+- Configurable formatting options
+- Integrates with VS Code formatting system
+
+### Settings
+
+- `agentMd.path`: Path to agent-md executable
+- `agentMd.format.removeBold`: Remove bold markers (default: true)
+- `agentMd.format.compactBlankLines`: Compact blank lines (default: true)
+- `agentMd.format.collapseSpaces`: Collapse multiple spaces (default: true)
+- `agentMd.format.removeHorizontalRules`: Remove horizontal rules (default: true)
+- `agentMd.format.removeEmphasis`: Remove emphasis markers (default: true)
+
+### Usage
+
+Open a Markdown file and use `Shift+Option+F` (macOS) or `Shift+Alt+F` (Windows/Linux) to format.
+Enable "Format on Save":
+```json
+{
+  "[markdown]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "agent-md.agent-md-formatter"
+  }
+}
 ```
 
 ## License
