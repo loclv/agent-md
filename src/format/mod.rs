@@ -190,8 +190,6 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
 /// Process a single markdown line with formatting options.
 /// Used for both regular lines and lines inside ```markdown code blocks.
 fn process_markdown_line(line: &str, options: &FormatOptions, is_heading: bool) -> String {
-	let trimmed = line.trim();
-
 	// Handle tables
 	let (prefix, table_content) = tables::parse_table_line(line);
 	if !table_content.is_empty() {
@@ -1226,6 +1224,56 @@ agent-md # format
 	}
 
 	#[test]
+	fn test_format_markdown_inside_markdown_code_block() {
+		let content = r#"```markdown
+| Column 1 | Column 2 | Column 3 |
+|-----------|---------|----------|
+| Value 1   | Value 2 | Value 3  |
+```
+"#;
+		let expected = r#"```markdown
+| Column 1 | Column 2 | Column 3 |
+|---|---|---|
+| Value 1 | Value 2 | Value 3 |
+```
+"#;
+		let result = format_markdown(content);
+		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_format_markdown_inside_md_code_block() {
+		let content = r#"```md
+**Bold** text and *italic* text.
+```
+"#;
+		let expected = r#"```md
+Bold text and italic text.
+```
+"#;
+		let result = format_markdown(content);
+		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_format_markdown_inside_markdown_block_with_list() {
+		let content = r#"```markdown
+1. **First item**
+2. **Second item**: `code`
+3. **Third item**
+```
+"#;
+		let expected = r#"```markdown
+1. First item
+2. Second item: `code`
+3. Third item
+```
+"#;
+		let result = format_markdown(content);
+		assert_eq!(result, expected);
+	}
+
+	#[test]
 	fn test_cmd_fmt_stdin_basic() {
 		// Test that cmd_fmt_stdin produces correct output via format_markdown_with_options
 		let input = "# Test\n\nThis has **bold** text.\n";
@@ -1238,8 +1286,8 @@ agent-md # format
 
 	#[test]
 	fn test_cmd_fmt_stdin_preserves_code_blocks() {
-		// Code block content should be preserved
-		let input = r#"```markdown
+		// Non-markdown code block content should be preserved
+		let input = r#"```text
 **bold** should stay
 ```
 

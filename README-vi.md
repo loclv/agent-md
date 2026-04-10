@@ -55,23 +55,23 @@ Bây giờ bạn có thể sử dụng lệnh `agent-md` từ bất cứ đâu.
 ```markdown
 # Dự án Của Tôi
 
-## **Tổng quan**
+## Tổng quan
 
-Đây là một dự án **rất tuyệt vời** với nhiều tính năng __nổi bật__:
+Đây là một dự án rất tuyệt vời với nhiều tính năng nổi bật:
 
-| Tính năng | Mô tả                           | Trạng thái         |
-|-----------|---------------------------------|--------------------|
-| API       | RESTful API hoàn chỉnh          | ✅ Hoàn thành       |
-| UI        | Giao diện người dùng hiện đại   | 🚧 Đang phát triển  |
-| Tests     | Unit tests và integration tests | ✅ Hoàn thành       |
+| Tính năng | Mô tả | Trạng thái |
+|---|---|---|
+| API | RESTful API hoàn chỉnh | ✅ Hoàn thành |
+| UI | Giao diện người dùng hiện đại | 🚧 Đang phát triển |
+| Tests | Unit tests và integration tests | ✅ Hoàn thành |
 
 ### Các bước thực hiện
 
-1. **Clone repository**
-2. **Cài đặt dependencies**: `bun i`
-3. **Chạy server**: `bun dev`
+1. Clone repository
+2. Cài đặt dependencies: `bun i`
+3. Chạy server: `bun dev`
 
-> **Lưu ý**: Đảm bảo bạn có Node.js phiên bản 22+ được cài đặt!
+>Lưu ý: Đảm bảo bạn có Node.js phiên bản 22+ được cài đặt!
 
 ```
 
