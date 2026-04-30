@@ -30,7 +30,7 @@
   },
   "[markdown]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "agent-md.agent-md-formatter"
+    "editor.defaultFormatter": "loclv.agent-md-formatter"
   },
   "[typescript]": {
     "editor.formatOnSave": true,
