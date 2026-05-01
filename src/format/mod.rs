@@ -422,21 +422,70 @@ fn collapse_multiple_spaces(line: &str) -> String {
 	result
 }
 
-pub fn cmd_fmt(path: &str, human: bool, options: FormatOptions) {
-	match std::fs::read_to_string(path) {
-		Ok(content) => {
-			let formatted_content = format_markdown_with_options(&content, options);
+fn collect_markdown_files(
+	dir: &std::path::Path,
+	files: &mut Vec<std::path::PathBuf>,
+) -> std::io::Result<()> {
+	for entry in std::fs::read_dir(dir)? {
+		let entry = entry?;
+		let path = entry.path();
+		if path.is_dir() {
+			collect_markdown_files(&path, files)?;
+		} else if let Some(ext) = path.extension() {
+			if ext == "md" || ext == "markdown" {
+				files.push(path);
+			}
+		}
+	}
+	Ok(())
+}
 
-			match std::fs::write(path, &formatted_content) {
-				Ok(_) => {
-					let mut doc = parse_markdown(&formatted_content);
-					doc.path = path.to_string();
+fn format_single_file(path: &str, options: FormatOptions) -> Result<Document, String> {
+	let content =
+		std::fs::read_to_string(path).map_err(|e| format!("Failed to read file: {}", e))?;
+	let formatted_content = format_markdown_with_options(&content, options);
+	std::fs::write(path, &formatted_content).map_err(|e| format!("Failed to write file: {}", e))?;
+	let mut doc = parse_markdown(&formatted_content);
+	doc.path = path.to_string();
+	Ok(doc)
+}
+
+pub fn cmd_fmt(path: &str, human: bool, options: FormatOptions) {
+	let path_buf = std::path::PathBuf::from(path);
+
+	if path_buf.is_dir() {
+		let mut files = Vec::new();
+		if let Err(e) = collect_markdown_files(&path_buf, &mut files) {
+			println!(
+				"{}",
+				json_output(
+					&EditResult {
+						success: false,
+						message: format!("Failed to read directory: {}", e),
+						document: None,
+					},
+					human
+				)
+			);
+			return;
+		}
+
+		files.sort();
+
+		let mut success_count = 0;
+		let mut error_count = 0;
+
+		for file in &files {
+			let file_path = file.to_string_lossy().to_string();
+			match format_single_file(&file_path, options.clone()) {
+				Ok(doc) => {
+					success_count += 1;
 					println!(
 						"{}",
 						json_output(
 							&EditResult {
 								success: true,
-								message: "File formatted successfully".to_string(),
+								message: format!("File formatted successfully: {}", file_path),
 								document: Some(doc),
 							},
 							human
@@ -444,12 +493,13 @@ pub fn cmd_fmt(path: &str, human: bool, options: FormatOptions) {
 					);
 				}
 				Err(e) => {
+					error_count += 1;
 					println!(
 						"{}",
 						json_output(
 							&EditResult {
 								success: false,
-								message: format!("Failed to write file: {}", e),
+								message: e,
 								document: None,
 							},
 							human
@@ -458,18 +508,52 @@ pub fn cmd_fmt(path: &str, human: bool, options: FormatOptions) {
 				}
 			}
 		}
-		Err(e) => {
-			println!(
-				"{}",
-				json_output(
-					&EditResult {
-						success: false,
-						message: format!("Failed to read file: {}", e),
-						document: None,
-					},
-					human
-				)
-			);
+
+		let summary = format!(
+			"Formatted {} files ({} succeeded, {} failed)",
+			files.len(),
+			success_count,
+			error_count
+		);
+		println!(
+			"{}",
+			json_output(
+				&EditResult {
+					success: error_count == 0,
+					message: summary,
+					document: None,
+				},
+				human
+			)
+		);
+	} else {
+		match format_single_file(path, options) {
+			Ok(doc) => {
+				println!(
+					"{}",
+					json_output(
+						&EditResult {
+							success: true,
+							message: "File formatted successfully".to_string(),
+							document: Some(doc),
+						},
+						human
+					)
+				);
+			}
+			Err(e) => {
+				println!(
+					"{}",
+					json_output(
+						&EditResult {
+							success: false,
+							message: e,
+							document: None,
+						},
+						human
+					)
+				);
+			}
 		}
 	}
 }
@@ -1507,5 +1591,62 @@ fn main() {}
 "#;
 		let result = format_markdown(content);
 		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_collect_markdown_files_finds_md_and_markdown() {
+		use std::fs;
+		let temp_dir = std::env::temp_dir().join("agent_md_test_collect");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+		fs::create_dir_all(temp_dir.join("sub")).unwrap();
+
+		fs::write(temp_dir.join("a.md"), "# A").unwrap();
+		fs::write(temp_dir.join("b.markdown"), "# B").unwrap();
+		fs::write(temp_dir.join("sub/c.md"), "# C").unwrap();
+		fs::write(temp_dir.join("readme.txt"), "not md").unwrap();
+
+		let mut files = Vec::new();
+		collect_markdown_files(&temp_dir, &mut files).unwrap();
+		files.sort();
+
+		let names: Vec<String> = files
+			.iter()
+			.map(|p| p.file_name().unwrap().to_string_lossy().to_string())
+			.collect();
+
+		assert_eq!(names, vec!["a.md", "b.markdown", "c.md"]);
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_collect_markdown_files_empty_dir() {
+		use std::fs;
+		let temp_dir = std::env::temp_dir().join("agent_md_test_empty");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let mut files = Vec::new();
+		collect_markdown_files(&temp_dir, &mut files).unwrap();
+		assert!(files.is_empty());
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_collect_markdown_files_nested_dirs() {
+		use std::fs;
+		let temp_dir = std::env::temp_dir().join("agent_md_test_nested");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(temp_dir.join("a/b/c")).unwrap();
+
+		fs::write(temp_dir.join("root.md"), "# root").unwrap();
+		fs::write(temp_dir.join("a/level1.md"), "# l1").unwrap();
+		fs::write(temp_dir.join("a/b/level2.md"), "# l2").unwrap();
+		fs::write(temp_dir.join("a/b/c/level3.markdown"), "# l3").unwrap();
+
+		let mut files = Vec::new();
+		collect_markdown_files(&temp_dir, &mut files).unwrap();
+		assert_eq!(files.len(), 4);
+		let _ = fs::remove_dir_all(&temp_dir);
 	}
 }
