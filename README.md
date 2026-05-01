@@ -59,23 +59,23 @@ This is a standard markdown file that many LLMs generate:
 ```markdown
 # My Project
 
-## **Overview**
+## Overview
 
-This is a **really awesome** project with many __outstanding__ features:
+This is a really awesome project with many outstanding features:
 
-| Feature | Description                      | Status         |
-|---------|----------------------------------|----------------|
-| API     | Complete RESTful API             | ✅ Complete    |
-| UI      | Modern user interface            | 🚧 In Progress |
-| Tests   | Unit tests and integration tests | ✅ Complete    |
+| Feature | Description | Status |
+|---|---|---|
+| API | Complete RESTful API | ✅ Complete |
+| UI | Modern user interface | 🚧 In Progress |
+| Tests | Unit tests and integration tests | ✅ Complete |
 
 ### Steps to Follow
 
-1. **Clone repository**
-2. **Install dependencies**: `bun i`
-3. **Run server**: `bun dev`
+1. Clone repository
+2. Install dependencies: `bun i`
+3. Run server: `bun dev`
 
-> **Note**: Make sure you have Node.js 22+ installed!
+>Note: Make sure you have Node.js 22+ installed!
 ```
 
 ### Output: AI-friendly Markdown via agent-md
@@ -434,6 +434,10 @@ make docs # Build and open documentation
 ## VS Code Extension
 
 `agent-md` includes a VS Code extension for formatting Markdown files.
+
+### Install from Marketplace
+
+The extension is available on the VS Code Marketplace. Search for "Agent-MD Formatter" and install it or download it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=loclv.agent-md-formatter).
 
 ### Install from Source
 
