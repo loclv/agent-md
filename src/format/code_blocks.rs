@@ -1,5 +1,24 @@
 /// Collapse multiple spaces before # comments in bash/sh code.
 /// This handles cases like "cd              # goto" -> "cd # goto"
+///
+/// # Arguments
+/// - `line`: A string slice representing a single line of shell code
+///
+/// # Returns
+/// - A new `String` with normalized spacing before comments
+///
+/// # Behavior
+/// - Finds the first `#` that appears to be a comment (preceded by whitespace or at line start)
+/// - Checks if the `#` is inside a quoted string to avoid false positives
+/// - Collapses multiple spaces/tabs before the comment to a single space
+/// - Preserves indentation for comment-only lines
+/// - Leaves code without comments unchanged
+///
+/// # Examples
+/// ```
+/// let result = collapse_spaces_before_comment("cd              # goto");
+/// assert_eq!(result, "cd # goto");
+/// ```
 pub fn collapse_spaces_before_comment(line: &str) -> String {
 	// Find the position of # that looks like a comment (preceded by space or at start)
 	let mut comment_byte_pos = None;
