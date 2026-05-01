@@ -107,9 +107,9 @@ Note: Make sure you have Node.js 22+ installed.
 # Lint regular markdown file
 agent-md lint regular-markdown.md
 # {"valid":false,"errors":[
-#   {"line":3,"message":"No bold text allowed","rule":"no-bold"},
-#   {"line":6,"message":"Complex table detected","rule":"simple-table"},
-#   {"line":15,"message":"No bold text allowed","rule":"no-bold"}
+# {"line":3,"message":"No bold text allowed","rule":"no-bold"},
+# {"line":6,"message":"Complex table detected","rule":"simple-table"},
+# {"line":15,"message":"No bold text allowed","rule":"no-bold"}
 # ]}
 
 # Lint agent-md file
@@ -244,11 +244,23 @@ agent-md lint-file <path>
 
 - Formats the markdown file in-place, trimming leading and trailing spaces from table cells.
 - Preserves separator rows and code block content.
+- Collapses multiple spaces before `#` comments in shell code blocks (`bash`, `sh`, `shell`, `zsh`).
 
 ```bash
 agent-md fmt <path>
 # Returns JSON data: {success, message, document}
 ```
+
+#### Code Block Comment Formatting
+
+For code blocks, the formatter automatically collapses excessive spaces before `#` comments while preserving indentation:
+~~~text
+After:
+```bash
+echo hello # this is a comment
+    # indented comment
+```
+~~~
 
 #### Format Options
 

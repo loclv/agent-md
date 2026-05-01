@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.9] - 2026-05-01
+
+### Features
+- Collapse multiple spaces before # comments in bash/sh/zsh/text code blocks
+
 ## [0.1.6] - 2026-03-30
 
 ### Features
@@ -80,6 +85,11 @@ All notable changes to this project will be documented in this file.
 - Add markdownlint config
 
 ## Recent Development (Unreleased)
+
+### 2026-05-01
+- Fix char-index vs byte-index bug in comment collapsing with Unicode characters
+- Extend comment collapsing to `text` code blocks
+- Preserve leading indentation for comment-only lines in code blocks
 
 ### 2026-04-10
 - Update Vietnamese README examples and add markdown code block tests

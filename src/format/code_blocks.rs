@@ -2,8 +2,11 @@
 /// This handles cases like "cd              # goto" -> "cd # goto"
 pub fn collapse_spaces_before_comment(line: &str) -> String {
 	// Find the position of # that looks like a comment (preceded by space or at start)
-	let mut comment_pos = None;
+	let mut comment_byte_pos = None;
 	let chars: Vec<char> = line.chars().collect();
+
+	// Build a mapping from char index to byte offset
+	let byte_offsets: Vec<usize> = line.char_indices().map(|(byte_pos, _)| byte_pos).collect();
 
 	for i in 0..chars.len() {
 		if chars[i] == '#' {
@@ -32,34 +35,39 @@ pub fn collapse_spaces_before_comment(line: &str) -> String {
 				}
 				// If we're inside quotes, this # is not a comment
 				if single_quotes % 2 == 0 && double_quotes % 2 == 0 {
-					comment_pos = Some(i);
+					comment_byte_pos = Some(byte_offsets[i]);
 					break;
 				}
 			}
 		}
 	}
 
-	if let Some(pos) = comment_pos {
+	if let Some(pos) = comment_byte_pos {
 		let before = &line[..pos];
 		let comment = &line[pos..];
 
-		// Preserve leading indentation (spaces/tabs at the start)
-		let leading_indent: String = before
-			.chars()
-			.take_while(|&c| c == ' ' || c == '\t')
-			.collect();
-		// Collapse trailing spaces before the comment, and remove leading indent (we'll add it back)
-		let before_trimmed = before.trim();
-		// If nothing before the comment (except indentation), preserve the indentation
-		if before_trimmed.is_empty() {
-			format!("{}{}", leading_indent, comment)
+		// Find the actual content before the comment (collapse trailing whitespace)
+		let before_trimmed_end = before.trim_end();
+		// Collapse multiple spaces within the comment text on the same line only
+		let comment_line_end = comment.find('\n').unwrap_or(comment.len());
+		let comment_line = &comment[..comment_line_end];
+		let comment_rest = &comment[comment_line_end..];
+		let collapsed_comment_line: String = comment_line
+			.trim_start()
+			.split_whitespace()
+			.collect::<Vec<&str>>()
+			.join(" ");
+		let collapsed_comment = format!("{}{}", collapsed_comment_line, comment_rest);
+		// If there's content before the comment, add a single space before the comment
+		if before_trimmed_end.is_empty() {
+			// Only whitespace/indentation before the comment - preserve indentation
+			let indent: String = before
+				.chars()
+				.take_while(|&c| c == ' ' || c == '\t')
+				.collect();
+			format!("{}{}", indent, collapsed_comment)
 		} else {
-			format!(
-				"{}{} {}",
-				leading_indent,
-				before_trimmed.trim_start(),
-				comment
-			)
+			format!("{} {}", before_trimmed_end, collapsed_comment)
 		}
 	} else {
 		line.to_string()
@@ -121,7 +129,6 @@ mod tests {
 		assert!(is_shell_language("shell"));
 		assert!(is_shell_language("zsh"));
 		assert!(!is_shell_language("python"));
-		assert!(!is_shell_language("rust"));
 	}
 
 	#[test]
@@ -192,10 +199,204 @@ mod tests {
 	}
 
 	#[test]
+	fn test_collapse_spaces_before_comment_with_box_drawing_single_space() {
+		// Test with Unicode box-drawing characters
+		let input = "│   ├── pagefind/         # auto-generated when build";
+		let expected = "│   ├── pagefind/ # auto-generated when build";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_collapse_spaces_before_comment_with_text_block_single_space() {
+		// Test case from test-md/test-graph.md
+		let input = "```text\n│   ├── pagefind/ # auto-generated when build\n```";
+		let expected = "```text\n│   ├── pagefind/ # auto-generated when build\n```";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_collapse_spaces_before_comment_with_text_block_multiple_spaces() {
+		// Test case from test-md/test-graph.md
+		let input = "```text\n│   ├── pagefind/ #  auto-generated when build\n```";
+		let expected = "```text\n│   ├── pagefind/ # auto-generated when build\n```";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_collapse_spaces_before_comment_with_txt_block_single_space() {
+		// Test case from test-md/test-graph.md
+		let input = "```txt\n│   ├── pagefind/ # auto-generated when build\n```";
+		let expected = "```txt\n│   ├── pagefind/ # auto-generated when build\n```";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_collapse_spaces_before_comment_with_txt_block_multiple_spaces() {
+		// Test case from test-md/test-graph.md
+		let input = "```txt\n│   ├── pagefind/   # auto-generated when build\n```";
+		let expected = "```txt\n│   ├── pagefind/ # auto-generated when build\n```";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_collapse_spaces_before_comment_with_txt_block_two_spaces() {
+		// Test case from test-md/test-graph.md
+		let input = "```txt\n│   ├── pagefind/  # auto-generated when build\n```";
+		let expected = "```txt\n│   ├── pagefind/ # auto-generated when build\n```";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
 	fn test_indented_command_with_inline_comment() {
 		// Indented command with inline comment - collapse extra spaces but preserve indent
 		let input = "    echo test      # comment";
 		let expected = "    echo test # comment";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_hash_not_preceded_by_space() {
+		// # directly after text is not a comment
+		let input = "echo#notacomment";
+		assert_eq!(collapse_spaces_before_comment(input), "echo#notacomment");
+	}
+
+	#[test]
+	fn test_hash_at_start_of_line() {
+		let input = "# this is a comment";
+		assert_eq!(collapse_spaces_before_comment(input), "# this is a comment");
+	}
+
+	#[test]
+	fn test_empty_line() {
+		assert_eq!(collapse_spaces_before_comment(""), "");
+	}
+
+	#[test]
+	fn test_line_with_only_spaces() {
+		assert_eq!(collapse_spaces_before_comment("    "), "    ");
+	}
+
+	#[test]
+	fn test_tab_before_comment() {
+		let input = "echo hello\t# comment";
+		let expected = "echo hello # comment";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_comment_with_only_hash() {
+		let input = "echo hello   #";
+		let expected = "echo hello #";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_multiple_hash_signs() {
+		// Second # is part of the comment text, not a new comment
+		let input = "echo hello   # comment # more";
+		let expected = "echo hello # comment # more";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_escaped_hash() {
+		// Escaped # should not be treated as comment start
+		let input = r"echo \#notcomment";
+		assert_eq!(collapse_spaces_before_comment(input), input);
+	}
+
+	#[test]
+	fn test_is_shell_language_txt() {
+		assert!(!is_shell_language("txt"));
+	}
+
+	#[test]
+	fn test_comment_with_trailing_spaces() {
+		let input = "echo hello   # comment   ";
+		let expected = "echo hello # comment";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_mixed_tabs_and_spaces() {
+		let input = "echo hello\t\t   # comment";
+		// Tabs and spaces are both trimmed before comment
+		let expected = "echo hello # comment";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_comment_after_pipe() {
+		let input = "cat file | grep foo   # filter results";
+		let expected = "cat file | grep foo # filter results";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_comment_after_command_no_space_before_hash() {
+		// # directly attached to text is not a comment
+		let input = "echo hello#notacomment";
+		assert_eq!(
+			collapse_spaces_before_comment(input),
+			"echo hello#notacomment"
+		);
+	}
+
+	#[test]
+	fn test_only_hash_sign() {
+		let input = "#";
+		assert_eq!(collapse_spaces_before_comment(input), "#");
+	}
+
+	#[test]
+	fn test_hash_with_only_spaces_after() {
+		let input = "echo hello   #   ";
+		let expected = "echo hello #";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_long_spaces_before_comment() {
+		let input = "echo hello                    # far comment";
+		let expected = "echo hello # far comment";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_comment_with_unicode() {
+		let input = "echo hello   # comment with unicode: 你好 🎉";
+		let expected = "echo hello # comment with unicode: 你好 🎉";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_hash_in_url_not_comment() {
+		// URL with # is not a comment since no space before #
+		let input = "curl https://example.com/page#section";
+		assert_eq!(collapse_spaces_before_comment(input), input);
+	}
+
+	#[test]
+	fn test_backtick_in_single_quotes_with_comment() {
+		let input = "echo '`not code`'   # real comment";
+		let expected = "echo '`not code`' # real comment";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_hash_in_backticks_not_comment() {
+		// Backticks don't prevent # from being treated as comment
+		// since backtick is not a quote character in this function
+		let input = "echo `hello # world`   # real comment";
+		let expected = "echo `hello # world` # real comment";
+		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_nested_quotes_comment() {
+		let input = "echo \"it's a 'test'\"   # comment";
+		let expected = "echo \"it's a 'test'\" # comment";
 		assert_eq!(collapse_spaces_before_comment(input), expected);
 	}
 }

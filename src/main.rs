@@ -414,7 +414,8 @@ fn main() {
 	let cli = Cli::parse();
 
 	if cli.version {
-		println!("0.1.8");
+		// IMPORTANT: Update this version when releasing new versions
+		println!("0.1.9");
 		return;
 	}
 
