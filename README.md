@@ -118,7 +118,7 @@ agent-md lint agent-md-markdown.md
 ```
 
 Benefits:
-- Reduces ~20% unnecessary tokens
+- In some cases, reduces ~20% unnecessary tokens
 - Faster LLM reading and processing
 - Maintains full information content
 - Easy section extraction
