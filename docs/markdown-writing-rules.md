@@ -6,8 +6,6 @@ This document outlines all the validation rules enforced by the agent-md linter 
 
 The agent-md linter enforces AI-friendly markdown standards to ensure content is easily readable and parseable by AI agents. The rules focus on simplicity, clarity, and machine-readability.
 
----
-
 ## Rule 1: No Bold Text
 
 Rule ID: `no-bold`
@@ -81,15 +79,24 @@ This is a code block with **bold** text that is allowed.
 Use `**bold**` and `__bold__` in inline code for emphasis.
 ```
 
-`**bold**` and `__bold__` are allowed in both inline code (` `) and fenced code blocks (``` ```).
+✅ Valid - Bold text in table cells is auto-formatted
+
+```text
+| Name | Description |
+|---|---|
+| Item | This has bold text |
+| Test | This has italic text |
+```
+
+When formatting markdown, `strip_bold_from_cell` automatically removes `**` and `__` markers from table cell content while preserving inline code spans.
+`**bold**` and `__bold__` are allowed in both inline code (` `) and fenced code blocks (``` ```). Bold in table cells is automatically stripped during `agent-md fmt`.
 
 ### Rationale for No Bold Rule
 
 Bold text creates visual noise for AI agents and doesn't add semantic meaning that can't be conveyed through other means like headings or code formatting.
+Code blocks are exempt because they preserve original syntax and formatting for programming languages, documentation, and other contexts where bold characters may have specific meaning or be part of the code syntax itself.
 
-*Code blocks are exempt* because they preserve original syntax and formatting for programming languages, documentation, and other contexts where bold characters may have specific meaning or be part of the code syntax itself.
-
----
+Table cells are auto-formatted — bold markers are stripped during `agent-md fmt` so the resulting table contains plain text. Inline code within table cells is preserved unchanged.
 
 ## Rule 2: Simple Table Syntax
 
@@ -167,8 +174,6 @@ Description: Tables should use simple syntax without complex attributes.
 
 Complex tables are difficult for AI agents to parse and can introduce formatting inconsistencies. Simple tables are more reliable for machine processing.
 
----
-
 ## Rule 3: No Useless Links
 
 Rule ID: `useless-links`
@@ -217,8 +222,6 @@ For more information: https://example.com
 ### Rationale for Useless Links Rule
 
 Links where the text equals the URL provide no additional context and create redundant information. Descriptive link text helps AI agents understand the purpose and destination of links.
-
----
 
 ## Rule 4: No ASCII Graphs
 
@@ -330,7 +333,6 @@ flowchart LR
 ```
 
 ✅ Valid - ZON format (Zero Overhead Notation)
-
 See: <https://github.com/ZON-Format/ZON>, <https://zonformat.org/>.
 
 ```txt
@@ -349,18 +351,14 @@ Progress: 80% complete
 ### Rationale for ASCII Graphs Rule
 
 ASCII graphs are visually appealing but difficult for AI agents to parse reliably. Structured formats like JSON, CSV, or Mermaid diagrams provide machine-readable alternatives.
-
 Unlike bold text (which is allowed in code blocks because it may be part of programming language syntax), ASCII graphs in code blocks are still visual patterns that AI agents struggle to interpret. The `agent-md` linter therefore rejects ASCII graphs even inside code blocks, as they provide no additional semantic value for AI processing.
 
 When you need to represent tree structures, diagrams, or visual hierarchies, use these alternatives:
-
 - JSON for nested data structures
 - CSV for tabular data
 - Mermaid for flowcharts and diagrams
 - Numbered lists with conditions for processes
 - Simple text descriptions for progress indicators
-
----
 
 ## Rule 5: Proper Heading Structure
 
@@ -425,8 +423,6 @@ Description: Headings should follow logical hierarchy and not skip levels.
 
 Proper heading structure creates a logical document outline that AI agents can easily navigate and understand.
 
----
-
 ## Rule 6: Code Block Best Practices
 
 Rule ID: `code-blocks`
@@ -469,7 +465,6 @@ def example():
 ```
 
 ✅ Valid - Inline code for short snippets
-
 Use `console.log()` for debugging.
 
 ✅ Valid - When no language is specified, use `text`
@@ -481,8 +476,6 @@ This is a code block without specific language
 ### Rationale for Code Blocks Rule
 
 Specifying language helps AI agents understand the context and apply appropriate parsing rules.
-
----
 
 ## Rule 7: List Formatting
 
@@ -547,8 +540,6 @@ Description: Lists should be consistent and properly formatted.
 
 Consistent list formatting improves readability and parsing reliability for AI agents.
 
----
-
 ## Rule 8: No Duplicate Headings
 
 Rule ID: `no-duplicate-headings`
@@ -567,7 +558,6 @@ Some content here
 Different content but same heading text
 
 ```
-
 ❌ Invalid - Same heading content at same level
 
 ```text
@@ -648,8 +638,6 @@ Additional usage notes
 
 Duplicate headings create ambiguity for AI agents when navigating and referencing document sections. Unique heading content ensures clear navigation and unambiguous section identification, making it easier for AI agents to understand and process document structure.
 
----
-
 ## Rule 9: Single H1 Title
 
 Rule ID: `single-title`
@@ -687,7 +675,6 @@ Content for section 1
 Content for section 2
 
 ```
-
 ✅ Valid - Proper hierarchy
 
 ```text
@@ -701,8 +688,6 @@ Content for section 2
 ### Rationale for Single H1 Title Rule
 
 Multiple H1 headings create confusion about the document's main title and structure. AI agents rely on a clear document hierarchy, and a single H1 provides an unambiguous entry point for understanding the document's purpose.
-
----
 
 ## Rule 10: Limited Space Indentation
 
@@ -772,8 +757,6 @@ def example():
 
 Excessive indentation (more than 2 spaces) in regular text can cause parsing issues and formatting inconsistencies. Code blocks are exempt because they require proper indentation for readability and many programming languages mandate specific indentation styles.
 
----
-
 ## Rule 11: No Trailing Spaces in Table Cells
 
 Rule ID: `table-trailing-spaces`
@@ -783,33 +766,28 @@ Description: Table cells should not have trailing spaces, except for a single op
 ### Rule 11 Invalid Examples
 
  Invalid - Multiple trailing spaces in table cells
-
 | Name | Description |
 |---|---|
-| Item      | This is an item  |
+| Item | This is an item |
 
  Invalid - Many trailing spaces in cells
-
 | Column 1 | Column 2 | Column 3 |
 |---|---|---|
-| Value 1    | Value 2     | Value 3   |
+| Value 1 | Value 2 | Value 3 |
 
 ### Rule 11 Recommended Alternatives
 
  Valid - No trailing spaces in cells
-
 | Name | Description |
 |---|---|
 | Item | This is an item |
 
  Valid - Single trailing space in cells (allowed but not recommended)
-
 | Name | Description |
 |---|---|
 | Item | This is an item |
 
  Valid - Table separator rows are ignored
-
 | Name | Description |
 |---|---|
 | Item | This is an item |
@@ -825,8 +803,6 @@ agent-md fmt path/to/file.md
 ### Rationale for Table Trailing Spaces Rule
 
 Trailing spaces in table cells are unnecessary and can cause formatting inconsistencies. They add visual noise without any semantic value and may cause issues with markdown parsers and version control systems.
-
----
 
 ## Validation Output Format
 
@@ -864,8 +840,6 @@ When using the `agent-md lint` command, validation results are returned in JSON 
 - message: Human-readable description of the issue
 - rule: Internal rule identifier
 
----
-
 ## Best Practices Summary
 
 - Use plain text instead of bold formatting
@@ -879,8 +853,6 @@ When using the `agent-md lint` command, validation results are returned in JSON 
 - Use only one H1 heading per document
 - Limit text indentation to 2 spaces or fewer (code blocks exempt)
 - Avoid trailing spaces in table cells (0 or 1 space maximum)
-
----
 
 ## Integration with agent-md
 

@@ -14,7 +14,15 @@ Development setup and guidelines for contributing to agent-md.
 agent-md/
 ├── src/
 │   ├── main.rs # Main application logic and CLI
-│   └── tests.rs # All unit tests (separate module)
+│   ├── format/ # Formatting modules
+│   │   ├── tables.rs # Table formatting (separator compaction, row formatting)
+│   │   ├── bold_tables.rs # Bold stripping from table cells
+│   │   ├── blockquotes.rs
+│   │   ├── code_blocks.rs
+│   │   └── frontmatter.rs
+│   ├── rules/ # Validation rule modules
+│   ├── tests.rs # Core unit tests
+│   └── html_tests.rs # HTML rendering tests
 ├── docs/ # Documentation
 ├── test-md/ # Test markdown files
 └── Makefile # Convenience commands
@@ -35,11 +43,16 @@ make build
 
 ## Testing
 
-The project uses a modular test structure with all tests in `src/tests.rs`:
+The project uses inline tests within each module:
 
 ```bash
 # Run all tests
 cargo test
+
+# Run specific module tests
+cargo test format::tables::tests
+cargo test format::bold_tables::tests
+cargo test rules::code_blocks::tests
 
 # Run specific test
 cargo test test_validate_space_indentation
@@ -53,10 +66,10 @@ make test
 
 ### Test Coverage
 
-- *99 unit tests* covering all validation rules
-- *Integration tests* for complete workflows
-- *Performance tests* for large documents
-- *Edge case testing* for all parsing functions
+- 400+ unit tests across all validation and formatting modules
+- Integration tests for complete workflows
+- Performance tests for large documents
+- Edge case testing for all parsing functions
 
 ## Code Quality
 
@@ -77,17 +90,17 @@ make ci
 
 ### Quality Standards
 
-- *Clippy rules*: Cognitive complexity ≤ 30, function arguments ≤ 7, type complexity ≤ 250
-- *Documentation*: Required for all public items
-- *Error handling*: No `unwrap()`/`expect()` in production code
-- *Formatting*: 100-character line width, 4-space indentation
+- Clippy rules: Cognitive complexity ≤ 30, function arguments ≤ 7, type complexity ≤ 250
+- Documentation: Required for all public items
+- Error handling: No `unwrap()`/`expect()` in production code
+- Formatting: 100-character line width, 4-space indentation
 
 ## Adding New Features
 
-1. *Validation Rules*: Add to `src/main.rs` in the validation section
-2. *CLI Commands*: Extend the `Commands` enum and add handler functions
-3. *Tests*: Add comprehensive tests to `src/tests.rs`
-4. *Documentation*: Update relevant sections in `docs/`
+1. Validation Rules: Add to `src/main.rs` in the validation section
+2. CLI Commands: Extend the `Commands` enum and add handler functions
+3. Tests: Add comprehensive tests to `src/tests.rs`
+4. Documentation: Update relevant sections in `docs/`
 
 ### Example: Adding a New Validation Rule
 
@@ -127,7 +140,7 @@ git checkout -b feature/new-validation-rule
 # - Update documentation
 
 # 3. Verify quality
-make ci  # Runs lint, format, and test
+make ci # Runs lint, format, and test
 
 # 4. Test manually
 ./target/release/agent-md lint test-file.md
