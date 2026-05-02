@@ -1,4 +1,5 @@
 mod blockquotes;
+mod bold_tables;
 mod code_blocks;
 mod frontmatter;
 mod tables;
@@ -197,7 +198,7 @@ fn process_markdown_line(line: &str, options: &FormatOptions, is_heading: bool) 
 			let compacted = tables::compact_separator_row(table_content);
 			return format!("{}{}", prefix, compacted);
 		} else {
-			return tables::format_table_row(prefix, table_content);
+			return tables::format_table_row(prefix, table_content, options.remove_bold);
 		}
 	}
 

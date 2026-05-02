@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.10] - 2026-xx-xx
+
+### Features
+- Add recursive directory formatting: `agent-md .` or `agent-md fmt <dir>` formats all `.md`/`.markdown` files recursively
+- Add unit tests for `collect_markdown_files`
+- Add inline documentation for `collapse_spaces_before_comment` and `compact_separator_row`
+
 ## [0.1.9] - 2026-05-01
 
 ### Features

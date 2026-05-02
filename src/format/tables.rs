@@ -1,6 +1,18 @@
+// `| **text** | center | right |` becomes `| text | center | right |`
+
+use super::bold_tables::strip_bold_from_cell;
+
 /// Compact separator row dashes to exactly 3, preserving alignment colons.
 /// |----|-----| becomes |---|---|
 /// |:---|:--:|--:| becomes |:---|:--:|--:|
+///
+/// # Arguments
+///
+/// * `table_content` - The table content to compact
+///
+/// # Returns
+///
+/// * `String` - The compacted table content
 pub fn compact_separator_row(table_content: &str) -> String {
 	let cells: Vec<&str> = table_content.split('|').collect();
 	let mut formatted_cells = Vec::new();
@@ -60,7 +72,8 @@ pub fn parse_table_line(line: &str) -> (&str, &str) {
 }
 
 /// Format a table row, trimming cell content and standardizing spacing.
-pub fn format_table_row(prefix: &str, table_content: &str) -> String {
+/// When `remove_bold` is true, strips `**` and `__` markers from cell text.
+pub fn format_table_row(prefix: &str, table_content: &str, remove_bold: bool) -> String {
 	let cells: Vec<&str> = table_content.split('|').collect();
 	let mut formatted_cells = Vec::new();
 
@@ -68,8 +81,11 @@ pub fn format_table_row(prefix: &str, table_content: &str) -> String {
 		if i == 0 || i == cells.len() - 1 {
 			continue;
 		}
-		let cell_trimmed = cell.trim();
-		formatted_cells.push(cell_trimmed.to_string());
+		let mut cell_trimmed = cell.trim().to_string();
+		if remove_bold {
+			cell_trimmed = strip_bold_from_cell(&cell_trimmed);
+		}
+		formatted_cells.push(cell_trimmed);
 	}
 
 	format!("{}| {} |", prefix, formatted_cells.join(" | "))
@@ -148,19 +164,43 @@ mod tests {
 
 	#[test]
 	fn test_format_table_row_basic() {
-		let result = format_table_row("", "| Header | Value |");
+		let result = format_table_row("", "| Header | Value |", false);
 		assert_eq!(result, "| Header | Value |");
 	}
 
 	#[test]
 	fn test_format_table_row_trailing_spaces() {
-		let result = format_table_row("", "| Header  | Value   |");
+		let result = format_table_row("", "| Header  | Value   |", false);
 		assert_eq!(result, "| Header | Value |");
 	}
 
 	#[test]
 	fn test_format_table_row_with_prefix() {
-		let result = format_table_row("  ", "| Header | Value |");
+		let result = format_table_row("  ", "| Header | Value |", false);
 		assert_eq!(result, "  | Header | Value |");
+	}
+
+	#[test]
+	fn test_format_table_row_removes_bold_asterisks() {
+		let result = format_table_row("", "| **text** | center | right |", true);
+		assert_eq!(result, "| text | center | right |");
+	}
+
+	#[test]
+	fn test_format_table_row_removes_bold_underscores() {
+		let result = format_table_row("", "| __text__ | value |", true);
+		assert_eq!(result, "| text | value |");
+	}
+
+	#[test]
+	fn test_format_table_row_preserves_bold_in_inline_code() {
+		let result = format_table_row("", "| `**text**` | normal |", true);
+		assert_eq!(result, "| `**text**` | normal |");
+	}
+
+	#[test]
+	fn test_format_table_row_bold_disabled() {
+		let result = format_table_row("", "| **text** | value |", false);
+		assert_eq!(result, "| **text** | value |");
 	}
 }
