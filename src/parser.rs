@@ -201,4 +201,41 @@ mod tests {
             _ => panic!("Expected List"),
         }
     }
+
+    #[test]
+    fn test_parse_multiple_tables() {
+        let content = "| T1 |\n|---|\n| V1 |\n\nText\n\n| T2 |\n|---|\n| V2 |\n";
+        let parsed = parse(content);
+        // Table, BlankLine, Paragraph, BlankLine, Table
+        assert_eq!(parsed.blocks.len(), 5);
+        assert!(matches!(parsed.blocks[0], MarkdownBlock::Table { .. }));
+        assert!(matches!(parsed.blocks[1], MarkdownBlock::BlankLine));
+        assert!(matches!(parsed.blocks[2], MarkdownBlock::Paragraph(_)));
+        assert!(matches!(parsed.blocks[3], MarkdownBlock::BlankLine));
+        assert!(matches!(parsed.blocks[4], MarkdownBlock::Table { .. }));
+    }
+
+    #[test]
+    fn test_parse_indented_list() {
+        let content = "- Item 1\n  - Subitem 1\n  - Subitem 2\n- Item 2";
+        let parsed = parse(content);
+        assert_eq!(parsed.blocks.len(), 1);
+        match &parsed.blocks[0] {
+            MarkdownBlock::List { items, .. } => assert_eq!(items.len(), 4),
+            _ => panic!("Expected List"),
+        }
+    }
+
+    #[test]
+    fn test_parse_mixed_content() {
+        let content = "# Title\n\nIntro.\n\n- L1\n- L2\n\n```js\nconst x = 1;\n```\n\n| H |\n|---|\n| V |\n";
+        let parsed = parse(content);
+        // Heading, BlankLine, Paragraph, BlankLine, List, BlankLine, CodeBlock, BlankLine, Table
+        assert_eq!(parsed.blocks.len(), 9);
+        assert!(matches!(parsed.blocks[0], MarkdownBlock::Heading { .. }));
+        assert!(matches!(parsed.blocks[2], MarkdownBlock::Paragraph(_)));
+        assert!(matches!(parsed.blocks[4], MarkdownBlock::List { .. }));
+        assert!(matches!(parsed.blocks[6], MarkdownBlock::CodeBlock { .. }));
+        assert!(matches!(parsed.blocks[8], MarkdownBlock::Table { .. }));
+    }
 }

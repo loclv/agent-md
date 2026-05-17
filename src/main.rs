@@ -427,11 +427,17 @@ fn get_format_options(
 	remove_emphasis: bool,
 ) -> format::FormatOptions {
 	let mut blanks_around_lists = true;
+	let mut blanks_around_fences = true;
 
 	if let Some(config) = get_markdownlint_config() {
 		if let Some(val) = config.get("blanks-around-lists") {
 			if val.is_boolean() {
 				blanks_around_lists = val.as_bool().unwrap();
+			}
+		}
+		if let Some(val) = config.get("blanks-around-fences") {
+			if val.is_boolean() {
+				blanks_around_fences = val.as_bool().unwrap();
 			}
 		}
 	}
@@ -444,6 +450,7 @@ fn get_format_options(
 		remove_horizontal_rules,
 		remove_emphasis,
 		blanks_around_lists,
+		blanks_around_fences,
 	}
 }
 
