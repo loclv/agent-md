@@ -72,7 +72,6 @@ pub fn collapse_spaces_before_comment(line: &str) -> String {
 		let comment_line = &comment[..comment_line_end];
 		let comment_rest = &comment[comment_line_end..];
 		let collapsed_comment_line: String = comment_line
-			.trim_start()
 			.split_whitespace()
 			.collect::<Vec<&str>>()
 			.join(" ");

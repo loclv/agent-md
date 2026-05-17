@@ -428,6 +428,7 @@ fn get_format_options(
 ) -> format::FormatOptions {
 	let mut blanks_around_lists = true;
 	let mut blanks_around_fences = true;
+	let mut blanks_around_headings = true;
 
 	if let Some(config) = get_markdownlint_config() {
 		if let Some(val) = config.get("blanks-around-lists") {
@@ -438,6 +439,11 @@ fn get_format_options(
 		if let Some(val) = config.get("blanks-around-fences") {
 			if val.is_boolean() {
 				blanks_around_fences = val.as_bool().unwrap();
+			}
+		}
+		if let Some(val) = config.get("blanks-around-headings") {
+			if val.is_boolean() {
+				blanks_around_headings = val.as_bool().unwrap();
 			}
 		}
 	}
@@ -451,6 +457,7 @@ fn get_format_options(
 		remove_emphasis,
 		blanks_around_lists,
 		blanks_around_fences,
+		blanks_around_headings,
 	}
 }
 

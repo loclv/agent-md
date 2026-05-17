@@ -1313,6 +1313,7 @@ Please contribute to the project.
 				remove_emphasis: false,
 				blanks_around_lists: false,
 				blanks_around_fences: false,
+				blanks_around_headings: true,
 			},
 		);
 		assert_eq!(formatted, content);

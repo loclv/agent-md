@@ -16,6 +16,7 @@ pub struct FormatOptions {
 	pub remove_emphasis: bool,
 	pub blanks_around_lists: bool,
 	pub blanks_around_fences: bool,
+	pub blanks_around_headings: bool,
 }
 
 impl FormatOptions {
@@ -30,6 +31,7 @@ impl FormatOptions {
 			remove_emphasis: true,
 			blanks_around_lists: true,
 			blanks_around_fences: true,
+			blanks_around_headings: true,
 		}
 	}
 }
@@ -45,6 +47,7 @@ impl Default for FormatOptions {
 			remove_emphasis: true,
 			blanks_around_lists: true,
 			blanks_around_fences: true,
+			blanks_around_headings: true,
 		}
 	}
 }
@@ -98,62 +101,86 @@ pub fn format_markdown_structured(content: &str, options: FormatOptions) -> Stri
 	let mut formatted_parts = Vec::new();
 	let mut last_was_frontmatter = false;
 
-	for block in parsed.blocks.iter() {
+	for (idx, block) in parsed.blocks.iter().enumerate() {
 		match block {
 			crate::parser::MarkdownBlock::Frontmatter(s) => {
 				formatted_parts.push(s.clone());
 				last_was_frontmatter = true;
 			}
 			crate::parser::MarkdownBlock::Heading { level, text, .. } => {
-				ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+				let prev_is_blank_or_fm = idx == 0
+					|| last_was_frontmatter
+					|| matches!(
+						parsed.blocks[idx - 1],
+						crate::parser::MarkdownBlock::BlankLine
+					);
+				if options.blanks_around_headings && !prev_is_blank_or_fm {
+					ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
+				} else {
+					ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+				}
 				let mut h = "#".repeat(*level as usize);
 				h.push(' ');
 				h.push_str(text);
 				h.push('\n');
 				formatted_parts.push(h);
+				let next_is_blank = idx + 1 < parsed.blocks.len()
+					&& matches!(
+						parsed.blocks[idx + 1],
+						crate::parser::MarkdownBlock::BlankLine
+					);
+				if options.blanks_around_headings && !next_is_blank {
+					ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
+				} else {
+					ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+				}
 				last_was_frontmatter = false;
 			}
-			crate::parser::MarkdownBlock::CodeBlock { language, content: cb_content, .. } => {
-			    if options.blanks_around_fences {
-			        ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
-			    } else {
-			        ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
-			    }
+			crate::parser::MarkdownBlock::CodeBlock {
+				language,
+				content: cb_content,
+				..
+			} => {
+				if options.blanks_around_fences {
+					ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
+				} else {
+					ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+				}
 
-			    let mut cb = String::from("```");
-			    if let Some(lang) = language {
-			        cb.push_str(lang);
-			    }
-			    cb.push('\n');
+				let mut cb = String::from("```");
+				if let Some(lang) = language {
+					cb.push_str(lang);
+				}
+				cb.push('\n');
 
-			    if let Some(lang) = language {
-			        if code_blocks::is_shell_language(lang) {
-			            for line in cb_content.lines() {
-			                cb.push_str(&code_blocks::collapse_spaces_before_comment(line));
-			                cb.push('\n');
-			            }
-			        } else if lang == "markdown" || lang == "md" {
-			            cb.push_str(&format_markdown_structured(cb_content, options.clone()));
-			            if !cb_content.ends_with('\n') {
-			                cb.push('\n');
-			            }
-			        } else {
-			            cb.push_str(cb_content);
-			        }
-			    } else {
-			        cb.push_str(cb_content);
-			    }
+				if let Some(lang) = language {
+					if code_blocks::is_shell_language(lang) {
+						for line in cb_content.lines() {
+							cb.push_str(&code_blocks::collapse_spaces_before_comment(line));
+							cb.push('\n');
+						}
+					} else if lang == "markdown" || lang == "md" {
+						cb.push_str(&format_markdown_structured(cb_content, options.clone()));
+						if !cb_content.ends_with('\n') {
+							cb.push('\n');
+						}
+					} else {
+						cb.push_str(cb_content);
+					}
+				} else {
+					cb.push_str(cb_content);
+				}
 
-			    if !cb.ends_with('\n') {
-			        cb.push('\n');
-			    }
-			    cb.push_str("```\n");
-			    formatted_parts.push(cb);
+				if !cb.ends_with('\n') {
+					cb.push('\n');
+				}
+				cb.push_str("```\n");
+				formatted_parts.push(cb);
 
-			    if options.blanks_around_fences {
-			        ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
-			    }
-			    last_was_frontmatter = false;
+				if options.blanks_around_fences {
+					ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
+				}
+				last_was_frontmatter = false;
 			}
 			crate::parser::MarkdownBlock::Table { raw, .. } => {
 				ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
@@ -187,10 +214,28 @@ pub fn format_markdown_structured(content: &str, options: FormatOptions) -> Stri
 				last_was_frontmatter = false;
 			}
 			crate::parser::MarkdownBlock::BlankLine => {
-				if !options.compact_blank_lines {
-					formatted_parts.push("\n".to_string());
+				let skip_blank_line = if !options.blanks_around_headings {
+					let prev_is_heading = idx > 0
+						&& matches!(
+							parsed.blocks[idx - 1],
+							crate::parser::MarkdownBlock::Heading { .. }
+						);
+					let next_is_heading = idx + 1 < parsed.blocks.len()
+						&& matches!(
+							parsed.blocks[idx + 1],
+							crate::parser::MarkdownBlock::Heading { .. }
+						);
+					prev_is_heading || next_is_heading
 				} else {
-					ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
+					false
+				};
+
+				if !skip_blank_line {
+					if !options.compact_blank_lines {
+						formatted_parts.push("\n".to_string());
+					} else {
+						ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
+					}
 				}
 			}
 			crate::parser::MarkdownBlock::HorizontalRule(s) => {
@@ -717,6 +762,7 @@ Another paragraph.
 				remove_emphasis: false,
 				blanks_around_lists: false,
 				blanks_around_fences: false,
+				blanks_around_headings: true,
 			},
 		);
 		assert_eq!(result, expected);
@@ -830,6 +876,7 @@ More text.
 				remove_emphasis: false,
 				blanks_around_lists: false,
 				blanks_around_fences: false,
+				blanks_around_headings: true,
 			},
 		);
 		assert_eq!(result, expected);
@@ -920,6 +967,7 @@ Some text.
 				remove_emphasis: false,
 				blanks_around_lists: false,
 				blanks_around_fences: false,
+				blanks_around_headings: true,
 			},
 		);
 		assert_eq!(result, expected);
@@ -985,6 +1033,7 @@ Just text with | pipes
 				remove_emphasis: false,
 				blanks_around_lists: false,
 				blanks_around_fences: false,
+				blanks_around_headings: true,
 			},
 		);
 		assert_eq!(result, "\n\n\n");
@@ -1150,6 +1199,7 @@ But remove these markers outside code.
 			remove_emphasis: false,
 			blanks_around_lists: false,
 			blanks_around_fences: false,
+			blanks_around_headings: true,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "Line 1\n\nLine 2\n\nLine 3");
@@ -1167,6 +1217,7 @@ But remove these markers outside code.
 			remove_emphasis: false,
 			blanks_around_lists: false,
 			blanks_around_fences: false,
+			blanks_around_headings: true,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "This is **bold** text");
@@ -1184,6 +1235,7 @@ But remove these markers outside code.
 			remove_emphasis: false,
 			blanks_around_lists: false,
 			blanks_around_fences: false,
+			blanks_around_headings: true,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "Text with trailing\nMore text");
@@ -1201,6 +1253,7 @@ But remove these markers outside code.
 			remove_emphasis: false,
 			blanks_around_lists: false,
 			blanks_around_fences: false,
+			blanks_around_headings: true,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "This has multiple spaces");
@@ -1218,6 +1271,7 @@ But remove these markers outside code.
 			remove_emphasis: false,
 			blanks_around_lists: false,
 			blanks_around_fences: false,
+			blanks_around_headings: true,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "# Heading   with    spaces");
@@ -1235,6 +1289,7 @@ But remove these markers outside code.
 			remove_emphasis: false,
 			blanks_around_lists: false,
 			blanks_around_fences: false,
+			blanks_around_headings: true,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert!(!result.contains("---"));
@@ -1254,6 +1309,7 @@ But remove these markers outside code.
 			remove_emphasis: false,
 			blanks_around_lists: false,
 			blanks_around_fences: false,
+			blanks_around_headings: true,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert!(!result.contains("***"));
@@ -1275,6 +1331,7 @@ But remove these markers outside code.
 			remove_emphasis: true,
 			blanks_around_lists: false,
 			blanks_around_fences: false,
+			blanks_around_headings: true,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "This is italic text");
@@ -1292,6 +1349,7 @@ But remove these markers outside code.
 			remove_emphasis: true,
 			blanks_around_lists: false,
 			blanks_around_fences: false,
+			blanks_around_headings: true,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "This is italic text");
@@ -1309,6 +1367,7 @@ But remove these markers outside code.
 			remove_emphasis: true,
 			blanks_around_lists: false,
 			blanks_around_fences: false,
+			blanks_around_headings: true,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "# *Heading* with emphasis");
@@ -1326,6 +1385,7 @@ But remove these markers outside code.
 			remove_emphasis: true,
 			blanks_around_lists: false,
 			blanks_around_fences: false,
+			blanks_around_headings: true,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "Use `*italic*` in code");
@@ -1371,6 +1431,7 @@ But remove these markers outside code.
 		let options = FormatOptions {
 			blanks_around_lists: false,
 			blanks_around_fences: false,
+			blanks_around_headings: true,
 			..FormatOptions::default()
 		};
 		let result = format_markdown_with_options(content, options);
@@ -1738,6 +1799,7 @@ echo "hello" # comment
 			remove_emphasis: false, // Preserve emphasis markers
 			blanks_around_lists: false,
 			blanks_around_fences: false,
+			blanks_around_headings: true,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, expected);
@@ -1885,6 +1947,7 @@ fn main() {}
 			remove_emphasis: false,
 			blanks_around_lists: false,
 			blanks_around_fences: true,
+			blanks_around_headings: true,
 		};
 		let result = format_markdown_with_options(content, options);
 		let expected = "Text\n\n```rust\nfn main() {}\n```\n\nEnd";
@@ -1903,6 +1966,7 @@ fn main() {}
 			remove_emphasis: false,
 			blanks_around_lists: false,
 			blanks_around_fences: false,
+			blanks_around_headings: true,
 		};
 		let result = format_markdown_with_options(content, options);
 		let expected = "Text\n\n```rust\nfn main() {}\n```\n\nEnd";
@@ -1921,6 +1985,7 @@ fn main() {}
 			remove_emphasis: false,
 			blanks_around_lists: false,
 			blanks_around_fences: true,
+			blanks_around_headings: true,
 		};
 		let result = format_markdown_with_options(content, options);
 		let expected = "Text\n\n```rust\nfn main() {}\n```\n\nEnd";
@@ -1956,5 +2021,43 @@ fn main() {}
 		collect_markdown_files(&temp_dir, &mut files).unwrap();
 		assert_eq!(files.len(), 4);
 		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_headings_enabled() {
+		let content = "Text\n# Heading\nParagraph";
+		let options = FormatOptions {
+			remove_bold: false,
+			compact_blank_lines: true,
+			trim_trailing_whitespace: true,
+			collapse_spaces: false,
+			remove_horizontal_rules: false,
+			remove_emphasis: false,
+			blanks_around_lists: false,
+			blanks_around_fences: false,
+			blanks_around_headings: true,
+		};
+		let result = format_markdown_with_options(content, options);
+		let expected = "Text\n\n# Heading\n\nParagraph";
+		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_headings_disabled() {
+		let content = "Text\n\n# Heading\n\nParagraph";
+		let options = FormatOptions {
+			remove_bold: false,
+			compact_blank_lines: true,
+			trim_trailing_whitespace: true,
+			collapse_spaces: false,
+			remove_horizontal_rules: false,
+			remove_emphasis: false,
+			blanks_around_lists: false,
+			blanks_around_fences: false,
+			blanks_around_headings: false,
+		};
+		let result = format_markdown_with_options(content, options);
+		let expected = "Text\n# Heading\nParagraph";
+		assert_eq!(result, expected);
 	}
 }
