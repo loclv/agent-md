@@ -52,149 +52,157 @@ pub fn format_markdown(content: &str) -> String {
 }
 
 fn ensure_newlines(parts: &mut Vec<String>, count: usize, compact: bool) {
-    if parts.is_empty() {
-        return;
-    }
+	if parts.is_empty() {
+		return;
+	}
 
-    let mut current_newlines = 0;
-    // Check from the end of parts
-    for part in parts.iter().rev() {
-        if part == "\n" {
-            current_newlines += 1;
-        } else {
-            // Count trailing newlines in the part itself
-            let trailing = part.chars().rev().take_while(|&c| c == '\n').count();
-            current_newlines += trailing;
-            break;
-        }
-    }
-    
-    let target = if compact { std::cmp::min(count, 2) } else { count };
-    
-    while current_newlines < target {
-        parts.push("\n".to_string());
-        current_newlines += 1;
-    }
+	let mut current_newlines = 0;
+	// Check from the end of parts
+	for part in parts.iter().rev() {
+		if part == "\n" {
+			current_newlines += 1;
+		} else {
+			// Count trailing newlines in the part itself
+			let trailing = part.chars().rev().take_while(|&c| c == '\n').count();
+			current_newlines += trailing;
+			break;
+		}
+	}
+
+	let target = if compact {
+		std::cmp::min(count, 2)
+	} else {
+		count
+	};
+
+	while current_newlines < target {
+		parts.push("\n".to_string());
+		current_newlines += 1;
+	}
 }
 
 pub fn format_markdown_structured(content: &str, options: FormatOptions) -> String {
-    if content.chars().all(|c| c == '\n') && !content.is_empty() {
-        let n = content.len();
-        if options.compact_blank_lines {
-            return "\n".repeat(std::cmp::min(n, 2));
-        } else {
-            return content.to_string();
-        }
-    }
+	if content.chars().all(|c| c == '\n') && !content.is_empty() {
+		let n = content.len();
+		if options.compact_blank_lines {
+			return "\n".repeat(std::cmp::min(n, 2));
+		} else {
+			return content.to_string();
+		}
+	}
 
-    let parsed = crate::parser::parse(content);
-    let mut formatted_parts = Vec::new();
-    let mut last_was_frontmatter = false;
+	let parsed = crate::parser::parse(content);
+	let mut formatted_parts = Vec::new();
+	let mut last_was_frontmatter = false;
 
-    for block in parsed.blocks.iter() {
-        match block {
-            crate::parser::MarkdownBlock::Frontmatter(s) => {
-                formatted_parts.push(s.clone());
-                last_was_frontmatter = true;
-            }
-            crate::parser::MarkdownBlock::Heading { level, text, .. } => {
-                ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
-                let mut h = "#".repeat(*level as usize);
-                h.push(' ');
-                h.push_str(text);
-                h.push('\n');
-                formatted_parts.push(h);
-                last_was_frontmatter = false;
-            }
-            crate::parser::MarkdownBlock::CodeBlock { language, content: cb_content, .. } => {
-                ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
+	for block in parsed.blocks.iter() {
+		match block {
+			crate::parser::MarkdownBlock::Frontmatter(s) => {
+				formatted_parts.push(s.clone());
+				last_was_frontmatter = true;
+			}
+			crate::parser::MarkdownBlock::Heading { level, text, .. } => {
+				ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+				let mut h = "#".repeat(*level as usize);
+				h.push(' ');
+				h.push_str(text);
+				h.push('\n');
+				formatted_parts.push(h);
+				last_was_frontmatter = false;
+			}
+			crate::parser::MarkdownBlock::CodeBlock {
+				language,
+				content: cb_content,
+				..
+			} => {
+				ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
 
-                let mut cb = String::from("```");
-                if let Some(lang) = language {
-                    cb.push_str(lang);
-                }
-                cb.push('\n');
+				let mut cb = String::from("```");
+				if let Some(lang) = language {
+					cb.push_str(lang);
+				}
+				cb.push('\n');
 
-                if let Some(lang) = language {
-                    if code_blocks::is_shell_language(lang) {
-                        for line in cb_content.lines() {
-                            cb.push_str(&code_blocks::collapse_spaces_before_comment(line));
-                            cb.push('\n');
-                        }
-                    } else if lang == "markdown" || lang == "md" {
-                        cb.push_str(&format_markdown_structured(cb_content, options.clone()));
-                        if !cb_content.ends_with('\n') {
-                            cb.push('\n');
-                        }
-                    } else {
-                        cb.push_str(cb_content);
-                    }
-                } else {
-                    cb.push_str(cb_content);
-                }
+				if let Some(lang) = language {
+					if code_blocks::is_shell_language(lang) {
+						for line in cb_content.lines() {
+							cb.push_str(&code_blocks::collapse_spaces_before_comment(line));
+							cb.push('\n');
+						}
+					} else if lang == "markdown" || lang == "md" {
+						cb.push_str(&format_markdown_structured(cb_content, options.clone()));
+						if !cb_content.ends_with('\n') {
+							cb.push('\n');
+						}
+					} else {
+						cb.push_str(cb_content);
+					}
+				} else {
+					cb.push_str(cb_content);
+				}
 
-                if !cb.ends_with('\n') {
-                    cb.push('\n');
-                }
-                cb.push_str("```\n");
-                formatted_parts.push(cb);
-                last_was_frontmatter = false;
-            }
-            crate::parser::MarkdownBlock::Table { raw, .. } => {
-                ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
-                for line in raw.lines() {
-                    formatted_parts.push(process_markdown_line(line, &options, false));
-                    formatted_parts.push("\n".to_string());
-                }
-                last_was_frontmatter = false;
-            }
-            crate::parser::MarkdownBlock::List { items, .. } => {
-                if options.blanks_around_lists {
-                    ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
-                } else {
-                    ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
-                }
+				if !cb.ends_with('\n') {
+					cb.push('\n');
+				}
+				cb.push_str("```\n");
+				formatted_parts.push(cb);
+				last_was_frontmatter = false;
+			}
+			crate::parser::MarkdownBlock::Table { raw, .. } => {
+				ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+				for line in raw.lines() {
+					formatted_parts.push(process_markdown_line(line, &options, false));
+					formatted_parts.push("\n".to_string());
+				}
+				last_was_frontmatter = false;
+			}
+			crate::parser::MarkdownBlock::List { items, .. } => {
+				if options.blanks_around_lists {
+					ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
+				} else {
+					ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+				}
 
-                for item in items {
-                    formatted_parts.push(process_markdown_line(item, &options, false));
-                    formatted_parts.push("\n".to_string());
-                }
+				for item in items {
+					formatted_parts.push(process_markdown_line(item, &options, false));
+					formatted_parts.push("\n".to_string());
+				}
 
-                if options.blanks_around_lists {
-                    ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
-                }
-                last_was_frontmatter = false;
-            }
-            crate::parser::MarkdownBlock::Paragraph(s) => {
-                ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
-                formatted_parts.push(process_markdown_line(s, &options, false));
-                formatted_parts.push("\n".to_string());
-                last_was_frontmatter = false;
-            }
-            crate::parser::MarkdownBlock::BlankLine => {
-                if !options.compact_blank_lines {
-                    formatted_parts.push("\n".to_string());
-                } else {
-                    ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
-                }
-            }
-            crate::parser::MarkdownBlock::HorizontalRule(s) => {
-                if !options.remove_horizontal_rules {
-                    ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
-                    formatted_parts.push(s.clone());
-                    formatted_parts.push("\n".to_string());
-                } else if last_was_frontmatter {
-                     // If HR is removed but it was directly after frontmatter,
-                     // we might need to ensure something, but the original logic
-                     // seems to imply it just doesn't add anything.
-                }
-                last_was_frontmatter = false;
-            }
-        }
-    }
+				if options.blanks_around_lists {
+					ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
+				}
+				last_was_frontmatter = false;
+			}
+			crate::parser::MarkdownBlock::Paragraph(s) => {
+				ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+				formatted_parts.push(process_markdown_line(s, &options, false));
+				formatted_parts.push("\n".to_string());
+				last_was_frontmatter = false;
+			}
+			crate::parser::MarkdownBlock::BlankLine => {
+				if !options.compact_blank_lines {
+					formatted_parts.push("\n".to_string());
+				} else {
+					ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
+				}
+			}
+			crate::parser::MarkdownBlock::HorizontalRule(s) => {
+				if !options.remove_horizontal_rules {
+					ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+					formatted_parts.push(s.clone());
+					formatted_parts.push("\n".to_string());
+				} else if last_was_frontmatter {
+					// If HR is removed but it was directly after frontmatter,
+					// we might need to ensure something, but the original logic
+					// seems to imply it just doesn't add anything.
+				}
+				last_was_frontmatter = false;
+			}
+		}
+	}
 
-    let mut result = formatted_parts.concat();
-    if options.compact_blank_lines {
+	let mut result = formatted_parts.concat();
+	if options.compact_blank_lines {
 		let lines: Vec<&str> = result.split('\n').collect();
 		let mut compact_lines = Vec::new();
 		let mut prev_was_empty = false;
@@ -204,26 +212,26 @@ pub fn format_markdown_structured(content: &str, options: FormatOptions) -> Stri
 			if is_empty && prev_was_empty {
 				continue;
 			}
-            if is_empty && idx == 0 {
-                continue;
-            }
+			if is_empty && idx == 0 {
+				continue;
+			}
 			compact_lines.push(*line);
 			prev_was_empty = is_empty;
 		}
 		result = compact_lines.join("\n");
-    }
+	}
 
-    while result.ends_with('\n') {
-        result.pop();
-    }
-    if content.ends_with('\n') && !result.is_empty() {
-        result.push('\n');
-    }
-    result
+	while result.ends_with('\n') {
+		result.pop();
+	}
+	if content.ends_with('\n') && !result.is_empty() {
+		result.push('\n');
+	}
+	result
 }
 
 pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> String {
-    format_markdown_structured(content, options)
+	format_markdown_structured(content, options)
 }
 
 /// Process a single markdown line with formatting options.
@@ -1132,7 +1140,7 @@ But remove these markers outside code.
 			blanks_around_lists: false,
 		};
 		let result = format_markdown_with_options(content, options);
-		assert_eq!(result, "Line 1\n\nLine 2\nLine 3");
+		assert_eq!(result, "Line 1\n\nLine 2\n\nLine 3");
 	}
 
 	#[test]
@@ -1771,6 +1779,7 @@ title: Test
 ---
 
 Text above
+
 Text below
 "#;
 		let result = format_markdown(content);
