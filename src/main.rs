@@ -459,7 +459,7 @@ fn main() {
 
 	if cli.version {
 		// IMPORTANT: Update this version when releasing new versions
-		println!("0.1.9");
+		println!("0.2.0");
 		return;
 	}
 

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-05-18
+
+### Features
+- Support to parse markdown files with complex content.
+- Support rules of ".markdownlint.json".
+
 ## [0.1.10] - 2026-xx-xx
 
 ### Features
