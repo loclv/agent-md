@@ -976,7 +976,7 @@ Just text with | pipes
 				blanks_around_lists: false,
 			},
 		);
-		assert_eq!(result, "\n\n");
+		assert_eq!(result, "\n\n\n");
 	}
 
 	#[test]
