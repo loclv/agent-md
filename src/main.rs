@@ -6,6 +6,7 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 
 mod html_tests;
+mod parser;
 mod rules;
 
 use crate::rules::extract_heading_level;

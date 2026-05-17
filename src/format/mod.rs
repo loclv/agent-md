@@ -1,7 +1,7 @@
 mod blockquotes;
 mod bold_tables;
 mod code_blocks;
-mod frontmatter;
+pub mod frontmatter;
 mod tables;
 
 use crate::*;
@@ -51,207 +51,179 @@ pub fn format_markdown(content: &str) -> String {
 	format_markdown_with_options(content, FormatOptions::default())
 }
 
-pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> String {
-	let ends_with_newline = content.ends_with('\n');
+fn ensure_newlines(parts: &mut Vec<String>, count: usize, compact: bool) {
+    if parts.is_empty() {
+        return;
+    }
 
-	// First pass: collect all lines to determine which blank lines to keep
-	let lines: Vec<&str> = content.lines().collect();
-	let mut formatted_lines = Vec::new();
-	let mut in_code_block = false;
-	let mut code_block_lang: Option<String> = None;
-	// YAML frontmatter detection: starts with --- at line 0
-	let mut in_frontmatter = frontmatter::is_frontmatter_start(&lines);
-	let mut prev_was_list_item = false;
-	let mut in_list_block = false;
+    let mut current_newlines = 0;
+    // Check from the end of parts
+    for part in parts.iter().rev() {
+        if part == "\n" {
+            current_newlines += 1;
+        } else {
+            // Count trailing newlines in the part itself
+            let trailing = part.chars().rev().take_while(|&c| c == '\n').count();
+            current_newlines += trailing;
+            break;
+        }
+    }
+    
+    let target = if compact { std::cmp::min(count, 2) } else { count };
+    
+    while current_newlines < target {
+        parts.push("\n".to_string());
+        current_newlines += 1;
+    }
+}
 
-	for (i, line) in lines.iter().enumerate() {
-		let trimmed = line.trim();
+pub fn format_markdown_structured(content: &str, options: FormatOptions) -> String {
+    if content.chars().all(|c| c == '\n') && !content.is_empty() {
+        let n = content.len();
+        if options.compact_blank_lines {
+            return "\n".repeat(std::cmp::min(n, 2));
+        } else {
+            return content.to_string();
+        }
+    }
 
-		// Handle YAML frontmatter block
-		if in_frontmatter {
-			// Preserve all lines in frontmatter block as-is
-			formatted_lines.push(line.to_string());
-			// Check for closing delimiter (--- on its own line, after the opening)
-			if frontmatter::is_frontmatter_end(trimmed, i) {
-				in_frontmatter = false;
-			}
-			continue;
-		}
+    let parsed = crate::parser::parse(content);
+    let mut formatted_parts = Vec::new();
+    let mut last_was_frontmatter = false;
 
-		if trimmed.starts_with("```") {
-			if options.blanks_around_lists && !in_code_block && prev_was_list_item {
-				formatted_lines.push(String::new());
-			}
-			in_code_block = !in_code_block;
-			if in_code_block {
-				// Extract language from the opening fence
-				code_block_lang = trimmed.strip_prefix("```").map(|s| s.to_lowercase());
-			} else {
-				code_block_lang = None;
-			}
-			formatted_lines.push(line.to_string());
-			prev_was_list_item = false;
-			in_list_block = false;
-			continue;
-		}
+    for block in parsed.blocks.iter() {
+        match block {
+            crate::parser::MarkdownBlock::Frontmatter(s) => {
+                formatted_parts.push(s.clone());
+                last_was_frontmatter = true;
+            }
+            crate::parser::MarkdownBlock::Heading { level, text, .. } => {
+                ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+                let mut h = "#".repeat(*level as usize);
+                h.push(' ');
+                h.push_str(text);
+                h.push('\n');
+                formatted_parts.push(h);
+                last_was_frontmatter = false;
+            }
+            crate::parser::MarkdownBlock::CodeBlock { language, content: cb_content, .. } => {
+                ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
 
-		if in_code_block {
-			if let Some(ref lang) = code_block_lang {
-				// For bash/sh code blocks, collapse spaces before # comments
-				if code_blocks::is_shell_language(lang) {
-					let processed = code_blocks::collapse_spaces_before_comment(line);
-					formatted_lines.push(processed);
-					continue;
-				}
-				// For markdown code blocks, apply formatting rules to the content
-				if lang == "markdown" || lang == "md" {
-					// Process the line as regular markdown
-					let processed = process_markdown_line(line, &options, false);
-					formatted_lines.push(processed);
-					continue;
-				}
-			}
-			formatted_lines.push(line.to_string());
-			continue;
-		}
+                let mut cb = String::from("```");
+                if let Some(lang) = language {
+                    cb.push_str(lang);
+                }
+                cb.push('\n');
 
-		if options.remove_horizontal_rules && is_horizontal_rule(trimmed) {
-			prev_was_list_item = false;
-			in_list_block = false;
-			continue;
-		}
+                if let Some(lang) = language {
+                    if code_blocks::is_shell_language(lang) {
+                        for line in cb_content.lines() {
+                            cb.push_str(&code_blocks::collapse_spaces_before_comment(line));
+                            cb.push('\n');
+                        }
+                    } else if lang == "markdown" || lang == "md" {
+                        cb.push_str(&format_markdown_structured(cb_content, options.clone()));
+                        if !cb_content.ends_with('\n') {
+                            cb.push('\n');
+                        }
+                    } else {
+                        cb.push_str(cb_content);
+                    }
+                } else {
+                    cb.push_str(cb_content);
+                }
 
-		let is_heading = trimmed.starts_with('#');
-		let is_list_item = rules::detect_list_item(trimmed).is_some();
-		let is_indented = line.starts_with(' ') || line.starts_with('\t');
-		let is_list_content = is_list_item || (in_list_block && is_indented && !trimmed.is_empty());
+                if !cb.ends_with('\n') {
+                    cb.push('\n');
+                }
+                cb.push_str("```\n");
+                formatted_parts.push(cb);
+                last_was_frontmatter = false;
+            }
+            crate::parser::MarkdownBlock::Table { raw, .. } => {
+                ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+                for line in raw.lines() {
+                    formatted_parts.push(process_markdown_line(line, &options, false));
+                    formatted_parts.push("\n".to_string());
+                }
+                last_was_frontmatter = false;
+            }
+            crate::parser::MarkdownBlock::List { items, .. } => {
+                if options.blanks_around_lists {
+                    ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
+                } else {
+                    ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+                }
 
-		if is_list_item {
-			in_list_block = true;
-		} else if !trimmed.is_empty() && !is_indented {
-			in_list_block = false;
-		}
+                for item in items {
+                    formatted_parts.push(process_markdown_line(item, &options, false));
+                    formatted_parts.push("\n".to_string());
+                }
 
-		// Use shared function for line processing
-		let processed_line = process_markdown_line(line, &options, is_heading);
-		let processed_trimmed = processed_line.trim();
+                if options.blanks_around_lists {
+                    ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
+                }
+                last_was_frontmatter = false;
+            }
+            crate::parser::MarkdownBlock::Paragraph(s) => {
+                ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+                formatted_parts.push(process_markdown_line(s, &options, false));
+                formatted_parts.push("\n".to_string());
+                last_was_frontmatter = false;
+            }
+            crate::parser::MarkdownBlock::BlankLine => {
+                if !options.compact_blank_lines {
+                    formatted_parts.push("\n".to_string());
+                } else {
+                    ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
+                }
+            }
+            crate::parser::MarkdownBlock::HorizontalRule(s) => {
+                if !options.remove_horizontal_rules {
+                    ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+                    formatted_parts.push(s.clone());
+                    formatted_parts.push("\n".to_string());
+                } else if last_was_frontmatter {
+                     // If HR is removed but it was directly after frontmatter,
+                     // we might need to ensure something, but the original logic
+                     // seems to imply it just doesn't add anything.
+                }
+                last_was_frontmatter = false;
+            }
+        }
+    }
 
-		// Handle blank lines with compact_blank_lines option
-		if options.compact_blank_lines && processed_trimmed.is_empty() {
-			if let Some(prev) = formatted_lines.last() {
-				if !prev.is_empty() {
-					// Check if next non-empty line is a heading - if so, preserve blank line
-					let next_is_heading = lines[i + 1..]
-						.iter()
-						.find(|l| !l.trim().is_empty())
-						.is_some_and(|l| l.trim().starts_with('#'));
-					if next_is_heading {
-						formatted_lines.push(String::new());
-						prev_was_list_item = false;
-						in_list_block = false;
-						continue;
-					}
-
-					// Check if next non-empty line is a code fence - if so, preserve blank line
-					let next_is_code_fence = lines[i + 1..]
-						.iter()
-						.find(|l| !l.trim().is_empty())
-						.is_some_and(|l| l.trim().starts_with("```"));
-					if next_is_code_fence {
-						formatted_lines.push(String::new());
-						prev_was_list_item = false;
-						in_list_block = false;
-						continue;
-					}
-
-					// Check if next non-empty line is a list item - if so, preserve blank line
-					let next_is_list = lines[i + 1..]
-						.iter()
-						.find(|l| !l.trim().is_empty())
-						.is_some_and(|l| rules::detect_list_item(l.trim()).is_some());
-					if options.blanks_around_lists && next_is_list {
-						formatted_lines.push(String::new());
-						prev_was_list_item = false;
-						// Don't reset in_list_block here, as a blank line is allowed inside/between lists
-						continue;
-					}
-
-					// Check if previous line was a list item - if so, preserve blank line
-					if options.blanks_around_lists && prev_was_list_item {
-						formatted_lines.push(String::new());
-						prev_was_list_item = false;
-						continue;
-					}
-
-					// Check if previous line was a heading - if so, preserve blank line
-					let prev_was_heading = prev.trim().starts_with('#');
-					if prev_was_heading {
-						formatted_lines.push(String::new());
-						prev_was_list_item = false;
-						in_list_block = false;
-						continue;
-					}
-
-					let needs_line = formatted_lines
-						.iter()
-						.rev()
-						.nth(1)
-						.map(|l| !l.trim().is_empty())
-						.unwrap_or(true);
-					if needs_line || !formatted_lines.iter().rev().take(2).any(|l| l.is_empty()) {
-						formatted_lines.push(String::new());
-					}
-					prev_was_list_item = false;
-					in_list_block = false;
-					continue;
-				}
-			}
-		}
-
-		if options.blanks_around_lists {
-			if is_list_content && !prev_was_list_item && !formatted_lines.is_empty() {
-				if let Some(prev) = formatted_lines.last() {
-					if !prev.trim().is_empty() {
-						formatted_lines.push(String::new());
-					}
-				}
-			}
-
-			if !is_list_content && prev_was_list_item && !processed_trimmed.is_empty() {
-				formatted_lines.push(String::new());
-			}
-		}
-
-		let is_empty = processed_trimmed.is_empty();
-		formatted_lines.push(processed_line);
-		if !is_empty {
-			prev_was_list_item = is_list_content;
-		}
-	}
-
-	let mut result = formatted_lines.join("\n");
-
-	if options.compact_blank_lines {
-		let lines: Vec<&str> = result.lines().collect();
+    let mut result = formatted_parts.concat();
+    if options.compact_blank_lines {
+		let lines: Vec<&str> = result.split('\n').collect();
 		let mut compact_lines = Vec::new();
 		let mut prev_was_empty = false;
 
-		for line in lines {
+		for (idx, line) in lines.iter().enumerate() {
 			let is_empty = line.trim().is_empty();
 			if is_empty && prev_was_empty {
 				continue;
 			}
-			compact_lines.push(line);
+            if is_empty && idx == 0 {
+                continue;
+            }
+			compact_lines.push(*line);
 			prev_was_empty = is_empty;
 		}
 		result = compact_lines.join("\n");
-	}
+    }
 
-	if ends_with_newline && !result.ends_with('\n') {
-		result.push('\n');
-	}
+    while result.ends_with('\n') {
+        result.pop();
+    }
+    if content.ends_with('\n') && !result.is_empty() {
+        result.push('\n');
+    }
+    result
+}
 
-	result
+pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> String {
+    format_markdown_structured(content, options)
 }
 
 /// Process a single markdown line with formatting options.
@@ -371,7 +343,7 @@ fn remove_bold_markers(line: &str) -> String {
 	result
 }
 
-fn is_horizontal_rule(line: &str) -> bool {
+pub fn is_horizontal_rule(line: &str) -> bool {
 	let trimmed = line.trim();
 	trimmed == "---" || trimmed == "***" || trimmed == "___"
 }
