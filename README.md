@@ -26,6 +26,7 @@ In practice, LLMs/agents don't need to read the entire file. They only need to a
 ### Solution
 
 `agent-md` introduces a minimal, AI-friendly markdown standard that:
+
 - Reduces unnecessary tokens
 - Keeps content structured and easy to access by section
 - Remains readable for humans when needed
@@ -35,6 +36,7 @@ The goal: write once, optimize for both humans and AI—without wasting resource
 ## Installation
 
 Build from source:
+
 - Install Rust first if not already installed
 - Then build the release version:
 
@@ -44,6 +46,7 @@ cargo build --release
 ```
 
 - Add to PATH (optional):
+
 ```bash
 # agent-md command
 export PATH="/Users/username/w/agent-md/target/release:$PATH"
@@ -56,6 +59,7 @@ Now you can use the `agent-md` command from anywhere.
 ### Input: Regular Markdown
 
 This is a standard markdown file that many LLMs generate:
+
 ```markdown
 # My Project
 
@@ -81,6 +85,7 @@ This is a really awesome project with many outstanding features:
 ### Output: AI-friendly Markdown via agent-md
 
 After processing with agent-md, the content becomes cleaner:
+
 ```markdown
 # My Project
 
@@ -118,6 +123,7 @@ agent-md lint agent-md-markdown.md
 ```
 
 Benefits:
+
 - In some cases, reduces ~20% unnecessary tokens
 - Faster LLM reading and processing
 - Maintains full information content
@@ -134,6 +140,7 @@ Or tell LLM/Agents:
 ## Commands (LLM-friendly JSON output)
 
 All commands return JSON for easy parsing. Use `--human` flag before the subcommand for pretty-printed output:
+
 ```bash
 agent-md --human lint README.md
 agent-md --human read README.md --field headings
@@ -256,10 +263,12 @@ agent-md fmt <path>
 For code blocks, the formatter automatically collapses excessive spaces before `#` comments while preserving indentation:
 ~~~text
 After:
+
 ```bash
 echo hello # this is a comment
     # indented comment
 ```
+
 ~~~
 
 #### Format Options
@@ -272,11 +281,23 @@ The formatter applies compact rules by default to reduce token count:
 | `collapse_spaces` | Collapses multiple spaces between words |
 | `remove_horizontal_rules` | Removes `---`, `***`, `___` lines |
 | `remove_emphasis` | Removes `*italic*` and `_italic_` markers |
+| `blanks_around_lists` | Ensures lists are surrounded by blank lines (configured in `.markdownlint.json`) |
+| `blanks_around_fences` | Ensures fenced code blocks are surrounded by blank lines (configured in `.markdownlint.json`) |
 
 Example:
+
 ```bash
 agent-md fmt document.md
 ```
+
+## How it Works: Structured Parsing
+
+Unlike simple line-based formatters, `agent-md` uses a structured parser that:
+
+1. Extracts YAML Frontmatter: Preserves metadata at the beginning of the document exactly as-is.
+2. Identifies Document Blocks: Recognizes headings, code blocks, tables, lists, and paragraphs.
+3. Applies Context-Aware Formatting: Formats each block according to its type and your configuration options.
+4. Optimizes for LLMs: Ensures the output is clean, consistent, and token-efficient while remaining human-readable.
 
 ## Validation Rules
 
@@ -369,6 +390,7 @@ agent-md write README.md "# New Title\nValid content"
 ## Read File and Extract Fields
 
 Use --field option (recommended):
+
 ```bash
 agent-md read README.md --field path # Get file path
 agent-md read README.md --field content # Get content
@@ -377,6 +399,7 @@ agent-md read README.md -f word_count # Short form for word count
 ```
 
 Read "Development" section - no need LLM to read entire file:
+
 ```bash
 agent-md read README.md -c="Development"
 # Nested sections: agent-md read README.md -c="Development > Build"
@@ -409,6 +432,7 @@ agent-md write document.md "# Title\nValid content without bold"
 ```
 
 Example output when use "--human" flag:
+
 ```json
 {
   "valid": false,
@@ -469,6 +493,7 @@ bun compile
 - Select `vscode-extension/agent-md-formatter-0.1.0.vsix`
 
 Or use CLI:
+
 ```bash
 code --install-extension vscode-extension/agent-md-formatter-0.1.0.vsix
 ```
@@ -492,6 +517,7 @@ code --install-extension vscode-extension/agent-md-formatter-0.1.0.vsix
 
 Open a Markdown file and use `Shift+Option+F` (macOS) or `Shift+Alt+F` (Windows/Linux) to format.
 Enable "Format on Save":
+
 ```json
 {
   "[markdown]": {

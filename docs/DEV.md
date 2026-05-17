@@ -14,7 +14,9 @@ Development setup and guidelines for contributing to agent-md.
 agent-md/
 ├── src/
 │   ├── main.rs # Main application logic and CLI
+│   ├── parser.rs # Structured Markdown parser (block-based)
 │   ├── format/ # Formatting modules
+│   │   ├── mod.rs # Structured formatter orchestration
 │   │   ├── tables.rs # Table formatting (separator compaction, row formatting)
 │   │   ├── bold_tables.rs # Bold stripping from table cells
 │   │   ├── blockquotes.rs
@@ -27,6 +29,15 @@ agent-md/
 ├── test-md/ # Test markdown files
 └── Makefile # Convenience commands
 ```
+
+## Architecture: Structured Parsing and Formatting
+
+`agent-md` follows a **Parse-then-Format** architecture:
+
+1.  **Parsing**: The `src/parser.rs` module decomposes the raw Markdown text into a sequence of `MarkdownBlock` elements (e.g., `Heading`, `CodeBlock`, `List`, `Table`). This stage also extracts YAML frontmatter.
+2.  **Formatting**: The `format_markdown_structured` function in `src/format/mod.rs` iterates over these blocks and applies formatting rules based on the block type and user configuration.
+
+This approach is more robust than simple line-based processing, especially for complex structures like nested lists or tables.
 
 ## Building
 

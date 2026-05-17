@@ -238,6 +238,44 @@ agent-md lint-file <path>
 # Trả về: đầu ra kiểm tra dễ đọc với lỗi, cảnh báo, và tóm tắt
 ```
 
+### Định dạng markdown
+
+- Định dạng tệp markdown tại chỗ, loại bỏ các khoảng trắng thừa trong ô bảng.
+- Bảo toàn các dòng phân tách và nội dung khối mã.
+- Thu gọn các khoảng trắng thừa trước các bình luận `#` trong các khối mã shell (`bash`, `sh`, `shell`, `zsh`).
+
+```bash
+agent-md fmt <path>
+# Trả về dữ liệu JSON: {success, message, document}
+```
+
+#### Định dạng tùy chọn
+
+Trình định dạng áp dụng các quy tắc thu gọn theo mặc định để giảm số lượng token:
+
+| Tùy chọn | Mô tả |
+|---|---|
+| `remove_bold` | Xóa các dấu `**bold**` và `__bold__` |
+| `compact_blank_lines` | Thu gọn nhiều dòng trống liên tiếp (giữ lại các dòng trống đơn quanh tiêu đề) |
+| `collapse_spaces` | Thu gọn nhiều khoảng trắng giữa các từ |
+| `remove_horizontal_rules` | Xóa các dòng `---`, `***`, `___` |
+| `remove_emphasis` | Xóa các dấu `*italic*` và `_italic_` |
+| `blanks_around_lists` | Đảm bảo danh sách được bao quanh bởi các dòng trống (cấu hình trong `.markdownlint.json`) |
+| `blanks_around_fences` | Đảm bảo các khối mã được bao quanh bởi các dòng trống (cấu hình trong `.markdownlint.json`) |
+
+Ví dụ:
+```bash
+agent-md fmt document.md
+```
+
+## Cách thức hoạt động: Phân tích cấu trúc (Structured Parsing)
+
+Khác với các trình định dạng theo dòng đơn giản, `agent-md` sử dụng bộ phân tích cấu trúc để:
+1.  **Trích xuất YAML Frontmatter**: Giữ nguyên metadata ở đầu tài liệu.
+2.  **Xác định các khối tài liệu**: Nhận diện tiêu đề, khối mã, bảng, danh sách và đoạn văn.
+3.  **Áp dụng định dạng theo ngữ cảnh**: Định dạng từng khối dựa trên loại của nó và các tùy chọn cấu hình.
+4.  **Tối ưu hóa cho LLM**: Đảm bảo đầu ra sạch sẽ, nhất quán và tiết kiệm token trong khi vẫn dễ đọc cho con người.
+
 ## Quy tắc xác thực
 
 Công cụ kiểm tra thực thi các tiêu chuẩn markdown thân thiện với AI.
