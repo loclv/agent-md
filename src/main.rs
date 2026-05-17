@@ -410,6 +410,42 @@ enum Commands {
 	},
 }
 
+fn get_markdownlint_config() -> Option<serde_json::Value> {
+	if let Ok(content) = fs::read_to_string(".markdownlint.json") {
+		serde_json::from_str(&content).ok()
+	} else {
+		None
+	}
+}
+
+fn get_format_options(
+	remove_bold: bool,
+	compact_blank_lines: bool,
+	collapse_spaces: bool,
+	remove_horizontal_rules: bool,
+	remove_emphasis: bool,
+) -> format::FormatOptions {
+	let mut blanks_around_lists = true;
+
+	if let Some(config) = get_markdownlint_config() {
+		if let Some(val) = config.get("blanks-around-lists") {
+			if val.is_boolean() {
+				blanks_around_lists = val.as_bool().unwrap();
+			}
+		}
+	}
+
+	format::FormatOptions {
+		remove_bold,
+		compact_blank_lines,
+		trim_trailing_whitespace: true,
+		collapse_spaces,
+		remove_horizontal_rules,
+		remove_emphasis,
+		blanks_around_lists,
+	}
+}
+
 fn main() {
 	let cli = Cli::parse();
 
@@ -454,14 +490,13 @@ fn main() {
 			remove_horizontal_rules,
 			remove_emphasis,
 		}) => {
-			let options = format::FormatOptions {
+			let options = get_format_options(
 				remove_bold,
 				compact_blank_lines,
-				trim_trailing_whitespace: true,
 				collapse_spaces,
 				remove_horizontal_rules,
 				remove_emphasis,
-			};
+			);
 			if stdin {
 				format::cmd_fmt_stdin(options)
 			} else if let Some(p) = path {
@@ -474,14 +509,7 @@ fn main() {
 		None => {
 			// If path provided without command, treat as fmt
 			if let Some(path) = cli.path {
-				let options = format::FormatOptions {
-					remove_bold: true,
-					compact_blank_lines: true,
-					trim_trailing_whitespace: true,
-					collapse_spaces: true,
-					remove_horizontal_rules: true,
-					remove_emphasis: true,
-				};
+				let options = get_format_options(true, true, true, true, true);
 				format::cmd_fmt(&path, cli.human, options)
 			} else {
 				// If no command and not version, show help

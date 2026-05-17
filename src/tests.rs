@@ -1311,6 +1311,7 @@ Please contribute to the project.
 				collapse_spaces: false,
 				remove_horizontal_rules: false,
 				remove_emphasis: false,
+				blanks_around_lists: false,
 			},
 		);
 		assert_eq!(formatted, content);

@@ -14,6 +14,7 @@ pub struct FormatOptions {
 	pub collapse_spaces: bool,
 	pub remove_horizontal_rules: bool,
 	pub remove_emphasis: bool,
+	pub blanks_around_lists: bool,
 }
 
 impl FormatOptions {
@@ -26,6 +27,7 @@ impl FormatOptions {
 			collapse_spaces: true,
 			remove_horizontal_rules: true,
 			remove_emphasis: true,
+			blanks_around_lists: true,
 		}
 	}
 }
@@ -39,6 +41,7 @@ impl Default for FormatOptions {
 			collapse_spaces: true,
 			remove_horizontal_rules: true,
 			remove_emphasis: true,
+			blanks_around_lists: true,
 		}
 	}
 }
@@ -58,6 +61,8 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
 	let mut code_block_lang: Option<String> = None;
 	// YAML frontmatter detection: starts with --- at line 0
 	let mut in_frontmatter = frontmatter::is_frontmatter_start(&lines);
+	let mut prev_was_list_item = false;
+	let mut in_list_block = false;
 
 	for (i, line) in lines.iter().enumerate() {
 		let trimmed = line.trim();
@@ -74,6 +79,9 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
 		}
 
 		if trimmed.starts_with("```") {
+			if options.blanks_around_lists && !in_code_block && prev_was_list_item {
+				formatted_lines.push(String::new());
+			}
 			in_code_block = !in_code_block;
 			if in_code_block {
 				// Extract language from the opening fence
@@ -82,6 +90,8 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
 				code_block_lang = None;
 			}
 			formatted_lines.push(line.to_string());
+			prev_was_list_item = false;
+			in_list_block = false;
 			continue;
 		}
 
@@ -106,10 +116,21 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
 		}
 
 		if options.remove_horizontal_rules && is_horizontal_rule(trimmed) {
+			prev_was_list_item = false;
+			in_list_block = false;
 			continue;
 		}
 
 		let is_heading = trimmed.starts_with('#');
+		let is_list_item = rules::detect_list_item(trimmed).is_some();
+		let is_indented = line.starts_with(' ') || line.starts_with('\t');
+		let is_list_content = is_list_item || (in_list_block && is_indented && !trimmed.is_empty());
+
+		if is_list_item {
+			in_list_block = true;
+		} else if !trimmed.is_empty() && !is_indented {
+			in_list_block = false;
+		}
 
 		// Use shared function for line processing
 		let processed_line = process_markdown_line(line, &options, is_heading);
@@ -126,6 +147,8 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
 						.is_some_and(|l| l.trim().starts_with('#'));
 					if next_is_heading {
 						formatted_lines.push(String::new());
+						prev_was_list_item = false;
+						in_list_block = false;
 						continue;
 					}
 
@@ -136,6 +159,27 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
 						.is_some_and(|l| l.trim().starts_with("```"));
 					if next_is_code_fence {
 						formatted_lines.push(String::new());
+						prev_was_list_item = false;
+						in_list_block = false;
+						continue;
+					}
+
+					// Check if next non-empty line is a list item - if so, preserve blank line
+					let next_is_list = lines[i + 1..]
+						.iter()
+						.find(|l| !l.trim().is_empty())
+						.is_some_and(|l| rules::detect_list_item(l.trim()).is_some());
+					if options.blanks_around_lists && next_is_list {
+						formatted_lines.push(String::new());
+						prev_was_list_item = false;
+						// Don't reset in_list_block here, as a blank line is allowed inside/between lists
+						continue;
+					}
+
+					// Check if previous line was a list item - if so, preserve blank line
+					if options.blanks_around_lists && prev_was_list_item {
+						formatted_lines.push(String::new());
+						prev_was_list_item = false;
 						continue;
 					}
 
@@ -143,6 +187,8 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
 					let prev_was_heading = prev.trim().starts_with('#');
 					if prev_was_heading {
 						formatted_lines.push(String::new());
+						prev_was_list_item = false;
+						in_list_block = false;
 						continue;
 					}
 
@@ -155,12 +201,32 @@ pub fn format_markdown_with_options(content: &str, options: FormatOptions) -> St
 					if needs_line || !formatted_lines.iter().rev().take(2).any(|l| l.is_empty()) {
 						formatted_lines.push(String::new());
 					}
+					prev_was_list_item = false;
+					in_list_block = false;
 					continue;
 				}
 			}
 		}
 
+		if options.blanks_around_lists {
+			if is_list_content && !prev_was_list_item && !formatted_lines.is_empty() {
+				if let Some(prev) = formatted_lines.last() {
+					if !prev.trim().is_empty() {
+						formatted_lines.push(String::new());
+					}
+				}
+			}
+
+			if !is_list_content && prev_was_list_item && !processed_trimmed.is_empty() {
+				formatted_lines.push(String::new());
+			}
+		}
+
+		let is_empty = processed_trimmed.is_empty();
 		formatted_lines.push(processed_line);
+		if !is_empty {
+			prev_was_list_item = is_list_content;
+		}
 	}
 
 	let mut result = formatted_lines.join("\n");
@@ -662,6 +728,7 @@ Another paragraph.
 				collapse_spaces: false,
 				remove_horizontal_rules: false,
 				remove_emphasis: false,
+				blanks_around_lists: false,
 			},
 		);
 		assert_eq!(result, expected);
@@ -773,6 +840,7 @@ More text.
 				collapse_spaces: false,
 				remove_horizontal_rules: false,
 				remove_emphasis: false,
+				blanks_around_lists: false,
 			},
 		);
 		assert_eq!(result, expected);
@@ -861,6 +929,7 @@ Some text.
 				collapse_spaces: false,
 				remove_horizontal_rules: false,
 				remove_emphasis: false,
+				blanks_around_lists: false,
 			},
 		);
 		assert_eq!(result, expected);
@@ -924,6 +993,7 @@ Just text with | pipes
 				collapse_spaces: false,
 				remove_horizontal_rules: false,
 				remove_emphasis: false,
+				blanks_around_lists: false,
 			},
 		);
 		assert_eq!(result, "\n\n");
@@ -1087,6 +1157,7 @@ But remove these markers outside code.
 			collapse_spaces: false,
 			remove_horizontal_rules: false,
 			remove_emphasis: false,
+			blanks_around_lists: false,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "Line 1\n\nLine 2\nLine 3");
@@ -1102,6 +1173,7 @@ But remove these markers outside code.
 			collapse_spaces: false,
 			remove_horizontal_rules: false,
 			remove_emphasis: false,
+			blanks_around_lists: false,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "This is **bold** text");
@@ -1117,6 +1189,7 @@ But remove these markers outside code.
 			collapse_spaces: false,
 			remove_horizontal_rules: false,
 			remove_emphasis: false,
+			blanks_around_lists: false,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "Text with trailing\nMore text");
@@ -1132,6 +1205,7 @@ But remove these markers outside code.
 			collapse_spaces: true,
 			remove_horizontal_rules: false,
 			remove_emphasis: false,
+			blanks_around_lists: false,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "This has multiple spaces");
@@ -1147,6 +1221,7 @@ But remove these markers outside code.
 			collapse_spaces: true,
 			remove_horizontal_rules: false,
 			remove_emphasis: false,
+			blanks_around_lists: false,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "# Heading   with    spaces");
@@ -1162,6 +1237,7 @@ But remove these markers outside code.
 			collapse_spaces: false,
 			remove_horizontal_rules: true,
 			remove_emphasis: false,
+			blanks_around_lists: false,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert!(!result.contains("---"));
@@ -1179,6 +1255,7 @@ But remove these markers outside code.
 			collapse_spaces: false,
 			remove_horizontal_rules: true,
 			remove_emphasis: false,
+			blanks_around_lists: false,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert!(!result.contains("***"));
@@ -1198,6 +1275,7 @@ But remove these markers outside code.
 			collapse_spaces: false,
 			remove_horizontal_rules: false,
 			remove_emphasis: true,
+			blanks_around_lists: false,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "This is italic text");
@@ -1213,6 +1291,7 @@ But remove these markers outside code.
 			collapse_spaces: false,
 			remove_horizontal_rules: false,
 			remove_emphasis: true,
+			blanks_around_lists: false,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "This is italic text");
@@ -1228,6 +1307,7 @@ But remove these markers outside code.
 			collapse_spaces: false,
 			remove_horizontal_rules: false,
 			remove_emphasis: true,
+			blanks_around_lists: false,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "# *Heading* with emphasis");
@@ -1243,6 +1323,7 @@ But remove these markers outside code.
 			collapse_spaces: false,
 			remove_horizontal_rules: false,
 			remove_emphasis: true,
+			blanks_around_lists: false,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, "Use `*italic*` in code");
@@ -1258,6 +1339,172 @@ But remove these markers outside code.
 		assert!(result.contains("Text with emphasis"));
 		assert!(!result.contains("---"));
 		assert!(result.contains("More text"));
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_lists_add() {
+		let content = "Text\n- Item 1\n- Item 2\nEnd";
+		let options = FormatOptions {
+			blanks_around_lists: true,
+			..FormatOptions::default()
+		};
+		let result = format_markdown_with_options(content, options);
+		assert_eq!(result, "Text\n\n- Item 1\n- Item 2\n\nEnd");
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_lists_keep() {
+		let content = "Text\n\n- Item 1\n- Item 2\n\nEnd";
+		let options = FormatOptions {
+			blanks_around_lists: true,
+			..FormatOptions::default()
+		};
+		let result = format_markdown_with_options(content, options);
+		assert_eq!(result, "Text\n\n- Item 1\n- Item 2\n\nEnd");
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_lists_disabled() {
+		let content = "Text\n- Item 1\n- Item 2\nEnd";
+		let options = FormatOptions {
+			blanks_around_lists: false,
+			..FormatOptions::default()
+		};
+		let result = format_markdown_with_options(content, options);
+		assert_eq!(result, "Text\n- Item 1\n- Item 2\nEnd");
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_lists_nested() {
+		let content = "Text\n- Item 1\n  - Nested\nEnd";
+		let options = FormatOptions {
+			blanks_around_lists: true,
+			..FormatOptions::default()
+		};
+		let result = format_markdown_with_options(content, options);
+		assert_eq!(result, "Text\n\n- Item 1\n  - Nested\n\nEnd");
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_lists_consecutive_lists() {
+		let content = "- List 1\n\n1. List 2";
+		let options = FormatOptions {
+			blanks_around_lists: true,
+			..FormatOptions::default()
+		};
+		let result = format_markdown_with_options(content, options);
+		// Should preserve/ensure exactly one blank line between different list types
+		assert_eq!(result, "- List 1\n\n1. List 2");
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_lists_start_of_file() {
+		let content = "- Item 1\nText";
+		let options = FormatOptions {
+			blanks_around_lists: true,
+			..FormatOptions::default()
+		};
+		let result = format_markdown_with_options(content, options);
+		assert_eq!(result, "- Item 1\n\nText");
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_lists_end_of_file() {
+		let content = "Text\n- Item 1";
+		let options = FormatOptions {
+			blanks_around_lists: true,
+			..FormatOptions::default()
+		};
+		let result = format_markdown_with_options(content, options);
+		assert_eq!(result, "Text\n\n- Item 1");
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_lists_with_heading() {
+		let content = "# Title\n- Item 1\n## Section";
+		let options = FormatOptions {
+			blanks_around_lists: true,
+			..FormatOptions::default()
+		};
+		let result = format_markdown_with_options(content, options);
+		// Heading logic already adds blank lines, should not double up
+		assert_eq!(result, "# Title\n\n- Item 1\n\n## Section");
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_lists_in_blockquote() {
+		let content = "> - Item 1\n> - Item 2";
+		let options = FormatOptions {
+			blanks_around_lists: true,
+			..FormatOptions::default()
+		};
+		let result = format_markdown_with_options(content, options);
+		// Inside blockquotes, we don't currently add blank lines because we process line by line
+		// and the prefix "> " makes it not look like a list item to the simple detector.
+		// This test documents current behavior.
+		assert_eq!(result, ">- Item 1\n>- Item 2");
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_lists_with_code_block() {
+		let content = "Text\n- Item 1\n```rust\nfn main() {}\n```";
+		let options = FormatOptions {
+			blanks_around_lists: true,
+			..FormatOptions::default()
+		};
+		let result = format_markdown_with_options(content, options);
+		assert_eq!(result, "Text\n\n- Item 1\n\n```rust\nfn main() {}\n```");
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_lists_compact_multiple() {
+		let content = "Text\n\n\n\n- Item 1\n\n\n\nEnd";
+		let options = FormatOptions {
+			blanks_around_lists: true,
+			compact_blank_lines: true,
+			..FormatOptions::default()
+		};
+		let result = format_markdown_with_options(content, options);
+		assert_eq!(result, "Text\n\n- Item 1\n\nEnd");
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_lists_disabled_keep_existing() {
+		let content = "Text\n\n- Item 1\n\nEnd";
+		let options = FormatOptions {
+			blanks_around_lists: false,
+			compact_blank_lines: false,
+			..FormatOptions::default()
+		};
+		let result = format_markdown_with_options(content, options);
+		assert_eq!(result, "Text\n\n- Item 1\n\nEnd");
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_lists_with_multiple_paragraphs() {
+		let content = "- Item 1\n\n  Still item 1\n\nNext";
+		let options = FormatOptions {
+			blanks_around_lists: true,
+			..FormatOptions::default()
+		};
+		let result = format_markdown_with_options(content, options);
+		// Note: The current line-by-line processor might not perfectly handle
+		// multiline list items if they have blank lines inside, as it resets context.
+		// This test helps understand how it handles them.
+		assert_eq!(result, "- Item 1\n\n  Still item 1\n\nNext");
+	}
+
+	#[test]
+	fn test_format_options_blanks_around_lists_loose_list() {
+		let content = "- Item 1\n\n- Item 2";
+		let options = FormatOptions {
+			blanks_around_lists: true,
+			compact_blank_lines: true,
+			..FormatOptions::default()
+		};
+		let result = format_markdown_with_options(content, options);
+		// Loose lists should have their internal blank lines preserved
+		assert_eq!(result, "- Item 1\n\n- Item 2");
 	}
 
 	#[test]
@@ -1279,7 +1526,7 @@ But remove these markers outside code.
 	#[test]
 	fn test_format_markdown_preserve_list_indentation() {
 		let content = "lists:\n  - 2 spaces\n  - 2 spaces\n";
-		let expected = "lists:\n  - 2 spaces\n  - 2 spaces\n";
+		let expected = "lists:\n\n  - 2 spaces\n  - 2 spaces\n";
 		let result = format_markdown(content);
 		assert_eq!(result, expected);
 	}
@@ -1486,6 +1733,7 @@ echo "hello" # comment
 			collapse_spaces: true,
 			remove_horizontal_rules: true,
 			remove_emphasis: false, // Preserve emphasis markers
+			blanks_around_lists: false,
 		};
 		let result = format_markdown_with_options(content, options);
 		assert_eq!(result, expected);
