@@ -125,9 +125,15 @@ mod tests {
 		let content = "Line 1  \nLine 2\t\nLine 3 without newline";
 		let errors = validate_whitespace(content);
 		assert_eq!(errors.len(), 4);
-		assert!(errors.iter().any(|e| e.rule == "no-trailing-spaces" && e.line == 1));
-		assert!(errors.iter().any(|e| e.rule == "no-hard-tabs" && e.line == 2));
-		assert!(errors.iter().any(|e| e.rule == "no-trailing-spaces" && e.line == 2));
+		assert!(errors
+			.iter()
+			.any(|e| e.rule == "no-trailing-spaces" && e.line == 1));
+		assert!(errors
+			.iter()
+			.any(|e| e.rule == "no-hard-tabs" && e.line == 2));
+		assert!(errors
+			.iter()
+			.any(|e| e.rule == "no-trailing-spaces" && e.line == 2));
 		assert!(errors.iter().any(|e| e.rule == "single-trailing-newline"));
 	}
 }

@@ -95,6 +95,15 @@ fn validate_markdown(content: &str) -> LintResult {
 
 	let mut in_code_block = false;
 
+	let mut blanks_around_headings = true;
+	if let Some(config) = get_markdownlint_config() {
+		if let Some(val) = config.get("blanks-around-headings") {
+			if val.is_boolean() {
+				blanks_around_headings = val.as_bool().unwrap();
+			}
+		}
+	}
+
 	for (line_num, line) in content.lines().enumerate() {
 		let line_num = line_num + 1;
 
@@ -181,7 +190,8 @@ fn validate_markdown(content: &str) -> LintResult {
 		}
 	}
 
-	if let Some(heading_issues) = rules::validate_heading_structure(content) {
+	if let Some(heading_issues) = rules::validate_heading_structure(content, blanks_around_headings)
+	{
 		for issue in heading_issues {
 			if issue.is_error {
 				errors.push(LintError {
@@ -491,7 +501,7 @@ fn main() {
 
 	if cli.version {
 		// IMPORTANT: Update this version when releasing new versions
-		println!("0.2.0");
+		println!("0.2.1");
 		return;
 	}
 

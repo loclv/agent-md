@@ -285,6 +285,7 @@ The formatter applies compact rules by default to reduce token count:
 | `remove_emphasis` | Removes `*italic*` and `_italic_` markers |
 | `blanks_around_lists` | Ensures lists are surrounded by blank lines (configured in `.markdownlint.json`) |
 | `blanks_around_fences` | Ensures fenced code blocks are surrounded by blank lines (configured in `.markdownlint.json`) |
+| `blanks_around_headings` | Ensures headings are surrounded by blank lines (configured in `.markdownlint.json`) |
 
 Example:
 

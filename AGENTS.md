@@ -1,8 +1,13 @@
 # Agent-MD Project Rules
+
 These rules apply when working with the agent-md project.
+
 ## Project Overview
+
 agent-md is a Rust-based Markdown editor designed for AI agents. It provides CLI tools for reading, writing, editing, and validating Markdown files with JSON output.
+
 ## Task Execution Process
+
 For any development task:
 
 1. Receive the request - Understand requirements and scope
@@ -18,10 +23,15 @@ For any development task:
    - Run tests: `make test`
 
 After creating or updating any markdown file, always run `agent-md lint path/to/file.md` to validate the content before considering the task complete.
+
 ## Strict Rules
+
 ### grep/rg for definitions, signatures, class names, or type declarations
+
 - NEVER start with grep/rg for definitions, signatures, class names, or type declarations, use `vfs` CLI first. If `vfs` doesn't work, then use grep/rg.
+
 ### Logging
+
 Whenever you finish a task or change codes, always log your work using the l-log bash command (llm-lean-log-cli package) with the following format:
 
 `l-log add ./logs/chat.csv "<Task Name>" --tags="<tags>" --problem="<problem>" --solution="<solution>" --action="<action>" --files="<files>" --tech-stack="<tech>" --created-by-agent="<agent-name>"`
@@ -33,7 +43,9 @@ Before run:
 - Install the l-log CLI if not already installed: `bun add -g llm-lean-log-cli`.
 - If need, run CLI help command: `l-log -h` for more information.
 - log path: `./logs/chat.csv`.
+
 ## Markdown Writing Rules
+
 When writing Markdown files in this project, follow these critical rules:
 
 - No bold text: Double asterisks and double underscores are NOT allowed
@@ -50,7 +62,9 @@ Additional rules enforced by agent-md linter:
 - Code blocks must specify language
 - No duplicate headings
 - Single H1 title per document
+
 ## Available Commands
+
 ```bash
 make help # Show all commands
 make build # Build release version
@@ -65,22 +79,31 @@ cargo test
 cargo fmt
 cargo clippy
 ```
+
 ## Code Quality Standards
+
 ### Clippy Rules
+
 - Cognitive complexity 30 or less
 - Function arguments 7 or fewer
 - Type complexity 250 or less
 - Documentation required for public items
 - No unwrap/expect in production code
+
 ### Formatting Rules
+
 - Maximum line width: 100 characters
 - 4 spaces for indentation
 - Vertical trailing commas
 - Reordered imports
+
 ## Troubleshooting
+
 - Build fails: Check Rust version in `rust-toolchain.toml` (requires 1.94.0)
 - Formatting errors: Run `make format`
 - Clippy warnings: Address linting issues in code
 - Test failures: Check test output for specific errors
+
 ## Detailed Documentation
+
 For comprehensive project information, use the `agent-md` skill when available.

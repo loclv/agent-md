@@ -866,6 +866,8 @@ Rule ID: `blanks-around-headings`
 Severity: Warning
 Description: Headings should be surrounded by blank lines for better readability.
 
+*Note: This rule is configurable via the `.markdownlint.json` file. If `"blanks-around-headings": false` is specified, the linter will not enforce blank lines around headings, and the formatter will not auto-add spaces between headings and other content.*
+
 ### Rule 14 Invalid Examples
 
 ❌ Invalid - Missing blank lines

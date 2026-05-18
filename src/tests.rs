@@ -1766,10 +1766,10 @@ This web site is using `markedjs/marked`.
 
 		let result = validate_markdown(content);
 		assert!(result.valid);
-		}
+	}
 
-		#[test]
-		fn test_agent_rules_documentation() {
+	#[test]
+	fn test_agent_rules_documentation() {
 		let agents_md = std::fs::read_to_string("AGENTS.md").unwrap();
 		assert!(agents_md.contains("Update documentation"));
 		assert!(agents_md.contains("Update `README.md`"));
@@ -1779,5 +1779,5 @@ This web site is using `markedjs/marked`.
 		assert!(readme_md.contains("update documentation (`docs/`)"));
 		assert!(readme_md.contains("update `README.md`"));
 		assert!(readme_md.contains("write unit tests for your changes"));
-		}
-		}
+	}
+}

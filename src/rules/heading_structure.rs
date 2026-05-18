@@ -9,7 +9,10 @@ pub struct HeadingIssue {
 	pub is_error: bool,
 }
 
-pub fn validate_heading_structure(content: &str) -> Option<Vec<HeadingIssue>> {
+pub fn validate_heading_structure(
+	content: &str,
+	blanks_around_headings: bool,
+) -> Option<Vec<HeadingIssue>> {
 	let mut heading_levels = Vec::new();
 	let mut h1_count = 0;
 	let mut h1_locations = Vec::new();
@@ -45,7 +48,8 @@ pub fn validate_heading_structure(content: &str) -> Option<Vec<HeadingIssue>> {
 					issues.push(HeadingIssue {
 						line: line_num,
 						column: 1,
-						message: "First line in a file should be a top-level heading (H1)".to_string(),
+						message: "First line in a file should be a top-level heading (H1)"
+							.to_string(),
 						rule: "first-line-h1".to_string(),
 						is_error: false,
 					});
@@ -92,9 +96,12 @@ pub fn validate_heading_structure(content: &str) -> Option<Vec<HeadingIssue>> {
 
 			// MD022: blanks-around-headings
 			// Check line before (if not first line and not after another heading/code block fence)
-			if line_num > 1 {
+			if blanks_around_headings && line_num > 1 {
 				if let Some(prev) = prev_line {
-					if !prev.trim().is_empty() && extract_heading_level(prev).is_none() && !prev.trim().starts_with("```") {
+					if !prev.trim().is_empty()
+						&& extract_heading_level(prev).is_none()
+						&& !prev.trim().starts_with("```")
+					{
 						issues.push(HeadingIssue {
 							line: line_num,
 							column: 1,
@@ -107,15 +114,20 @@ pub fn validate_heading_structure(content: &str) -> Option<Vec<HeadingIssue>> {
 			}
 
 			// Check line after
-			if let Some(next_line) = content.lines().nth(line_num) {
-				if !next_line.trim().is_empty() && extract_heading_level(next_line).is_none() && !next_line.trim().starts_with("```") {
-					issues.push(HeadingIssue {
-						line: line_num,
-						column: 1,
-						message: "Headings should be followed by a blank line".to_string(),
-						rule: "blanks-around-headings".to_string(),
-						is_error: false,
-					});
+			if blanks_around_headings {
+				if let Some(next_line) = content.lines().nth(line_num) {
+					if !next_line.trim().is_empty()
+						&& extract_heading_level(next_line).is_none()
+						&& !next_line.trim().starts_with("```")
+					{
+						issues.push(HeadingIssue {
+							line: line_num,
+							column: 1,
+							message: "Headings should be followed by a blank line".to_string(),
+							rule: "blanks-around-headings".to_string(),
+							is_error: false,
+						});
+					}
 				}
 			}
 		}
@@ -221,6 +233,10 @@ pub fn extract_heading_level(line: &str) -> Option<u32> {
 #[cfg(test)]
 mod tests {
 	use super::*;
+
+	fn validate_heading_structure(content: &str) -> Option<Vec<HeadingIssue>> {
+		super::validate_heading_structure(content, true)
+	}
 
 	#[test]
 	fn test_extract_heading_level_valid() {
@@ -494,7 +510,8 @@ Setext Heading
 
 	#[test]
 	fn test_validate_heading_structure_blanks_around() {
-		let content = "# H1\nNo blank line after\n\n## H2\n\nHas blanks\n\n### H3\nNo blank line after";
+		let content =
+			"# H1\nNo blank line after\n\n## H2\n\nHas blanks\n\n### H3\nNo blank line after";
 		let result = validate_heading_structure(content);
 		assert!(result.is_some());
 		let issues = result.unwrap();
@@ -523,10 +540,25 @@ Setext Heading
 		let result = validate_heading_structure(content);
 		assert!(result.is_some());
 		let issues = result.unwrap();
-		let blanks_issues = issues.iter().filter(|i| i.rule == "blanks-around-headings").count();
+		let blanks_issues = issues
+			.iter()
+			.filter(|i| i.rule == "blanks-around-headings")
+			.count();
 		// # H1 lacks blank after (1)
 		// ## H2 lacks blank before (1)
 		// ## H2 lacks blank after (1)
 		assert_eq!(blanks_issues, 3);
+	}
+
+	#[test]
+	fn test_validate_heading_structure_blanks_around_headings_disabled() {
+		let content = "# H1\nText\n## H2\nText";
+		let result = super::validate_heading_structure(content, false);
+		// Since blanks-around-headings is false, it shouldn't produce any issues for blanks.
+		// Wait, are there other issues like first-line-h1?
+		// First line H1 is valid ("# H1").
+		// Sequental H2 after H1 is valid.
+		// So result should be None.
+		assert!(result.is_none());
 	}
 }
