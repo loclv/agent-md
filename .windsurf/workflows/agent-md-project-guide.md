@@ -244,9 +244,14 @@ Follow these steps for any development task:
 1. Receive the request - Understand the requirements and scope
 2. Break down complex requests - If the request is complex, break it down into smaller tasks and write each task to a separate file named `tasks.md`
 3. Execute each small task - Work through tasks systematically, marking each as finished in `tasks.md` when completed
-4. Validate completion - Once all tasks are completed
+4. On task completion, you must:
 
-   - Write unit tests
+   - Update documentation (`docs/`)
+   - Update `README.md`
+   - Write unit tests for your changes
+
+5. Validate completion - Once all tasks are completed
+
    - Run the linter
    - Run the formatter
 

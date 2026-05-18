@@ -804,6 +804,162 @@ agent-md fmt path/to/file.md
 
 Trailing spaces in table cells are unnecessary and can cause formatting inconsistencies. They add visual noise without any semantic value and may cause issues with markdown parsers and version control systems.
 
+## Rule 12: No Trailing Spaces
+
+Rule ID: `no-trailing-spaces`
+Severity: Warning
+Description: Trailing spaces at the end of lines are unnecessary and should be removed.
+
+### Rule 12 Invalid Examples
+
+❌ Invalid - Trailing spaces
+
+```text
+This line has a trailing space 
+This line has multiple trailing spaces   
+```
+
+### Rule 12 Recommended Alternatives
+
+✅ Valid - No trailing spaces
+
+```text
+This line has no trailing spaces
+This line is also clean
+```
+
+### Rationale for No Trailing Spaces Rule
+
+Trailing spaces are often invisible to the reader but can cause formatting inconsistencies, bloat the file size, and create unnecessary diffs in version control.
+
+## Rule 13: No Hard Tabs
+
+Rule ID: `no-hard-tabs`
+Severity: Warning
+Description: Use spaces for indentation instead of hard tabs.
+
+### Rule 13 Invalid Examples
+
+❌ Invalid - Hard tabs
+
+```text
+	This line starts with a tab.
+-	List item with a tab.
+```
+
+### Rule 13 Recommended Alternatives
+
+✅ Valid - Spaces for indentation
+
+```text
+  This line starts with spaces.
+- List item with a space.
+```
+
+### Rationale for No Hard Tabs Rule
+
+Tabs can be rendered inconsistently across different editors and platforms, leading to alignment issues. Spaces ensure consistent rendering everywhere.
+
+## Rule 14: Blanks Around Headings
+
+Rule ID: `blanks-around-headings`
+Severity: Warning
+Description: Headings should be surrounded by blank lines for better readability.
+
+### Rule 14 Invalid Examples
+
+❌ Invalid - Missing blank lines
+
+```text
+Some paragraph text.
+# Heading 1
+More paragraph text.
+```
+
+### Rule 14 Recommended Alternatives
+
+✅ Valid - Blank lines around headings
+
+```text
+Some paragraph text.
+
+# Heading 1
+
+More paragraph text.
+```
+
+### Rationale for Blanks Around Headings Rule
+
+Proper spacing around headings makes the document structure clearer and visually separates sections, enhancing readability for both humans and AI agents.
+
+## Rule 15: First Line Heading
+
+Rule ID: `first-line-h1`
+Severity: Warning
+Description: The first non-blank line in a document should be a top-level heading (H1).
+
+### Rule 15 Invalid Examples
+
+❌ Invalid - Missing H1 at start
+
+```text
+This is an introduction paragraph.
+
+# Main Title
+```
+
+### Rule 15 Recommended Alternatives
+
+✅ Valid - Starts with H1
+
+```text
+# Main Title
+
+This is an introduction paragraph.
+```
+
+### Rationale for First Line Heading Rule
+
+Starting a document with an H1 heading immediately establishes its main subject and purpose, making it easier to identify the content's context.
+
+## Rule 16: Single Trailing Newline
+
+Rule ID: `single-trailing-newline`
+Severity: Warning
+Description: Files should end with exactly one single newline character.
+
+### Rule 16 Invalid Examples
+
+❌ Invalid - Missing trailing newline
+
+```text
+# Title
+Content ends here without a newline
+```
+
+❌ Invalid - Multiple trailing newlines
+
+```text
+# Title
+Content ends here.
+
+
+```
+
+### Rule 16 Recommended Alternatives
+
+✅ Valid - Single trailing newline
+
+```text
+# Title
+Content ends here.
+<newline>
+```
+
+### Rationale for Single Trailing Newline Rule
+
+A single trailing newline is a POSIX standard for text files, ensuring that tools and parsers process the file correctly without missing the last line or complaining about EOF behavior.
+
 ## Validation Output Format
 
 When using the `agent-md lint` command, validation results are returned in JSON format:
@@ -853,6 +1009,11 @@ When using the `agent-md lint` command, validation results are returned in JSON 
 - Use only one H1 heading per document
 - Limit text indentation to 2 spaces or fewer (code blocks exempt)
 - Avoid trailing spaces in table cells (0 or 1 space maximum)
+- Remove trailing spaces at the end of lines
+- Use spaces instead of hard tabs for indentation
+- Surround headings with blank lines
+- Start documents with an H1 heading
+- End files with a single newline character
 
 ## Integration with agent-md
 

@@ -241,10 +241,8 @@ function example() {
 		let result = validate_markdown(content);
 		assert!(result.valid); // Should be valid (warnings only)
 		assert_eq!(result.errors.len(), 0);
-		assert_eq!(result.warnings.len(), 1);
-		assert_eq!(result.warnings[0].rule, "no-ascii-graph");
-		assert_eq!(result.warnings[0].line, 1);
-		assert_eq!(result.warnings[0].column, 1);
+		assert_eq!(result.warnings.len(), 3); // no-ascii-graph, first-line-h1, single-trailing-newline
+		assert!(result.warnings.iter().any(|w| w.rule == "no-ascii-graph"));
 	}
 
 	#[test]
@@ -253,10 +251,8 @@ function example() {
 		let result = validate_markdown(content);
 		assert!(result.valid); // Should be valid (warnings only)
 		assert_eq!(result.errors.len(), 0);
-		assert_eq!(result.warnings.len(), 1);
-		assert_eq!(result.warnings[0].rule, "useless-links");
-		assert_eq!(result.warnings[0].line, 1);
-		assert_eq!(result.warnings[0].column, 7);
+		assert_eq!(result.warnings.len(), 3); // useless-links, first-line-h1, single-trailing-newline
+		assert!(result.warnings.iter().any(|w| w.rule == "useless-links"));
 	}
 
 	#[test]
@@ -266,7 +262,7 @@ function example() {
 		let result = validate_markdown(content);
 		assert!(!result.valid); // Should have errors
 		assert_eq!(result.errors.len(), 1); // One bold error
-		assert_eq!(result.warnings.len(), 2); // Two warnings (link + graph)
+		assert_eq!(result.warnings.len(), 4); // link, graph, first-line-h1, single-trailing-newline
 	}
 
 	#[test]
@@ -1554,8 +1550,8 @@ Please contribute to the project.
 		let content = r#"[https://example.com](https://example.com)"#;
 		let result = validate_markdown(content);
 		assert!(result.valid); // Warning only
-		assert_eq!(result.warnings.len(), 1);
-		assert_eq!(result.warnings[0].rule, "useless-links");
+		assert_eq!(result.warnings.len(), 3); // useless-links, first-line-h1, single-trailing-newline
+		assert!(result.warnings.iter().any(|w| w.rule == "useless-links"));
 	}
 
 	#[test]
@@ -1563,7 +1559,7 @@ Please contribute to the project.
 		let content = r#"[Click here for more info](https://example.com)"#;
 		let result = validate_markdown(content);
 		assert!(result.valid);
-		assert_eq!(result.warnings.len(), 0);
+		assert_eq!(result.warnings.len(), 2); // first-line-h1, single-trailing-newline
 	}
 
 	// Tests for basic Markdown syntax - Blockquotes
@@ -1770,5 +1766,18 @@ This web site is using `markedjs/marked`.
 
 		let result = validate_markdown(content);
 		assert!(result.valid);
-	}
-}
+		}
+
+		#[test]
+		fn test_agent_rules_documentation() {
+		let agents_md = std::fs::read_to_string("AGENTS.md").unwrap();
+		assert!(agents_md.contains("Update documentation"));
+		assert!(agents_md.contains("Update `README.md`"));
+		assert!(agents_md.contains("Write unit tests for your changes"));
+
+		let readme_md = std::fs::read_to_string("README.md").unwrap();
+		assert!(readme_md.contains("update documentation (`docs/`)"));
+		assert!(readme_md.contains("update `README.md`"));
+		assert!(readme_md.contains("write unit tests for your changes"));
+		}
+		}

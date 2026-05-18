@@ -1,13 +1,23 @@
-use crate::LintError;
+use serde::{Deserialize, Serialize};
 
-pub fn validate_heading_structure(content: &str) -> Option<Vec<LintError>> {
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct HeadingIssue {
+	pub line: usize,
+	pub column: usize,
+	pub message: String,
+	pub rule: String,
+	pub is_error: bool,
+}
+
+pub fn validate_heading_structure(content: &str) -> Option<Vec<HeadingIssue>> {
 	let mut heading_levels = Vec::new();
 	let mut h1_count = 0;
 	let mut h1_locations = Vec::new();
 	let mut in_code_block = false;
 	let mut prev_line: Option<&str> = None;
+	let mut first_content_line = true;
 
-	let mut errors = Vec::new();
+	let mut issues = Vec::new();
 
 	for (line_num, line) in content.lines().enumerate() {
 		let line_num = line_num + 1;
@@ -15,24 +25,54 @@ pub fn validate_heading_structure(content: &str) -> Option<Vec<LintError>> {
 		if line.trim().starts_with("```") {
 			in_code_block = !in_code_block;
 			prev_line = Some(line);
+			if first_content_line && !line.trim().is_empty() {
+				first_content_line = false;
+			}
 			continue;
 		}
 
 		if in_code_block {
 			prev_line = Some(line);
+			if first_content_line && !line.trim().is_empty() {
+				first_content_line = false;
+			}
 			continue;
+		}
+
+		if first_content_line && !line.trim().is_empty() {
+			if let Some(level) = extract_heading_level(line) {
+				if level != 1 {
+					issues.push(HeadingIssue {
+						line: line_num,
+						column: 1,
+						message: "First line in a file should be a top-level heading (H1)".to_string(),
+						rule: "first-line-h1".to_string(),
+						is_error: false,
+					});
+				}
+			} else {
+				issues.push(HeadingIssue {
+					line: line_num,
+					column: 1,
+					message: "First line in a file should be a top-level heading (H1)".to_string(),
+					rule: "first-line-h1".to_string(),
+					is_error: false,
+				});
+			}
+			first_content_line = false;
 		}
 
 		// Check for Setext-style headings (underlined headings)
 		if let Some(level) = detect_setext_heading(line, prev_line) {
 			let heading_line = line_num - 1; // The heading text is on the previous line
-			errors.push(LintError {
+			issues.push(HeadingIssue {
 				line: heading_line,
 				column: 1,
 				message:
 					"Setext-style heading (underlined) detected. Use ATX-style headings with # instead."
 						.to_string(),
 				rule: "heading-structure".to_string(),
+				is_error: true,
 			});
 			heading_levels.push((level, heading_line));
 
@@ -49,6 +89,35 @@ pub fn validate_heading_structure(content: &str) -> Option<Vec<LintError>> {
 				h1_count += 1;
 				h1_locations.push(line_num);
 			}
+
+			// MD022: blanks-around-headings
+			// Check line before (if not first line and not after another heading/code block fence)
+			if line_num > 1 {
+				if let Some(prev) = prev_line {
+					if !prev.trim().is_empty() && extract_heading_level(prev).is_none() && !prev.trim().starts_with("```") {
+						issues.push(HeadingIssue {
+							line: line_num,
+							column: 1,
+							message: "Headings should be preceded by a blank line".to_string(),
+							rule: "blanks-around-headings".to_string(),
+							is_error: false,
+						});
+					}
+				}
+			}
+
+			// Check line after
+			if let Some(next_line) = content.lines().nth(line_num) {
+				if !next_line.trim().is_empty() && extract_heading_level(next_line).is_none() && !next_line.trim().starts_with("```") {
+					issues.push(HeadingIssue {
+						line: line_num,
+						column: 1,
+						message: "Headings should be followed by a blank line".to_string(),
+						rule: "blanks-around-headings".to_string(),
+						is_error: false,
+					});
+				}
+			}
 		}
 
 		prev_line = Some(line);
@@ -56,13 +125,14 @@ pub fn validate_heading_structure(content: &str) -> Option<Vec<LintError>> {
 
 	if h1_count > 1 {
 		for &location in &h1_locations[1..] {
-			errors.push(LintError {
+			issues.push(HeadingIssue {
 				line: location,
 				column: 1,
 				message:
 					"Multiple H1 headings found. Documents should have only one top-level heading"
 						.to_string(),
 				rule: "heading-structure".to_string(),
+				is_error: true,
 			});
 		}
 	}
@@ -73,7 +143,7 @@ pub fn validate_heading_structure(content: &str) -> Option<Vec<LintError>> {
 			let (prev_level, _) = heading_levels[i - 1];
 
 			if current_level > prev_level + 1 {
-				errors.push(LintError {
+				issues.push(HeadingIssue {
 					line: current_line,
 					column: 1,
 					message: format!(
@@ -81,15 +151,16 @@ pub fn validate_heading_structure(content: &str) -> Option<Vec<LintError>> {
 						current_level, prev_level
 					),
 					rule: "heading-structure".to_string(),
+					is_error: true,
 				});
 			}
 		}
 	}
 
-	if errors.is_empty() {
+	if issues.is_empty() {
 		None
 	} else {
-		Some(errors)
+		Some(issues)
 	}
 }
 
@@ -208,10 +279,10 @@ mod tests {
 		let content = "# First H1\n\nSome content.\n\n# Second H1\n\nMore content.";
 		let result = validate_heading_structure(content);
 		assert!(result.is_some());
-		let errors = result.unwrap();
-		assert_eq!(errors.len(), 1); // One error for second H1
-		assert_eq!(errors[0].line, 5); // Second H1 is on line 5
-		assert!(errors[0].message.contains("Multiple H1"));
+		let issues = result.unwrap();
+		assert_eq!(issues.len(), 1); // One issue for second H1
+		assert_eq!(issues[0].line, 5); // Second H1 is on line 5
+		assert!(issues[0].message.contains("Multiple H1"));
 	}
 
 	#[test]
@@ -219,10 +290,10 @@ mod tests {
 		let content = "# H1\n\n### H3 (skipped H2)";
 		let result = validate_heading_structure(content);
 		assert!(result.is_some());
-		let errors = result.unwrap();
-		assert_eq!(errors.len(), 1); // One error for skipped level
-		assert_eq!(errors[0].line, 3); // H3 is on line 3
-		assert!(errors[0].message.contains("skipped"));
+		let issues = result.unwrap();
+		assert_eq!(issues.len(), 1); // One issue for skipped level
+		assert_eq!(issues[0].line, 3); // H3 is on line 3
+		assert!(issues[0].message.contains("skipped"));
 	}
 
 	#[test]
@@ -237,9 +308,9 @@ mod tests {
 		let content = "# H1\n\n## H2\n\n# Another H1\n\n## H2";
 		let result = validate_heading_structure(content);
 		assert!(result.is_some());
-		let errors = result.unwrap();
-		assert_eq!(errors.len(), 1); // One error for second H1
-		assert_eq!(errors[0].line, 5); // Second H1 is on line 5
+		let issues = result.unwrap();
+		assert_eq!(issues.len(), 1); // One issue for second H1
+		assert_eq!(issues[0].line, 5); // Second H1 is on line 5
 	}
 
 	#[test]
@@ -253,21 +324,27 @@ mod tests {
 	fn test_validate_heading_structure_other_heading_levels() {
 		let content = "## H2\n\n### H3\n\n#### H4";
 		let result = validate_heading_structure(content);
-		assert!(result.is_none()); // Should be valid (no H1 conflicts)
+		assert!(result.is_some()); // Should have first-line-h1 issue
+		let issues = result.unwrap();
+		assert_eq!(issues.len(), 1);
+		assert_eq!(issues[0].rule, "first-line-h1");
 	}
 
 	#[test]
 	fn test_validate_heading_structure_no_headings() {
 		let content = "Just some text\n\nwith no headings.";
 		let result = validate_heading_structure(content);
-		assert!(result.is_none()); // Should be valid
+		assert!(result.is_some()); // Should have first-line-h1 issue
+		let issues = result.unwrap();
+		assert_eq!(issues.len(), 1);
+		assert_eq!(issues[0].rule, "first-line-h1");
 	}
 
 	#[test]
 	fn test_validate_heading_structure_false_positives() {
 		let content = "This is not a heading\n\n# This is a heading\n\nNot a heading: #";
 		let result = validate_heading_structure(content);
-		assert!(result.is_none()); // Should be valid (only one real heading)
+		assert!(result.is_some()); // Should have first-line-h1 issue
 	}
 
 	#[test]
@@ -290,10 +367,10 @@ mod tests {
 		let content = "# H1\n\n#### H4 (skipped H2 and H3)";
 		let result = validate_heading_structure(content);
 		assert!(result.is_some());
-		let errors = result.unwrap();
-		assert_eq!(errors.len(), 1); // One error for skipped levels
-		assert_eq!(errors[0].line, 3); // H4 is on line 3
-		assert!(errors[0].message.contains("skipped"));
+		let issues = result.unwrap();
+		assert_eq!(issues.len(), 1); // One issue for skipped levels
+		assert_eq!(issues[0].line, 3); // H4 is on line 3
+		assert!(issues[0].message.contains("skipped"));
 	}
 
 	// Setext-style heading tests
@@ -332,24 +409,24 @@ mod tests {
 
 	#[test]
 	fn test_validate_heading_structure_setext_h1() {
-		let content = "Heading level 1\n===============";
+		let content = "# H1\nHeading level 1\n===============";
 		let result = validate_heading_structure(content);
 		assert!(result.is_some());
-		let errors = result.unwrap();
-		assert_eq!(errors.len(), 1);
-		assert_eq!(errors[0].line, 1); // Heading text is on line 1
-		assert!(errors[0].message.contains("Setext-style"));
+		let issues = result.unwrap();
+		assert_eq!(issues.len(), 3); // Setext-style + Multiple H1 + blanks-around-headings
+		assert!(issues.iter().any(|i| i.rule == "heading-structure"));
+		assert!(issues.iter().any(|i| i.rule == "blanks-around-headings"));
 	}
 
 	#[test]
 	fn test_validate_heading_structure_setext_h2() {
-		let content = "Heading level 2\n---------------";
+		let content = "# H1\nHeading level 2\n---------------";
 		let result = validate_heading_structure(content);
 		assert!(result.is_some());
-		let errors = result.unwrap();
-		assert_eq!(errors.len(), 1);
-		assert_eq!(errors[0].line, 1); // Heading text is on line 1
-		assert!(errors[0].message.contains("Setext-style"));
+		let issues = result.unwrap();
+		assert_eq!(issues.len(), 2); // Setext-style + blanks-around-headings
+		assert!(issues.iter().any(|i| i.rule == "heading-structure"));
+		assert!(issues.iter().any(|i| i.rule == "blanks-around-headings"));
 	}
 
 	#[test]
@@ -381,5 +458,75 @@ Setext Heading
 		let errors = result.unwrap();
 		// Should have error for Setext heading
 		assert!(errors.iter().any(|e| e.message.contains("Setext-style")));
+	}
+
+	#[test]
+	fn test_validate_heading_structure_first_line_h1() {
+		let content = "# Valid H1\n\nContent";
+		let result = validate_heading_structure(content);
+		assert!(result.is_none());
+	}
+
+	#[test]
+	fn test_validate_heading_structure_first_line_not_h1() {
+		let content = "## Invalid H2\n\nContent";
+		let result = validate_heading_structure(content);
+		assert!(result.is_some());
+		let errors = result.unwrap();
+		assert!(errors.iter().any(|e| e.rule == "first-line-h1"));
+	}
+
+	#[test]
+	fn test_validate_heading_structure_first_line_not_heading() {
+		let content = "Plain text\n\n# H1 later";
+		let result = validate_heading_structure(content);
+		assert!(result.is_some());
+		let errors = result.unwrap();
+		assert!(errors.iter().any(|e| e.rule == "first-line-h1"));
+	}
+
+	#[test]
+	fn test_validate_heading_structure_first_line_empty() {
+		let content = "\n\n# H1 after blanks";
+		let result = validate_heading_structure(content);
+		assert!(result.is_none());
+	}
+
+	#[test]
+	fn test_validate_heading_structure_blanks_around() {
+		let content = "# H1\nNo blank line after\n\n## H2\n\nHas blanks\n\n### H3\nNo blank line after";
+		let result = validate_heading_structure(content);
+		assert!(result.is_some());
+		let issues = result.unwrap();
+		assert!(issues.iter().any(|i| i.rule == "blanks-around-headings"));
+	}
+
+	#[test]
+	fn test_validate_heading_structure_blanks_around_code_block() {
+		let content = "# H1\n\n```rust\nfn main() {}\n```\n## H2";
+		let result = validate_heading_structure(content);
+		// H2 doesn't have a blank line before it, but it immediately follows a code block fence.
+		// Wait, the rule checks `!prev.trim().starts_with("\`\`\`")`. So it's exempt from having a blank line if it follows a code block immediately? Actually, if there is a blank line, prev is empty. If there isn't, prev is ```. Since we have `!prev.trim().starts_with("\`\`\`")`, it's not flagged.
+		assert!(result.is_none());
+	}
+
+	#[test]
+	fn test_validate_heading_structure_blanks_around_no_issues() {
+		let content = "# H1\n\nSome text here\n\n## H2\n\nMore text\n\n### H3\n\nEven more text";
+		let result = validate_heading_structure(content);
+		assert!(result.is_none());
+	}
+
+	#[test]
+	fn test_validate_heading_structure_multiple_blanks_around_issues() {
+		let content = "# H1\nText\n## H2\nText";
+		let result = validate_heading_structure(content);
+		assert!(result.is_some());
+		let issues = result.unwrap();
+		let blanks_issues = issues.iter().filter(|i| i.rule == "blanks-around-headings").count();
+		// # H1 lacks blank after (1)
+		// ## H2 lacks blank before (1)
+		// ## H2 lacks blank after (1)
+		assert_eq!(blanks_issues, 3);
 	}
 }

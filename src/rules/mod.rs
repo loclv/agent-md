@@ -6,6 +6,7 @@ pub mod no_bold;
 pub mod simple_tables;
 pub mod space_indentation;
 pub mod useless_links;
+pub mod whitespace;
 
 pub use code_blocks::validate_code_blocks;
 pub use heading_structure::{extract_heading_level, validate_heading_structure};
@@ -18,3 +19,4 @@ pub use no_bold::find_bold_text;
 pub use simple_tables::{validate_table_syntax, validate_table_trailing_spaces, Severity};
 pub use space_indentation::validate_space_indentation;
 pub use useless_links::find_useless_link;
+pub use whitespace::validate_whitespace;

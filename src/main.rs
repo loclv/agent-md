@@ -181,8 +181,24 @@ fn validate_markdown(content: &str) -> LintResult {
 		}
 	}
 
-	if let Some(heading_errors) = rules::validate_heading_structure(content) {
-		errors.extend(heading_errors);
+	if let Some(heading_issues) = rules::validate_heading_structure(content) {
+		for issue in heading_issues {
+			if issue.is_error {
+				errors.push(LintError {
+					line: issue.line,
+					column: issue.column,
+					message: issue.message,
+					rule: issue.rule,
+				});
+			} else {
+				warnings.push(LintWarning {
+					line: issue.line,
+					column: issue.column,
+					message: issue.message,
+					rule: issue.rule,
+				});
+			}
+		}
 	}
 
 	if let Some(code_block_issues) = rules::validate_code_blocks(content) {
@@ -205,6 +221,15 @@ fn validate_markdown(content: &str) -> LintResult {
 				rule: issue.rule,
 			});
 		}
+	}
+
+	for issue in rules::validate_whitespace(content) {
+		warnings.push(LintWarning {
+			line: issue.line,
+			column: issue.column,
+			message: issue.message,
+			rule: issue.rule,
+		});
 	}
 
 	LintResult {

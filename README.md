@@ -133,6 +133,8 @@ Benefits:
 
 For example, when adding a new rule, add it to the `AGENTS.md` file.
 >After creating or updating any markdown file, always run `agent-md lint path/to/file.md` to validate the content before considering the task complete.
+>
+>On task completion, you must update documentation (`docs/`), update `README.md`, and write unit tests for your changes.
 
 Or tell LLM/Agents:
 >Use `agent-md` CLI to run lint
