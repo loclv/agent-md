@@ -252,7 +252,8 @@ agent-md lint-file <path>
 ### Format markdown
 
 - Formats the markdown file in-place, trimming leading and trailing spaces from table cells.
-- Preserves separator rows and code block content.
+- Normalizes table separator rows (e.g., `|:---|:---|` becomes `|---|---|`), removing alignment colons to save tokens.
+- Preserves code block content.
 - Collapses multiple spaces before `#` comments in shell code blocks (`bash`, `sh`, `shell`, `zsh`).
 
 ```bash

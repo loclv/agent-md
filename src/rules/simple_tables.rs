@@ -25,6 +25,13 @@ pub fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
 			for part in parts {
 				let part_trimmed = part.trim();
 				if !part_trimmed.is_empty() {
+					if part_trimmed.contains(':') {
+						issues.push(TableIssue {
+							column: 1,
+							message: "Table alignment colons (:) are not allowed. Use plain separators (---) instead.".to_string(),
+							severity: Severity::Error,
+						});
+					}
 					let dash_count = part_trimmed.chars().filter(|&c| c == '-').count();
 					if dash_count != 3 {
 						issues.push(TableIssue {
@@ -316,7 +323,11 @@ mod tests {
 	fn test_validate_table_syntax_separator_with_colons() {
 		let line = "|:---|:---:|---:|";
 		let result = validate_table_syntax(line);
-		assert_eq!(result.len(), 0); // Alignment colons should be valid
+		assert_eq!(result.len(), 3); // Alignment colons should be rejected
+		for issue in &result {
+			assert_eq!(issue.severity, Severity::Error);
+			assert!(issue.message.contains("alignment colons"));
+		}
 	}
 
 	#[test]

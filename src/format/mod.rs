@@ -1171,7 +1171,7 @@ But remove these markers outside code.
 	#[test]
 	fn test_format_markdown_separator_with_colons() {
 		let content = "| Left | Center | Right |\n|:---|:---:|---:|\n| A | B | C |\n";
-		let expected = "| Left | Center | Right |\n|:---|:---:|---:|\n| A | B | C |\n";
+		let expected = "| Left | Center | Right |\n|---|---|---|\n| A | B | C |\n";
 		let result = format_markdown(content);
 		assert_eq!(result, expected);
 	}
@@ -1582,7 +1582,7 @@ But remove these markers outside code.
 	#[test]
 	fn test_format_markdown_compact_separator_preserve_alignment() {
 		let content = "| Left | Center | Right |\n|:-----|:------:|------:|\n| A | B | C |\n";
-		let expected = "| Left | Center | Right |\n|:---|:---:|---:|\n| A | B | C |\n";
+		let expected = "| Left | Center | Right |\n|---|---|---|\n| A | B | C |\n";
 		let result = format_markdown(content);
 		assert_eq!(result, expected);
 	}

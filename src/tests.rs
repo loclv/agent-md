@@ -1613,7 +1613,8 @@ Please contribute to the project.
 |:---|:---:|---:|
 | L1 | C1 | R1 |"#;
 		let result = validate_markdown(content);
-		assert!(result.valid);
+		assert!(!result.valid); // Alignment colons are now rejected
+		assert!(result.errors.iter().any(|e| e.rule == "simple-tables"));
 	}
 
 	#[test]

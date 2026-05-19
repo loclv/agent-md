@@ -115,7 +115,7 @@ The agent-md tool includes custom linting rules for Markdown content:
 - Type: Error/Warning
 - Description: Enforces simple table syntax
 - Detection:
-  - Error: Complex table attributes (colspan/rowspan)
+  - Error: Complex table attributes (colspan/rowspan), alignment colons (`:`) in separator rows
   - Warning: Inline formatting in table cells, very wide tables (>5 columns)
 
 #### useless-links

@@ -127,6 +127,12 @@ All notable changes to this project will be documented in this file.
 
 ## Recent Development (Unreleased)
 
+### 2026-05-20
+
+- Normalize table separator rows: Automatically remove alignment colons (e.g., `|:---|:---|` becomes `|---|---|`) during formatting to save tokens
+- Update `simple-tables` lint rule to reject alignment colons as errors
+- Update documentation and tests for table normalization
+
 ### 2026-05-01
 
 - Fix char-index vs byte-index bug in comment collapsing with Unicode characters

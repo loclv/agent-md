@@ -143,6 +143,16 @@ Description: Tables should use simple syntax without complex attributes.
 | Test | Another description |
 ```
 
+✅ Valid - Alignment colons are automatically removed during `agent-md fmt` to save tokens
+
+```text
+| Name | Description |
+|---|---|
+| Item | Simple description |
+```
+
+Note: `agent-md fmt` will convert `|:---|:---|` to `|---|---|`.
+
 ✅ Valid - Keep tables narrow (≤5 columns)
 
 ```text

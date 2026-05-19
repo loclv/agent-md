@@ -17,28 +17,12 @@ pub fn compact_separator_row(table_content: &str) -> String {
 	let cells: Vec<&str> = table_content.split('|').collect();
 	let mut formatted_cells = Vec::new();
 
-	for (i, cell) in cells.iter().enumerate() {
+	for (i, _cell) in cells.iter().enumerate() {
 		if i == 0 || i == cells.len() - 1 {
 			continue;
 		}
-		let cell_trimmed = cell.trim();
-		let has_left_colon = cell_trimmed.starts_with(':');
-		let has_right_colon = cell_trimmed.ends_with(':');
-
-		let compacted = if has_left_colon && has_right_colon {
-			// Center alignment: :---:
-			":---:"
-		} else if has_left_colon {
-			// Left alignment: :---
-			":---"
-		} else if has_right_colon {
-			// Right alignment: ---:
-			"---:"
-		} else {
-			// No alignment: ---
-			"---"
-		};
-		formatted_cells.push(compacted.to_string());
+		// Always use "---" to save tokens and normalize, removing any alignment colons
+		formatted_cells.push("---".to_string());
 	}
 
 	format!("|{}|", formatted_cells.join("|"))
@@ -105,14 +89,14 @@ mod tests {
 	#[test]
 	fn test_compact_separator_row_with_alignment() {
 		let content = "|:---|:--:|---:|";
-		let expected = "|:---|:---:|---:|";
+		let expected = "|---|---|---|";
 		assert_eq!(compact_separator_row(content), expected);
 	}
 
 	#[test]
 	fn test_compact_separator_row_center_only() {
 		let content = "|:--:|";
-		let expected = "|:---:|";
+		let expected = "|---|";
 		assert_eq!(compact_separator_row(content), expected);
 	}
 
