@@ -322,6 +322,9 @@ The linter enforces AI-friendly markdown standards.
 
 ### Warning Rules (style guidelines)
 
+- "no-duplicate-headings": No duplicate headings: Headings with same content are warned
+- "no-multiple-blanks": No multiple blank lines: Multiple consecutive blank lines are warned
+
 Detail at <docs/markdown-writing-rules.md>
 
 ### Automatic validation

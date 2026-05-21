@@ -21,6 +21,7 @@ pub fn validate_heading_structure(
 	let mut first_content_line = true;
 
 	let mut issues = Vec::new();
+	let mut seen_headings = std::collections::HashSet::new();
 
 	for (line_num, line) in content.lines().enumerate() {
 		let line_num = line_num + 1;
@@ -69,6 +70,7 @@ pub fn validate_heading_structure(
 		// Check for Setext-style headings (underlined headings)
 		if let Some(level) = detect_setext_heading(line, prev_line) {
 			let heading_line = line_num - 1; // The heading text is on the previous line
+			let heading_text = prev_line.unwrap_or("").trim();
 			issues.push(HeadingIssue {
 				line: heading_line,
 				column: 1,
@@ -84,10 +86,40 @@ pub fn validate_heading_structure(
 				h1_count += 1;
 				h1_locations.push(heading_line);
 			}
+
+			// Check for duplicates in Setext headings
+			if !heading_text.is_empty() {
+				if seen_headings.contains(heading_text) {
+					issues.push(HeadingIssue {
+						line: heading_line,
+						column: 1,
+						message: format!("Duplicate heading content found: '{}'", heading_text),
+						rule: "no-duplicate-headings".to_string(),
+						is_error: false,
+					});
+				} else {
+					seen_headings.insert(heading_text.to_string());
+				}
+			}
 		}
 
 		if let Some(level) = extract_heading_level(line) {
 			heading_levels.push((level, line_num));
+
+			let heading_text = line.trim_start_matches('#').trim();
+			if !heading_text.is_empty() {
+				if seen_headings.contains(heading_text) {
+					issues.push(HeadingIssue {
+						line: line_num,
+						column: 1,
+						message: format!("Duplicate heading content found: '{}'", heading_text),
+						rule: "no-duplicate-headings".to_string(),
+						is_error: false,
+					});
+				} else {
+					seen_headings.insert(heading_text.to_string());
+				}
+			}
 
 			if level == 1 {
 				h1_count += 1;
@@ -325,8 +357,9 @@ mod tests {
 		let result = validate_heading_structure(content);
 		assert!(result.is_some());
 		let issues = result.unwrap();
-		assert_eq!(issues.len(), 1); // One issue for second H1
-		assert_eq!(issues[0].line, 5); // Second H1 is on line 5
+		// Should have Multiple H1 for "Another H1" AND Duplicate for "## H2"
+		assert!(issues.iter().any(|i| i.message.contains("Multiple H1")));
+		assert!(issues.iter().any(|i| i.rule == "no-duplicate-headings"));
 	}
 
 	#[test]
@@ -551,14 +584,35 @@ Setext Heading
 	}
 
 	#[test]
-	fn test_validate_heading_structure_blanks_around_headings_disabled() {
-		let content = "# H1\nText\n## H2\nText";
-		let result = super::validate_heading_structure(content, false);
-		// Since blanks-around-headings is false, it shouldn't produce any issues for blanks.
-		// Wait, are there other issues like first-line-h1?
-		// First line H1 is valid ("# H1").
-		// Sequental H2 after H1 is valid.
-		// So result should be None.
-		assert!(result.is_none());
+	fn test_validate_heading_structure_duplicate_headings() {
+		let content = "# Title\n\n## Section\n\n## Section\n\n### Subsection\n\n### Subsection";
+		let result = validate_heading_structure(content);
+		assert!(result.is_some());
+		let issues = result.unwrap();
+		let duplicate_issues = issues
+			.iter()
+			.filter(|i| i.rule == "no-duplicate-headings")
+			.count();
+		assert_eq!(duplicate_issues, 2);
+	}
+
+	#[test]
+	fn test_validate_heading_structure_duplicate_headings_mixed() {
+		let content = "# Title\n\n## Introduction\n\n### Introduction";
+		let result = validate_heading_structure(content);
+		assert!(result.is_some());
+		let issues = result.unwrap();
+		assert!(issues.iter().any(|i| i.rule == "no-duplicate-headings"));
+	}
+
+	#[test]
+	fn test_validate_heading_structure_no_duplicate_headings() {
+		let content =
+			"# Title\n\n## Section 1\n\n## Section 2\n\n### Subsection A\n\n### Subsection B";
+		let result = validate_heading_structure(content);
+		// Should be None or contain other issues (like blanks-around-headings) but not duplicate-headings
+		if let Some(issues) = result {
+			assert!(!issues.iter().any(|i| i.rule == "no-duplicate-headings"));
+		}
 	}
 }

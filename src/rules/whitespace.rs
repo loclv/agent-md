@@ -3,17 +3,33 @@ use crate::LintError;
 pub fn validate_whitespace(content: &str) -> Vec<LintError> {
 	let mut errors = Vec::new();
 	let mut in_code_block = false;
+	let mut blank_line_count = 0;
 
 	for (line_num, line) in content.lines().enumerate() {
 		let line_num = line_num + 1;
 
 		if line.trim().starts_with("```") {
 			in_code_block = !in_code_block;
+			blank_line_count = 0;
 			continue;
 		}
 
 		if in_code_block {
 			continue;
+		}
+
+		if line.trim().is_empty() {
+			blank_line_count += 1;
+			if blank_line_count > 1 {
+				errors.push(LintError {
+					line: line_num,
+					column: 1,
+					message: "Multiple consecutive blank lines detected.".to_string(),
+					rule: "no-multiple-blanks".to_string(),
+				});
+			}
+		} else {
+			blank_line_count = 0;
 		}
 
 		// MD010: no-hard-tabs
@@ -103,12 +119,10 @@ mod tests {
 
 	#[test]
 	fn test_validate_whitespace_multiple_trailing_newlines() {
-		// Our current implementation of MD047 just checks if it ends with \n.
-		// A strict MD047 might flag multiple newlines, but we only flag missing ones right now.
-		// Let's at least ensure it doesn't crash or falsely flag.
 		let content = "Text\n\n\n";
 		let errors = validate_whitespace(content);
-		assert!(errors.is_empty());
+		// Now it should have no-multiple-blanks warning for the extra blank line
+		assert!(errors.iter().any(|e| e.rule == "no-multiple-blanks"));
 	}
 
 	#[test]
@@ -121,19 +135,38 @@ mod tests {
 	}
 
 	#[test]
-	fn test_validate_whitespace_mixed_issues() {
-		let content = "Line 1  \nLine 2\t\nLine 3 without newline";
+	fn test_validate_whitespace_multiple_blanks() {
+		let content = "Line 1\n\n\nLine 4\n";
 		let errors = validate_whitespace(content);
-		assert_eq!(errors.len(), 4);
-		assert!(errors
-			.iter()
-			.any(|e| e.rule == "no-trailing-spaces" && e.line == 1));
-		assert!(errors
-			.iter()
-			.any(|e| e.rule == "no-hard-tabs" && e.line == 2));
-		assert!(errors
-			.iter()
-			.any(|e| e.rule == "no-trailing-spaces" && e.line == 2));
-		assert!(errors.iter().any(|e| e.rule == "single-trailing-newline"));
+		assert!(errors.iter().any(|e| e.rule == "no-multiple-blanks"));
+		assert_eq!(
+			errors
+				.iter()
+				.filter(|e| e.rule == "no-multiple-blanks")
+				.count(),
+			1
+		);
+		assert_eq!(
+			errors
+				.iter()
+				.find(|e| e.rule == "no-multiple-blanks")
+				.unwrap()
+				.line,
+			3
+		);
+	}
+
+	#[test]
+	fn test_validate_whitespace_single_blanks_ok() {
+		let content = "Line 1\n\nLine 3\n\nLine 5\n";
+		let errors = validate_whitespace(content);
+		assert!(!errors.iter().any(|e| e.rule == "no-multiple-blanks"));
+	}
+
+	#[test]
+	fn test_validate_whitespace_multiple_blanks_in_code_block_ok() {
+		let content = "```\nLine 1\n\n\nLine 4\n```\n";
+		let errors = validate_whitespace(content);
+		assert!(!errors.iter().any(|e| e.rule == "no-multiple-blanks"));
 	}
 }

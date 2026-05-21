@@ -972,6 +972,37 @@ Content ends here.
 
 A single trailing newline is a POSIX standard for text files, ensuring that tools and parsers process the file correctly without missing the last line or complaining about EOF behavior.
 
+## Rule 17: No Multiple Blank Lines
+
+Rule ID: `no-multiple-blanks`
+Severity: Warning
+Description: Consecutive blank lines should be avoided. Use at most one blank line between content blocks.
+
+### Rule 17 Invalid Examples
+
+❌ Invalid - Triple newlines (two blank lines)
+
+```text
+First paragraph.
+
+
+Second paragraph.
+```
+
+### Rule 17 Recommended Alternatives
+
+✅ Valid - Double newlines (one blank line)
+
+```text
+First paragraph.
+
+Second paragraph.
+```
+
+### Rationale for No Multiple Blank Lines Rule
+
+Multiple consecutive blank lines increase token usage without adding semantic value. They also make document navigation less efficient for AI agents.
+
 ## Validation Output Format
 
 When using the `agent-md lint` command, validation results are returned in JSON format:
@@ -1026,6 +1057,7 @@ When using the `agent-md lint` command, validation results are returned in JSON 
 - Surround headings with blank lines
 - Start documents with an H1 heading
 - End files with a single newline character
+- Avoid multiple consecutive blank lines
 
 ## Integration with agent-md
 
