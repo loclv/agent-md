@@ -501,7 +501,7 @@ fn main() {
 
 	if cli.version {
 		// IMPORTANT: Update this version when releasing new versions
-		println!("0.2.1");
+		println!("0.2.2");
 		return;
 	}
 
