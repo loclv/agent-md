@@ -255,6 +255,7 @@ agent-md lint-file <path>
 - Normalizes table separator rows (e.g., `|:---|:---|` becomes `|---|---|`), removing alignment colons to save tokens.
 - Preserves code block content.
 - Collapses multiple spaces before `#` comments in shell code blocks (`bash`, `sh`, `shell`, `zsh`).
+- Automatically converts 4 leading spaces of list item indentation to 2 spaces, and 2 leading tabs to 1 tab for sub-items, reducing token usage in nested lists.
 
 ```bash
 agent-md fmt <path>

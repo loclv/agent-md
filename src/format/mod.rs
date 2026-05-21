@@ -198,7 +198,8 @@ pub fn format_markdown_structured(content: &str, options: FormatOptions) -> Stri
 				}
 
 				for item in items {
-					formatted_parts.push(process_markdown_line(item, &options, false));
+					let formatted_item = format_list_item_indentation(item);
+					formatted_parts.push(process_markdown_line(&formatted_item, &options, false));
 					formatted_parts.push("\n".to_string());
 				}
 
@@ -519,6 +520,17 @@ fn collapse_multiple_spaces(line: &str) -> String {
 	}
 
 	result
+}
+
+fn format_list_item_indentation(line: &str) -> String {
+	let leading_len = line.chars().take_while(|&c| c == ' ' || c == '\t').count();
+	let leading = &line[..leading_len];
+	let rest = &line[leading_len..];
+
+	let mut formatted_leading = leading.replace("    ", "  ");
+	formatted_leading = formatted_leading.replace("\t\t", "\t");
+
+	format!("{}{}", formatted_leading, rest)
 }
 
 fn collect_markdown_files(
@@ -2058,6 +2070,30 @@ fn main() {}
 		};
 		let result = format_markdown_with_options(content, options);
 		let expected = "Text\n# Heading\nParagraph";
+		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_format_list_indentation() {
+		let content = "- list:\n    - A\n    - B\n";
+		let expected = "- list:\n  - A\n  - B\n";
+		let result = format_markdown(content);
+		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_format_list_indentation_nested() {
+		let content = "- list:\n    - A\n        - B\n";
+		let expected = "- list:\n  - A\n    - B\n";
+		let result = format_markdown(content);
+		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_format_list_indentation_tabs() {
+		let content = "- list:\n\t\t- A\n\t\t- B\n";
+		let expected = "- list:\n\t- A\n\t- B\n";
+		let result = format_markdown(content);
 		assert_eq!(result, expected);
 	}
 }

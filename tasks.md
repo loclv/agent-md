@@ -14,3 +14,12 @@
 - [x] Update documentation in `README.md` and `docs/markdown-writing-rules.md` to explain the configuration.
 - [x] Validate completion by running formatting, clippy, lint, and tests.
 - [x] Log the work using l-log CLI.
+
+## Format List Indentation
+
+- [x] Implement `format_list_item_indentation` helper function in `src/format/mod.rs` to convert 4 leading spaces to 2, and 2 leading tabs to 1.
+- [x] Update `MarkdownBlock::List` formatting in `src/format/mod.rs` to apply `format_list_item_indentation`.
+- [x] Add unit tests in `src/format/mod.rs` to cover various list indentation cases.
+- [x] Update documentation in the project.
+- [x] Log work using `l-log` CLI.
+

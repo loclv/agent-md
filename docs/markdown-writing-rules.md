@@ -767,6 +767,14 @@ def example():
 
 Excessive indentation (more than 2 spaces) in regular text can cause parsing issues and formatting inconsistencies. Code blocks are exempt because they require proper indentation for readability and many programming languages mandate specific indentation styles.
 
+### Auto-fix
+
+Use the `fmt` command to automatically convert 4 leading spaces of list item indentation to 2 spaces, and 2 leading tabs to 1 tab:
+
+```bash
+agent-md fmt path/to/file.md
+```
+
 ## Rule 11: No Trailing Spaces in Table Cells
 
 Rule ID: `table-trailing-spaces`
