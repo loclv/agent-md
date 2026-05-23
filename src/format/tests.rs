@@ -1401,3 +1401,19 @@ fn test_format_list_indentation_tabs() {
 	let result = format_markdown(content);
 	assert_eq!(result, expected);
 }
+
+#[test]
+fn test_format_nested_code_block_in_list() {
+	let content = "- Here is the code:\n  ```ts\n      users: new Users(db.collection<IUser>('User') as any)\n  ```\n";
+	let expected = "- Here is the code:\n  ```ts\n      users: new Users(db.collection<IUser>('User') as any)\n  ```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_nested_code_block_in_list_preserves_content() {
+	let content = "- List item:\n  ```ts\n     //   Comment with spaces\n     const x = \"some  text\";\n     let y = **bold**;\n  ```\n";
+	let expected = "- List item:\n  ```ts\n     //   Comment with spaces\n     const x = \"some  text\";\n     let y = **bold**;\n  ```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
