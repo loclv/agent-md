@@ -23,3 +23,16 @@
 - [x] Update documentation in the project.
 - [x] Log work using `l-log` CLI.
 
+## Code Block Syntax Errors Validation
+
+- [x] Implement `find_unclosed_code_block` in `src/rules/code_blocks.rs` to detect unclosed code blocks.
+- [x] Export `find_unclosed_code_block` in `src/rules/mod.rs`.
+- [x] Update `validate_markdown` in `src/main.rs` to stop linting immediately and return a syntax error if an unclosed code block is detected.
+- [x] Update `parser::parse` in `src/parser.rs` to panic with a syntax error if an unclosed code block is detected.
+- [x] Update `format_single_file` and `cmd_fmt_stdin` in `src/format/io.rs` to validate and return a syntax error/exit before formatting.
+- [x] Write unit tests for unclosed code blocks in `src/rules/code_blocks.rs`.
+- [x] Update `README.md` and documentation to explain this behavior.
+- [x] Validate completion (lint, format, tests).
+- [x] Log work using `l-log` CLI.
+
+

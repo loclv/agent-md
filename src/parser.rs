@@ -33,6 +33,13 @@ pub struct ParsedMarkdown {
 }
 
 pub fn parse(content: &str) -> ParsedMarkdown {
+	if let Some(start_line) = crate::rules::find_unclosed_code_block(content) {
+		panic!(
+			"Syntax Error: Code block starting at line {} is missing a closing fence",
+			start_line
+		);
+	}
+
 	let lines: Vec<&str> = content.lines().collect();
 	let mut blocks = Vec::new();
 	let mut i = 0;

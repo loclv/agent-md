@@ -437,9 +437,18 @@ Proper heading structure creates a logical document outline that AI agents can e
 
 Rule ID: `code-blocks`
 Severity: Error
-Description: Code blocks should specify language when possible.
+Description: Code blocks should specify language when possible, and must always have valid, matching opening and closing fences. Unclosed code blocks are immediately rejected with a syntax error, immediately halting linting and formatting to prevent document corruption.
 
 ### Rule 6 Invalid Examples
+
+❌ Invalid - Missing closing fence / Unclosed code block
+
+```text
+"```javascript"
+function test() {
+    console.log("unclosed block");
+// Missing closing "```" here
+```
 
 ❌ Invalid - Unspecified language
 

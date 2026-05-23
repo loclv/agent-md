@@ -8,7 +8,7 @@ pub mod space_indentation;
 pub mod useless_links;
 pub mod whitespace;
 
-pub use code_blocks::validate_code_blocks;
+pub use code_blocks::{find_unclosed_code_block, validate_code_blocks};
 pub use heading_structure::{extract_heading_level, validate_heading_structure};
 #[allow(unused_imports)]
 pub use list_formatting::{

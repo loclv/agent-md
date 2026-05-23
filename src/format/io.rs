@@ -22,6 +22,12 @@ pub fn collect_markdown_files(dir: &Path, files: &mut Vec<PathBuf>) -> io::Resul
 
 pub fn format_single_file(path: &str, options: FormatOptions) -> Result<Document, String> {
 	let content = fs::read_to_string(path).map_err(|e| format!("Failed to read file: {}", e))?;
+	if let Some(start_line) = crate::rules::find_unclosed_code_block(&content) {
+		return Err(format!(
+			"Syntax Error: Code block starting at line {} is missing a closing fence",
+			start_line
+		));
+	}
 	let formatted_content = format_markdown_with_options(&content, options);
 	fs::write(path, &formatted_content).map_err(|e| format!("Failed to write file: {}", e))?;
 	let mut doc = parse_markdown(&formatted_content);
@@ -152,6 +158,14 @@ pub fn cmd_fmt_stdin(options: FormatOptions) {
 	let mut input = String::new();
 	if let Err(e) = io::stdin().read_to_string(&mut input) {
 		eprintln!("Error reading stdin: {}", e);
+		std::process::exit(1);
+	}
+
+	if let Some(start_line) = crate::rules::find_unclosed_code_block(&input) {
+		eprintln!(
+			"Syntax Error: Code block starting at line {} is missing a closing fence",
+			start_line
+		);
 		std::process::exit(1);
 	}
 

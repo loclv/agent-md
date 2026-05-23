@@ -1,5 +1,51 @@
 use crate::LintError;
 
+/// Finds the line number of the first unclosed code block in the markdown content, if any.
+pub fn find_unclosed_code_block(content: &str) -> Option<usize> {
+	let mut in_code_block = false;
+	let mut code_block_start_line = 0;
+	let mut fence_char = '`';
+	let mut fence_length = 0;
+
+	for (line_idx, line) in content.lines().enumerate() {
+		let line_num = line_idx + 1;
+		let trimmed = line.trim();
+
+		let is_backtick_fence = trimmed.starts_with("```");
+		let is_tilde_fence = trimmed.starts_with("~~~");
+
+		if is_backtick_fence || is_tilde_fence {
+			let current_fence_char = if is_backtick_fence { '`' } else { '~' };
+			let current_fence_len = trimmed
+				.chars()
+				.take_while(|&c| c == current_fence_char)
+				.count();
+
+			if !in_code_block {
+				in_code_block = true;
+				code_block_start_line = line_num;
+				fence_char = current_fence_char;
+				fence_length = current_fence_len;
+			} else {
+				if current_fence_char == fence_char && current_fence_len >= fence_length {
+					let rest = &trimmed[current_fence_len..];
+					if rest.trim().is_empty() {
+						in_code_block = false;
+					} else {
+						return Some(code_block_start_line);
+					}
+				}
+			}
+		}
+	}
+
+	if in_code_block {
+		Some(code_block_start_line)
+	} else {
+		None
+	}
+}
+
 pub fn validate_code_blocks(content: &str) -> Option<Vec<LintError>> {
 	let mut errors = Vec::new();
 	let mut in_code_block = false;
@@ -159,5 +205,42 @@ still inside
 		let content = "This has `inline code` but no fenced code blocks.";
 		let result = validate_code_blocks(content);
 		assert!(result.is_none()); // Should be valid (no fenced code blocks)
+	}
+
+	#[test]
+	fn test_find_unclosed_code_block_none() {
+		let content = "```rust\nfn main() {}\n```\nSome text\n```javascript\nconsole.log(1);\n```";
+		assert_eq!(find_unclosed_code_block(content), None);
+	}
+
+	#[test]
+	fn test_find_unclosed_code_block_missing_closing_at_end() {
+		let content = "```rust\nfn main() {}\n";
+		assert_eq!(find_unclosed_code_block(content), Some(1));
+	}
+
+	#[test]
+	fn test_find_unclosed_code_block_missing_closing_with_new_block() {
+		let content =
+			"```javascript\nconsole.log(1);\n// no closing fence\n\n```rust\nfn main() {}\n```";
+		assert_eq!(find_unclosed_code_block(content), Some(1));
+	}
+
+	#[test]
+	fn test_find_unclosed_code_block_nested_valid() {
+		let content = "````\n```rust\nfn main() {}\n```\n````";
+		assert_eq!(find_unclosed_code_block(content), None);
+	}
+
+	#[test]
+	fn test_find_unclosed_code_block_tilde_none() {
+		let content = "~~~\nhello\n~~~";
+		assert_eq!(find_unclosed_code_block(content), None);
+	}
+
+	#[test]
+	fn test_find_unclosed_code_block_tilde_unclosed() {
+		let content = "~~~\nhello\n";
+		assert_eq!(find_unclosed_code_block(content), Some(1));
 	}
 }

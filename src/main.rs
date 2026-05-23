@@ -90,6 +90,22 @@ fn json_output<T: ?Sized + Serialize>(value: &T, human: bool) -> String {
 }
 
 fn validate_markdown(content: &str) -> LintResult {
+	if let Some(start_line) = rules::find_unclosed_code_block(content) {
+		return LintResult {
+			valid: false,
+			errors: vec![LintError {
+				line: start_line,
+				column: 1,
+				message: format!(
+					"Code block starting at line {} is missing a closing fence",
+					start_line
+				),
+				rule: "code-blocks".to_string(),
+			}],
+			warnings: vec![],
+		};
+	}
+
 	let mut errors = Vec::new();
 	let mut warnings = Vec::new();
 
