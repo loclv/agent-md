@@ -46,5 +46,9 @@
 - [x] Validate completion (lint, format, tests).
 - [x] Log work using `l-log` CLI.
 
+## Dynamic Versioning from Cargo.toml
 
-
+- [x] Update `src/main.rs` to print the version dynamically using `env!("CARGO_PKG_VERSION")`.
+- [x] Add or run unit tests to verify the version printing behavior.
+- [x] Validate completion using *make format*, *make lint*, and *make test*.
+- [x] Log work using `l-log` CLI.

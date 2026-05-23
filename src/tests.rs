@@ -595,6 +595,13 @@ End of document.
 
 	// Tests for CLI argument parsing
 	#[test]
+	fn test_version_env_var() {
+		let version = env!("CARGO_PKG_VERSION");
+		assert!(!version.is_empty());
+		assert!(version.split('.').count() >= 3);
+	}
+
+	#[test]
 	fn test_cli_parsing_version_flag() {
 		// Test parsing version flag with -v
 		let args = vec!["agent-md", "-v"];

@@ -198,8 +198,7 @@ fn main() {
 	let cli = Cli::parse();
 
 	if cli.version {
-		// IMPORTANT: Update this version when releasing new versions
-		println!("0.2.4");
+		println!("{}", env!("CARGO_PKG_VERSION"));
 		return;
 	}
 
