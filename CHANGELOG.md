@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.3] - 2026-05-23
+
+### Fixed
+
+- Prevent code blocks nested inside markdown list items from being corrupted during formatting. This ensures their internal relative indentation is preserved and their content is not formatted as markdown text.
+
 ## [0.2.0] - 2026-05-18
 
 ### Added

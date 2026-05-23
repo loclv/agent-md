@@ -242,8 +242,71 @@ pub fn collapse_multiple_spaces(line: &str) -> String {
 pub fn format_list_items(items: &[String]) -> Vec<String> {
 	let mut formatted_items = Vec::new();
 	let mut stack: Vec<(String, String)> = Vec::new(); // (original_leading, formatted_leading)
+	let mut in_code_block = false;
+	let mut code_block_indent = String::new();
+	let mut code_block_formatted_indent = String::new();
 
 	for item in items {
+		let trimmed = item.trim();
+		if trimmed.starts_with("```") {
+			if !in_code_block {
+				in_code_block = true;
+				// Remember the indentation of the opening fence
+				let leading_len = item.chars().take_while(|&c| c == ' ' || c == '\t').count();
+				code_block_indent = item[..leading_len].to_string();
+
+				// Determine formatted leading for the fence
+				let formatted_leading = if code_block_indent.is_empty() {
+					String::new()
+				} else if stack.is_empty() {
+					let mut f = code_block_indent.clone();
+					f = f.replace("    ", "  ").replace("\t\t", "\t");
+					stack.push((code_block_indent.clone(), f.clone()));
+					f
+				} else {
+					let mut resolved = code_block_indent.clone();
+					if let Some((top_orig, top_formatted)) = stack.last() {
+						if code_block_indent == *top_orig {
+							resolved = top_formatted.clone();
+						} else if code_block_indent.starts_with(top_orig)
+							&& code_block_indent.len() > top_orig.len()
+						{
+							let suffix = &code_block_indent[top_orig.len()..];
+							let mut formatted_suffix = suffix.to_string();
+							if formatted_suffix == "    " {
+								formatted_suffix = "  ".to_string();
+							} else if formatted_suffix == "\t\t" {
+								formatted_suffix = "\t".to_string();
+							} else {
+								formatted_suffix =
+									formatted_suffix.replace("    ", "  ").replace("\t\t", "\t");
+							}
+							resolved = format!("{}{}", top_formatted, formatted_suffix);
+							stack.push((code_block_indent.clone(), resolved.clone()));
+						}
+					}
+					resolved
+				};
+				code_block_formatted_indent = formatted_leading.clone();
+				formatted_items.push(format!("{}{}", formatted_leading, trimmed));
+			} else {
+				in_code_block = false;
+				formatted_items.push(format!("{}{}", code_block_formatted_indent, trimmed));
+			}
+			continue;
+		}
+
+		if in_code_block {
+			// Inside code block, adjust only the base indentation and preserve everything else!
+			if item.starts_with(&code_block_indent) {
+				let remainder = &item[code_block_indent.len()..];
+				formatted_items.push(format!("{}{}", code_block_formatted_indent, remainder));
+			} else {
+				formatted_items.push(item.clone());
+			}
+			continue;
+		}
+
 		let leading_len = item.chars().take_while(|&c| c == ' ' || c == '\t').count();
 		let orig_leading = &item[..leading_len];
 		let rest = &item[leading_len..];

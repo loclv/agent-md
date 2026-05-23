@@ -165,9 +165,20 @@ pub fn format_markdown_structured(content: &str, options: FormatOptions) -> Stri
 				}
 
 				let formatted_items = lines::format_list_items(items);
+				let mut in_list_code_block = false;
 				for item in formatted_items {
-					formatted_parts.push(lines::process_markdown_line(&item, &options, false));
-					formatted_parts.push("\n".to_string());
+					let trimmed = item.trim();
+					if trimmed.starts_with("```") {
+						in_list_code_block = !in_list_code_block;
+						formatted_parts.push(item);
+						formatted_parts.push("\n".to_string());
+					} else if in_list_code_block {
+						formatted_parts.push(item);
+						formatted_parts.push("\n".to_string());
+					} else {
+						formatted_parts.push(lines::process_markdown_line(&item, &options, false));
+						formatted_parts.push("\n".to_string());
+					}
 				}
 
 				if options.blanks_around_lists {

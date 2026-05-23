@@ -17,4 +17,8 @@ function test() {
 }
 ```
 
+```bash
+bun i    # install
+```
+
 Final text with **bold** removed.
