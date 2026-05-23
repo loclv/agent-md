@@ -1,4 +1,4 @@
-use crate::LintError;
+use crate::types::LintError;
 
 /// Finds the line number of the first unclosed code block in the markdown content, if any.
 pub fn find_unclosed_code_block(content: &str) -> Option<usize> {

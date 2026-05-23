@@ -1,15 +1,18 @@
+use crate::commands::{find_section_range, parse_markdown};
 use crate::format::format_markdown;
 use crate::format::format_markdown_with_options;
-use crate::{find_section_range, parse_markdown, validate_markdown, LintError, LintWarning};
+use crate::linter::validate_markdown;
+use crate::types::{LintError, LintWarning};
 
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::module_inception)]
 	use super::*;
-	use crate::{
-		extract_section_content, parse_markdown_to_jsonl, unescape_content, Cli, Commands,
-		Document, EditResult, Heading, JsonlEntry, Match, SearchResult,
+	use crate::commands::{extract_section_content, parse_markdown_to_jsonl};
+	use crate::types::{
+		unescape_content, Document, EditResult, Heading, JsonlEntry, Match, SearchResult,
 	};
+	use crate::{Cli, Commands};
 	use clap::Parser;
 
 	// Tests for JsonlEntry serialization

@@ -13,7 +13,10 @@ Development setup and guidelines for contributing to agent-md.
 ```text
 agent-md/
 ├── src/
-│   ├── main.rs # Main application logic and CLI
+│   ├── main.rs # CLI Entrypoint & Clap Parsers
+│   ├── types.rs # Common types, structures and utilities
+│   ├── linter.rs # Lint rules orchestration
+│   ├── commands.rs # CLI Subcommand handlers and parsing logic
 │   ├── parser.rs # Structured Markdown parser (block-based)
 │   ├── format/ # Formatting modules
 │   │   ├── mod.rs # Structured formatter orchestration
@@ -108,21 +111,21 @@ make ci
 
 ## Adding New Features
 
-1. Validation Rules: Add to `src/main.rs` in the validation section
-2. CLI Commands: Extend the `Commands` enum and add handler functions
+1. Validation Rules: Add logic to `src/rules/` and run them inside `src/linter.rs`'s `validate_markdown` function
+2. CLI Commands: Extend `Commands` and `Cli` in `src/main.rs` and add handler functions in `src/commands.rs`
 3. Tests: Add comprehensive tests to `src/tests.rs`
 4. Documentation: Update relevant sections in `docs/`
 
 ### Example: Adding a New Validation Rule
 
 ```rust
-// In src/main.rs
+// In src/linter.rs
 fn validate_new_rule(line: &str) -> Option<usize> {
     // Validation logic here
     None
 }
 
-// In validate_markdown function
+// In validate_markdown function in src/linter.rs
 if let Some(col) = validate_new_rule(line) {
     warnings.push(LintWarning {
         line: line_num,

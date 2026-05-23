@@ -3,7 +3,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use super::{format_markdown_with_options, FormatOptions};
-use crate::{json_output, parse_markdown, Document, EditResult};
+use crate::commands::parse_markdown;
+use crate::types::{json_output, Document, EditResult};
 
 pub fn collect_markdown_files(dir: &Path, files: &mut Vec<PathBuf>) -> io::Result<()> {
 	for entry in fs::read_dir(dir)? {

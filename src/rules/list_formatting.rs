@@ -1,4 +1,4 @@
-use crate::LintError;
+use crate::types::LintError;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ListType {

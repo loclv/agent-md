@@ -1,4 +1,4 @@
-use crate::LintError;
+use crate::types::LintError;
 
 pub fn validate_whitespace(content: &str) -> Vec<LintError> {
 	let mut errors = Vec::new();

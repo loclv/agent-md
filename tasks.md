@@ -35,4 +35,16 @@
 - [x] Validate completion (lint, format, tests).
 - [x] Log work using `l-log` CLI.
 
+## Refactor main.rs into Smaller Files
+
+- [x] Identify candidate modules/functions in `src/main.rs` to extract (e.g. types, CLI/argument parsing, command execution handlers).
+- [x] Create `src/types.rs` containing `JsonlEntry`, `Document`, `Heading`, `EditResult`, `SearchResult`, `Match`, `LintResult`, `LintError`, `LintWarning`, `json_output`, `unescape_content`.
+- [x] Create `src/linter.rs` containing `validate_markdown`, `get_markdownlint_config`.
+- [x] Create `src/commands.rs` containing CLI subcommand handlers: `cmd_read`, `cmd_write`, `cmd_write_section`, `cmd_append`, `cmd_insert`, `cmd_delete`, `cmd_list`, `cmd_search`, `cmd_headings`, `cmd_stats`, `cmd_to_jsonl`, `cmd_lint`, `cmd_lint_file`, and helpers like `extract_section_content`, `find_section_range`, `find_section_end`, `parse_markdown`, `parse_markdown_to_jsonl`.
+- [x] Update `src/main.rs` to act as the main entrypoint importing these new modules and housing the `Cli` clap parser and the `main` function.
+- [x] Ensure all imports and references are resolved across all modules (including `src/format/io.rs`, `src/parser.rs`, and tests).
+- [x] Validate completion (lint, format, tests).
+- [x] Log work using `l-log` CLI.
+
+
 
