@@ -111,6 +111,9 @@ pub fn cmd_fmt(path: &str, human: bool, options: FormatOptions) {
 				human
 			)
 		);
+		if error_count > 0 {
+			std::process::exit(1);
+		}
 	} else {
 		match format_single_file(path, options) {
 			Ok(doc) => {
@@ -138,6 +141,7 @@ pub fn cmd_fmt(path: &str, human: bool, options: FormatOptions) {
 						human
 					)
 				);
+				std::process::exit(1);
 			}
 		}
 	}

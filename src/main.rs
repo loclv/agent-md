@@ -517,7 +517,7 @@ fn main() {
 
 	if cli.version {
 		// IMPORTANT: Update this version when releasing new versions
-		println!("0.2.3");
+		println!("0.2.4");
 		return;
 	}
 
@@ -821,7 +821,7 @@ fn cmd_write(path: &str, content: &str, human: bool) {
 			)
 		);
 		println!("{}", json_output(&validation, human));
-		return;
+		std::process::exit(1);
 	}
 
 	match fs::write(path, &content) {
@@ -852,6 +852,7 @@ fn cmd_write(path: &str, content: &str, human: bool) {
 					human
 				)
 			);
+			std::process::exit(1);
 		}
 	}
 }
@@ -876,7 +877,7 @@ fn cmd_write_section(path: &str, section_path: &str, new_content: &str, human: b
 			)
 		);
 		println!("{}", json_output(&validation, human));
-		return;
+		std::process::exit(1);
 	}
 
 	match fs::read_to_string(path) {
@@ -919,6 +920,7 @@ fn cmd_write_section(path: &str, section_path: &str, new_content: &str, human: b
 								human
 							)
 						);
+						std::process::exit(1);
 					}
 				},
 				Err(e) => {
@@ -933,6 +935,7 @@ fn cmd_write_section(path: &str, section_path: &str, new_content: &str, human: b
 							human
 						)
 					);
+					std::process::exit(1);
 				}
 			}
 		}
@@ -948,6 +951,7 @@ fn cmd_write_section(path: &str, section_path: &str, new_content: &str, human: b
 					human
 				)
 			);
+			std::process::exit(1);
 		}
 	}
 }
@@ -1409,6 +1413,9 @@ fn cmd_lint(path: &str, is_content: bool, human: bool) {
 
 	let result = validate_markdown(&content);
 	println!("{}", json_output(&result, human));
+	if !result.valid {
+		std::process::exit(1);
+	}
 }
 
 fn cmd_lint_file(path: &str, human: bool) {
@@ -1458,6 +1465,7 @@ fn cmd_lint_file(path: &str, human: bool) {
 				);
 				if !result.valid {
 					println!("✗ File is invalid due to errors.");
+					std::process::exit(1);
 				} else {
 					println!("✓ File is valid but has warnings.");
 				}

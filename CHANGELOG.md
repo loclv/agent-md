@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.4] - 2026-05-24
+
+### Added
+
+- Strict Code Block Syntax Validation: Implemented unclosed code block detection to prevent linter and formatter from continuing on malformed markdown documents.
+
+### Fixed
+
+- Lint cascading failures: Halt linting immediately upon encountering an unclosed code block to avoid generating multiple unrelated false-positive style warnings and errors.
+- Formatting safeguard: Abort formatting immediately and return a syntax error instead of writing corrupted contents to files.
+
 ## [0.2.3] - 2026-05-23
 
 ### Fixed
