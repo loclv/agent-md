@@ -138,16 +138,31 @@ pub fn parse(content: &str) -> ParsedMarkdown {
 		if crate::rules::detect_list_item(trimmed).is_some() {
 			let mut list_raw = String::new();
 			let mut items = Vec::new();
+			let mut list_in_code_block = false;
 			while i < lines.len() {
 				let current_line = lines[i];
 				let current_trimmed = current_line.trim();
-				if current_trimmed.is_empty() {
+
+				let is_fence =
+					current_trimmed.starts_with("```") || current_trimmed.starts_with("~~~");
+				if is_fence {
+					if !list_in_code_block {
+						if current_line.starts_with(' ') || current_line.starts_with('\t') {
+							list_in_code_block = true;
+						}
+					} else {
+						list_in_code_block = false;
+					}
+				}
+
+				if current_trimmed.is_empty() && !list_in_code_block {
 					break; // Blank line ends the list (for now, simple)
 				}
 				// Check if it's a list item or indented content
 				if crate::rules::detect_list_item(current_trimmed).is_some()
 					|| current_line.starts_with(' ')
 					|| current_line.starts_with('\t')
+					|| list_in_code_block
 				{
 					list_raw.push_str(current_line);
 					list_raw.push('\n');

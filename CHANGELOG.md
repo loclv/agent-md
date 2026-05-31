@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 
 - Lint cascading failures: Halt linting immediately upon encountering an unclosed code block to avoid generating multiple unrelated false-positive style warnings and errors.
 - Formatting safeguard: Abort formatting immediately and return a syntax error instead of writing corrupted contents to files.
+- Nested lists with code blocks: Fixed a bug where a nested code block inside a list item that contained blank lines was parsed as premature list end, causing the rest of the document to be parsed inside an unclosed outer code block and silently discarded during formatting.
 
 ## [0.2.3] - 2026-05-23
 

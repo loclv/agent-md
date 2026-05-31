@@ -50,5 +50,14 @@
 
 - [x] Update `src/main.rs` to print the version dynamically using `env!("CARGO_PKG_VERSION")`.
 - [x] Add or run unit tests to verify the version printing behavior.
-- [x] Validate completion using *make format*, *make lint*, and *make test*.
+- [x] Validate completion using make format, make lint, and make test.
 - [x] Log work using `l-log` CLI.
+
+## Formatting Nested Code Blocks with Blank Lines in Lists
+
+- [x] Update list parsing logic in `src/parser.rs` to track nested code blocks (`list_in_code_block`) inside list items.
+- [x] Ensure blank lines do not end list item parsing when inside a code block.
+- [x] Add unit tests in `src/parser.rs` and `src/format/tests.rs` to verify that lists with nested code blocks containing blank lines format correctly without truncating the rest of the document.
+- [x] Validate completion: run formatting, clippy, lint, and cargo tests.
+- [x] Update README.md and documentation if applicable.
+- [x] Log the work using l-log CLI.
