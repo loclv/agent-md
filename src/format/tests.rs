@@ -1464,3 +1464,29 @@ Built with speed and precision in Zig.
 	let result = format_markdown(content);
 	println!("Formatted result:\n{}", result);
 }
+
+#[test]
+fn test_format_list_item_asterisk_bullet_with_italics() {
+	let content = r#"* *header 1*: value 1
+* *header 2*: value 2
+* *header 3*: value 3
+"#;
+	let expected = r#"* header 1: value 1
+* header 2: value 2
+* header 3: value 3
+"#;
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_list_item_asterisk_bullet_with_bold() {
+	let content = r#"* **header 2**: value 2
+* **header 3**: value 3
+"#;
+	let expected = r#"* header 2: value 2
+* header 3: value 3
+"#;
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}

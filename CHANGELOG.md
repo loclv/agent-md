@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.7] - 2026-07-28
+
+### Added
+
+- List Bullet Point Unit Tests: Added unit test `test_format_list_item_asterisk_bullet_with_bold` for asterisk bullet items with bold headers (`* **header**: value`).
+
+### Fixed
+
+- List Bullet Point Emphasis Parsing: Fixed an issue where asterisk bullet list items followed by italicized text (e.g., `* *header*: value`) were incorrectly parsed as emphasis wrappers around spaces, causing `* *` to be stripped to a leading space. Opening and closing emphasis and bold markers are now strictly validated against whitespace boundaries.
+
 ## [0.2.6] - 2026-07-28
 
 ### Added

@@ -41,17 +41,19 @@ pub fn process_markdown_line(line: &str, options: &FormatOptions, is_heading: bo
 	processed_line
 }
 
-/// Remove bold markers (** and __) from a line while preserving the content inside.
-/// This skips markers inside inline code spans.
+/// Remove bold markers (`**` and `__`) from a line while preserving the content inside.
+///
+/// This skips markers inside inline code spans (enclosed in backticks).
+/// Delimiters immediately followed by whitespace (opening) or preceded by whitespace (closing)
+/// are ignored per Markdown formatting rules.
 pub fn remove_bold_markers(line: &str) -> String {
 	let mut result = String::new();
 	let chars: Vec<char> = line.chars().collect();
 	let mut i = 0;
 
 	while i < chars.len() {
-		// Check for inline code start
+		// Skip inline code blocks (e.g., `code with **bold**`)
 		if chars[i] == '`' {
-			// Find the end of the inline code
 			let mut code_end = i + 1;
 			while code_end < chars.len() {
 				if chars[code_end] == '`' {
@@ -59,7 +61,6 @@ pub fn remove_bold_markers(line: &str) -> String {
 				}
 				code_end += 1;
 			}
-			// Copy the entire code span as-is
 			for j in i..=code_end {
 				if j < chars.len() {
 					result.push(chars[j]);
@@ -71,11 +72,21 @@ pub fn remove_bold_markers(line: &str) -> String {
 
 		// Check for **bold** pattern
 		if i + 1 < chars.len() && chars[i] == '*' && chars[i + 1] == '*' {
-			// Find the closing **
+			// Opening delimiter MUST NOT be followed by whitespace (e.g., "** bold")
+			if i + 2 < chars.len() && chars[i + 2].is_whitespace() {
+				result.push(chars[i]);
+				i += 1;
+				continue;
+			}
+			// Search for matching closing **
 			let mut j = i + 2;
 			while j + 1 < chars.len() {
 				if chars[j] == '*' && chars[j + 1] == '*' {
-					// Found closing marker, copy content between markers
+					// Closing delimiter MUST NOT be preceded by whitespace (e.g., "bold **")
+					if j > i + 2 && chars[j - 1].is_whitespace() {
+						break;
+					}
+					// Found valid closing marker, copy content between markers
 					chars[i + 2..j].iter().for_each(|&c| result.push(c));
 					i = j + 2;
 					break;
@@ -92,11 +103,21 @@ pub fn remove_bold_markers(line: &str) -> String {
 
 		// Check for __bold__ pattern
 		if i + 1 < chars.len() && chars[i] == '_' && chars[i + 1] == '_' {
-			// Find the closing __
+			// Opening delimiter MUST NOT be followed by whitespace (e.g., "__ bold")
+			if i + 2 < chars.len() && chars[i + 2].is_whitespace() {
+				result.push(chars[i]);
+				i += 1;
+				continue;
+			}
+			// Search for matching closing __
 			let mut j = i + 2;
 			while j + 1 < chars.len() {
 				if chars[j] == '_' && chars[j + 1] == '_' {
-					// Found closing marker, copy content between markers
+					// Closing delimiter MUST NOT be preceded by whitespace (e.g., "bold __")
+					if j > i + 2 && chars[j - 1].is_whitespace() {
+						break;
+					}
+					// Found valid closing marker, copy content between markers
 					chars[i + 2..j].iter().for_each(|&c| result.push(c));
 					i = j + 2;
 					break;
@@ -119,17 +140,24 @@ pub fn remove_bold_markers(line: &str) -> String {
 	result
 }
 
+/// Check if a line is a horizontal rule (`---`, `***`, or `___`).
 pub fn is_horizontal_rule(line: &str) -> bool {
 	let trimmed = line.trim();
 	trimmed == "---" || trimmed == "***" || trimmed == "___"
 }
 
+/// Remove emphasis markers (`*` and `_`) from a line while preserving the content inside.
+///
+/// Skips inline code spans and link labels. Delimiters immediately followed by whitespace (opening)
+/// or preceded by whitespace (closing) are ignored to prevent misinterpreting list item bullets
+/// or mathematical expressions.
 pub fn remove_emphasis_markers(line: &str) -> String {
 	let mut result = String::new();
 	let chars: Vec<char> = line.chars().collect();
 	let mut i = 0;
 
 	while i < chars.len() {
+		// Skip inline code spans
 		if chars[i] == '`' {
 			let mut code_end = i + 1;
 			while code_end < chars.len() {
@@ -147,6 +175,7 @@ pub fn remove_emphasis_markers(line: &str) -> String {
 			continue;
 		}
 
+		// Skip markdown link labels [label]
 		if chars[i] == '[' {
 			let mut bracket_end = i;
 			while bracket_end < chars.len() && chars[bracket_end] != ']' {
@@ -161,20 +190,26 @@ pub fn remove_emphasis_markers(line: &str) -> String {
 			continue;
 		}
 
+		// Check for single asterisk or underscore emphasis marker (*text* or _text_)
 		if i + 1 < chars.len()
 			&& ((chars[i] == '*' && chars[i + 1] != '*')
 				|| (chars[i] == '_' && chars[i + 1] != '_'))
 		{
+			// Opening delimiter MUST NOT be followed by whitespace (e.g., "* bullet" or "_ word")
+			if chars[i + 1].is_whitespace() {
+				result.push(chars[i]);
+				i += 1;
+				continue;
+			}
+
 			let marker = chars[i];
 
 			// For underscore, check if it's part of an identifier (e.g., A_cat_meow)
 			// Only skip if BOTH sides are alphanumeric (underscore within a word)
-			// _word_ at boundaries should still be treated as emphasis
 			if marker == '_' {
 				let prev_is_word = i > 0 && chars[i - 1].is_alphanumeric();
 				let next_is_word = i + 1 < chars.len() && chars[i + 1].is_alphanumeric();
 				if prev_is_word && next_is_word {
-					// This underscore is within a word (identifier), skip it
 					result.push(chars[i]);
 					i += 1;
 					continue;
@@ -186,17 +221,24 @@ pub fn remove_emphasis_markers(line: &str) -> String {
 				j += 1;
 			}
 			if j < chars.len() && chars[j] == marker {
+				// Closing delimiter MUST NOT be preceded by whitespace (e.g., "text *")
+				if j > i + 1 && chars[j - 1].is_whitespace() {
+					result.push(chars[i]);
+					i += 1;
+					continue;
+				}
+
 				// For underscore, also check the closing marker isn't within a word
 				if marker == '_' {
 					let prev_is_word = j > 0 && chars[j - 1].is_alphanumeric();
 					let next_is_word = j + 1 < chars.len() && chars[j + 1].is_alphanumeric();
 					if prev_is_word && next_is_word {
-						// Closing underscore is within a word (identifier), skip this match
 						result.push(chars[i]);
 						i += 1;
 						continue;
 					}
 				}
+				// Copy text inside emphasis markers
 				chars[i + 1..j].iter().for_each(|&c| result.push(c));
 				i = j + 1;
 			} else {
@@ -213,6 +255,7 @@ pub fn remove_emphasis_markers(line: &str) -> String {
 	result
 }
 
+/// Collapse multiple consecutive space characters into a single space while preserving leading indentation.
 pub fn collapse_multiple_spaces(line: &str) -> String {
 	// Preserve leading whitespace (indentation)
 	let leading_len = line.chars().take_while(|&c| c == ' ').count();
