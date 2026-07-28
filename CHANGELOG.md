@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [0.2.6] - 2026-07-28
 
+### Added
+
+- Table Formatter Unit Tests: Added unit test `test_format_markdown_table_empty_cell_trailing_spaces` to verify empty cell formatting with trailing spaces.
+
 ### Fixed
 
 - Table Empty Cell Formatting: Fixed table row formatting so empty cells format as `| |` (single space) instead of auto-adding an extra space to format as `|  |`.

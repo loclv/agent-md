@@ -103,6 +103,20 @@ fn test_format_markdown_empty_cells() {
 }
 
 #[test]
+fn test_format_markdown_table_empty_cell_trailing_spaces() {
+	let content = r#"| Header1 | Header2 |
+|---|---|
+| c1 |  |
+"#;
+	let expected = r#"| Header1 | Header2 |
+|---|---|
+| c1 | |
+"#;
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
 fn test_format_markdown_complex_table() {
 	let content = r#"| Name | Age | City      | Notes |
 |------|-----|-----------|-------|
