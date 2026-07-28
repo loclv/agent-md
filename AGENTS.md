@@ -10,14 +10,12 @@ agent-md is a Rust-based Markdown editor designed for AI agents. It provides CLI
 
 For any development task:
 
-1. Receive the request - Understand requirements and scope
-2. Break down complex requests - Write tasks to `tasks.md` file
-3. Execute each task - Mark completed tasks in `tasks.md`
-4. On task completion, you must:
+1. On task completion, you must:
    - Update documentation in the `docs/` directory
    - Update `README.md`
    - Write unit tests for your changes
-5. Validate completion:
+   - Update "./CHANGELOG.md" file with summary of your changes.
+2. Validate completion:
    - Run linting: `make lint`
    - Run formatter: `make format`
    - Run tests: `make test`

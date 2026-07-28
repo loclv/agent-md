@@ -109,13 +109,13 @@ agent-md lint-file <file>
 
 ```bash
 # Using Makefile (recommended)
-make help          # Show all commands
-make build         # Build release version
-make test          # Run tests
-make lint          # Run all linting checks
-make format        # Format code
-make clippy        # Run clippy lints
-make ci            # Full CI pipeline
+make help # Show all commands
+make build # Build release version
+make test # Run tests
+make lint # Run all linting checks
+make format # Format code
+make clippy # Run clippy lints
+make ci # Full CI pipeline
 
 # Using Cargo directly
 cargo build --release
@@ -241,17 +241,13 @@ agent-md lint-file README.md
 
 Follow these steps for any development task:
 
-1. Receive the request - Understand the requirements and scope
-2. Break down complex requests - If the request is complex, break it down into smaller tasks and write each task to a separate file named `tasks.md`
-3. Execute each small task - Work through tasks systematically, marking each as finished in `tasks.md` when completed
-4. On task completion, you must:
-
+1. On task completion, you must:
    - Update documentation (`docs/`)
    - Update `README.md`
    - Write unit tests for your changes
+   - Update "./CHANGELOG.md" file with summary of your changes.
 
-5. Validate completion - Once all tasks are completed
-
+2. Validate completion - Once all tasks are completed
    - Run the linter
    - Run the formatter
 
@@ -307,9 +303,9 @@ make build && ./target/release/agent-md --help
 make ci
 
 # Individual checks
-make test          # Run tests
-make clippy        # Linting checks
-make check-format  # Format validation
+make test # Run tests
+make clippy # Linting checks
+make check-format # Format validation
 ```
 
 ## Linting and Code Quality
