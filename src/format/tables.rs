@@ -69,10 +69,14 @@ pub fn format_table_row(prefix: &str, table_content: &str, remove_bold: bool) ->
 		if remove_bold {
 			cell_trimmed = strip_bold_from_cell(&cell_trimmed);
 		}
-		formatted_cells.push(cell_trimmed);
+		if cell_trimmed.is_empty() {
+			formatted_cells.push(" ".to_string());
+		} else {
+			formatted_cells.push(format!(" {} ", cell_trimmed));
+		}
 	}
 
-	format!("{}| {} |", prefix, formatted_cells.join(" | "))
+	format!("{}|{}|", prefix, formatted_cells.join("|"))
 }
 
 #[cfg(test)]
@@ -186,5 +190,11 @@ mod tests {
 	fn test_format_table_row_bold_disabled() {
 		let result = format_table_row("", "| **text** | value |", false);
 		assert_eq!(result, "| **text** | value |");
+	}
+
+	#[test]
+	fn test_format_table_row_empty_cells() {
+		let result = format_table_row("", "| c1 | |", false);
+		assert_eq!(result, "| c1 | |");
 	}
 }

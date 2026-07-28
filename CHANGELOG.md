@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.6] - 2026-07-28
+
+### Fixed
+
+- Table Empty Cell Formatting: Fixed table row formatting so empty cells format as `| |` (single space) instead of auto-adding an extra space to format as `|  |`.
+
 ## [0.2.4] - 2026-05-24
 
 ### Added

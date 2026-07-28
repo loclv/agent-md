@@ -95,8 +95,8 @@ fn test_format_markdown_empty_cells() {
 "#;
 	let expected = r#"| Column 1 | Column 2 | Column 3 |
 |---|---|---|
-| Value 1 |  | Value 3 |
-|  | Value 2 |  |
+| Value 1 | | Value 3 |
+| | Value 2 | |
 "#;
 	let result = format_markdown(content);
 	assert_eq!(result, expected);
@@ -113,7 +113,7 @@ fn test_format_markdown_complex_table() {
 	let expected = r#"| Name | Age | City | Notes |
 |---|---|---|---|
 | John | 25 | New York | Test |
-| Jane | 30 | London |  |
+| Jane | 30 | London | |
 | Bob | 35 | Paris | Data |
 "#;
 	let result = format_markdown(content);
@@ -406,7 +406,7 @@ fn test_format_markdown_list_item_with_table() {
 #[test]
 fn test_format_markdown_empty_table_cells() {
 	let content = "| A | B | C |\n|---|---|---|\n|   |   |   |\n";
-	let expected = "| A | B | C |\n|---|---|---|\n|  |  |  |\n";
+	let expected = "| A | B | C |\n|---|---|---|\n| | | |\n";
 	let result = format_markdown(content);
 	assert_eq!(result, expected);
 }

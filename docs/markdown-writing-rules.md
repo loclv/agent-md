@@ -180,6 +180,16 @@ Note: `agent-md fmt` will convert `|:---|:---|` to `|---|---|`.
 }
 ```
 
+✅ Valid - Empty cells formatted with single space
+
+```text
+| Header 1 | Header 2 |
+|---|---|
+| Item 1 | |
+```
+
+Note: `agent-md fmt` formats empty table cells with a single space (`| |`) to normalize table structure cleanly.
+
 ### Rationale for Simple Tables Rule
 
 Complex tables are difficult for AI agents to parse and can introduce formatting inconsistencies. Simple tables are more reliable for machine processing.
