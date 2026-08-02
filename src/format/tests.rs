@@ -18,6 +18,14 @@ fn test_format_markdown_table_trailing_spaces() {
 }
 
 #[test]
+fn test_format_markdown_heading_trailing_colon() {
+	let content = "## header:\n### subheader:\n# main header\n";
+	let expected = "## header\n\n### subheader\n\n# main header\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
 fn test_format_markdown_table_preserve_leading_spaces() {
 	let content = r#"| Column 1 | Column 2 |
 |---|---|

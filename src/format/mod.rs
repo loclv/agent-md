@@ -88,7 +88,12 @@ pub fn format_markdown_structured(content: &str, options: FormatOptions) -> Stri
 				}
 				let mut h = "#".repeat(*level as usize);
 				h.push(' ');
-				h.push_str(text);
+				let heading_text = if text.ends_with(':') {
+					text.strip_suffix(':').unwrap_or(text).trim_end()
+				} else {
+					text.as_str()
+				};
+				h.push_str(heading_text);
 				h.push('\n');
 				formatted_parts.push(h);
 				let next_is_blank = idx + 1 < parsed.blocks.len()

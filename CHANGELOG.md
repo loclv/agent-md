@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.8] - 2026-08-02
+
+### Fixed
+
+- Formatter Header Trailing Colon: Fixed markdown formatter to remove trailing colons (`:`) from heading text (e.g. `## header:` => `## header`).
+
 ## [0.2.7] - 2026-07-28
 
 ### Added
