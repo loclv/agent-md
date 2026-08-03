@@ -88,6 +88,7 @@ pub fn format_markdown_structured(content: &str, options: FormatOptions) -> Stri
 				}
 				let mut h = "#".repeat(*level as usize);
 				h.push(' ');
+				// Strip trailing colon from heading text (e.g. "## header:" -> "## header")
 				let heading_text = if text.ends_with(':') {
 					text.strip_suffix(':').unwrap_or(text).trim_end()
 				} else {
@@ -120,8 +121,14 @@ pub fn format_markdown_structured(content: &str, options: FormatOptions) -> Stri
 				}
 
 				let mut cb = String::from("```");
-				if let Some(lang) = language {
-					cb.push_str(lang);
+				// Default unlabelled code blocks to 'text' language tag
+				match language {
+					Some(lang) if !lang.trim().is_empty() => {
+						cb.push_str(lang);
+					}
+					_ => {
+						cb.push_str("text");
+					}
 				}
 				cb.push('\n');
 

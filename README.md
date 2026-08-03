@@ -254,6 +254,8 @@ agent-md lint-file <path>
 - Formats the markdown file in-place, trimming leading and trailing spaces from table cells.
 - Formats empty table cells with a single space (`| |`) to maintain clean table structure.
 - Normalizes table separator rows (e.g., `|:---|:---|` becomes `|---|---|`), removing alignment colons to save tokens.
+- Removes trailing colons from headings (e.g., `## header:` becomes `## header`).
+- Automatically appends `text` as default language tag for unlabelled code blocks (e.g., ` ``` ` becomes ` ```text `).
 - Preserves code block content, including relative indentation and syntax inside nested code blocks within list items.
 - Collapses multiple spaces before `#` comments in shell code blocks (`bash`, `sh`, `shell`, `zsh`).
 - Automatically converts 4 leading spaces of list item indentation to 2 spaces, and 2 leading tabs to 1 tab for sub-items, reducing token usage in nested lists.

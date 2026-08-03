@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Formatter Header Trailing Colon: Fixed markdown formatter to remove trailing colons (`:`) from heading text (e.g. `## header:` => `## header`).
+- Formatter Code Block Language: Auto add `text` language specifier to unlabelled code blocks during formatting (e.g. ` ``` ` => ` ```text `).
 
 ## [0.2.7] - 2026-07-28
 

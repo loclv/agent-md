@@ -241,6 +241,8 @@ agent-md lint-file <path>
 ### Định dạng markdown
 
 - Định dạng tệp markdown tại chỗ, loại bỏ các khoảng trắng thừa trong ô bảng.
+- Loại bỏ dấu hai chấm ở cuối tiêu đề (ví dụ: `## header:` thành `## header`).
+- Tự động thêm thẻ ngôn ngữ `text` cho các khối mã chưa khai báo ngôn ngữ (ví dụ: ` ``` ` thành ` ```text `).
 - Bảo toàn các dòng phân tách và nội dung khối mã.
 - Thu gọn các khoảng trắng thừa trước các bình luận `#` trong các khối mã shell (`bash`, `sh`, `shell`, `zsh`).
 

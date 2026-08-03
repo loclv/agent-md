@@ -466,7 +466,7 @@ Also has __bold__ markers
 
 Regular text with **bold** and __bold__ should be removed.
 "#;
-	let expected = r#"```
+	let expected = r#"```text
 This has **bold** text
 Also has __bold__ markers
 ```
@@ -523,7 +523,7 @@ fn test_format_options_token_saver() {
 
 	assert!(!result.contains("**bold**"));
 	assert!(result.contains("bold"));
-	assert!(result.contains("```\n**bold in code**\n```"));
+	assert!(result.contains("```text\n**bold in code**\n```"));
 }
 
 #[test]
@@ -1082,8 +1082,12 @@ fn test_format_markdown_highlight_in_code_block_preserved() {
 ==highlight in code==
 ```
 "#;
+	let expected = r#"```text
+==highlight in code==
+```
+"#;
 	let result = format_markdown(content);
-	assert_eq!(result, content);
+	assert_eq!(result, expected);
 }
 
 #[test]
@@ -1495,6 +1499,32 @@ fn test_format_list_item_asterisk_bullet_with_bold() {
 	let expected = r#"* header 2: value 2
 * header 3: value 3
 "#;
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_heading_trailing_colon_edge_cases() {
+	let content =
+		"# Title:\n## Section 1: Overview:\n### Sub-section: Details:\n#### Note: Important:\n";
+	let expected =
+		"# Title\n\n## Section 1: Overview\n\n### Sub-section: Details\n\n#### Note: Important\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_heading_trailing_colon_with_whitespace() {
+	let content = "## header:   \n";
+	let expected = "## header\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_code_block_default_text_language() {
+	let content = "```\nabc\n```\n";
+	let expected = "```text\nabc\n```\n";
 	let result = format_markdown(content);
 	assert_eq!(result, expected);
 }
