@@ -350,6 +350,11 @@ pub fn format_list_items(items: &[String]) -> Vec<String> {
 			continue;
 		}
 
+		// Drop empty list items (marker with no content, e.g. a trailing `- ` line)
+		if crate::rules::is_empty_list_item(item) {
+			continue;
+		}
+
 		let leading_len = item.chars().take_while(|&c| c == ' ' || c == '\t').count();
 		let orig_leading = &item[..leading_len];
 		let rest = &item[leading_len..];

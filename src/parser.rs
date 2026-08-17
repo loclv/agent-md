@@ -135,7 +135,9 @@ pub fn parse(content: &str) -> ParsedMarkdown {
 		}
 
 		// List Item
-		if crate::rules::detect_list_item(trimmed).is_some() {
+		if crate::rules::detect_list_item(trimmed).is_some()
+			|| crate::rules::is_empty_list_item(line)
+		{
 			let mut list_raw = String::new();
 			let mut items = Vec::new();
 			let mut list_in_code_block = false;
@@ -160,6 +162,7 @@ pub fn parse(content: &str) -> ParsedMarkdown {
 				}
 				// Check if it's a list item or indented content
 				if crate::rules::detect_list_item(current_trimmed).is_some()
+					|| crate::rules::is_empty_list_item(current_line)
 					|| current_line.starts_with(' ')
 					|| current_line.starts_with('\t')
 					|| list_in_code_block
@@ -277,6 +280,17 @@ mod tests {
 		assert_eq!(parsed.blocks.len(), 1);
 		match &parsed.blocks[0] {
 			MarkdownBlock::List { items, .. } => assert_eq!(items.len(), 4),
+			_ => panic!("Expected List"),
+		}
+	}
+
+	#[test]
+	fn test_parse_empty_list_items() {
+		let content = "- Item 1\n- \n- Item 2\n1. \n* ";
+		let parsed = parse(content);
+		assert_eq!(parsed.blocks.len(), 1);
+		match &parsed.blocks[0] {
+			MarkdownBlock::List { items, .. } => assert_eq!(items.len(), 5),
 			_ => panic!("Expected List"),
 		}
 	}

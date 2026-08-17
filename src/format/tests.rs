@@ -1528,3 +1528,35 @@ fn test_format_markdown_code_block_default_text_language() {
 	let result = format_markdown(content);
 	assert_eq!(result, expected);
 }
+
+#[test]
+fn test_format_markdown_code_block_default_text_language_nested_in_list() {
+	let content = "- item:\n  ```\n  code\n  ```\n";
+	let expected = "- item:\n  ```text\n  code\n  ```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_empty_list_item_removed() {
+	let content = "- abc\n- \n";
+	let expected = "- abc\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_empty_list_item_middle_removed() {
+	let content = "- a\n- \n- b\n";
+	let expected = "- a\n- b\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_empty_list_item_ordered_removed() {
+	let content = "1. a\n2. \n3. b\n";
+	let expected = "1. a\n3. b\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}

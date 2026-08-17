@@ -502,6 +502,8 @@ Use `console.log()` for debugging.
 This is a code block without specific language
 ```
 
+Note: During `agent-md fmt`, unlabelled code blocks automatically get `text` as their default language tag (e.g. ` ``` ` becomes ` ```text `), including code fences nested inside list items. Empty list items (e.g. a trailing `- ` line with no content) are removed during formatting.
+
 ### Rationale for Code Blocks Rule
 
 Specifying language helps AI agents understand the context and apply appropriate parsing rules.

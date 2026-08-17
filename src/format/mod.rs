@@ -181,8 +181,17 @@ pub fn format_markdown_structured(content: &str, options: FormatOptions) -> Stri
 				for item in formatted_items {
 					let trimmed = item.trim();
 					if trimmed.starts_with("```") {
+						let is_opening = !in_list_code_block;
 						in_list_code_block = !in_list_code_block;
-						formatted_parts.push(item);
+						// Default unlabelled opening fences to 'text' language tag
+						let fence = if is_opening && trimmed == "```" {
+							let leading_len =
+								item.chars().take_while(|&c| c == ' ' || c == '\t').count();
+							format!("{}```text", &item[..leading_len])
+						} else {
+							item
+						};
+						formatted_parts.push(fence);
 						formatted_parts.push("\n".to_string());
 					} else if in_list_code_block {
 						formatted_parts.push(item);

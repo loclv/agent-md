@@ -124,6 +124,32 @@ pub fn extract_number_from_marker(marker: &str) -> Option<u32> {
 	}
 }
 
+/// Check if a line is an empty list item, i.e. a list marker followed by only
+/// whitespace (e.g. `-`, `* `, `1. `, `  - `).
+pub fn is_empty_list_item(line: &str) -> bool {
+	let trimmed = line.trim_end();
+	if trimmed.is_empty() {
+		return false;
+	}
+	let text = trimmed.trim_start();
+
+	// Unordered markers: `-`, `*`, `+` optionally followed by whitespace
+	if let Some(rest) = text.strip_prefix(['-', '*', '+']) {
+		return rest.chars().all(char::is_whitespace);
+	}
+
+	// Ordered markers: digits followed by `.` or `)`, then only whitespace
+	let digit_count = text.chars().take_while(|c| c.is_ascii_digit()).count();
+	if digit_count > 0 && digit_count < text.len() {
+		let mut chars = text[digit_count..].chars();
+		if let Some('.') | Some(')') = chars.next() {
+			return chars.as_str().chars().all(char::is_whitespace);
+		}
+	}
+
+	false
+}
+
 pub fn detect_list_item(line: &str) -> Option<(ListType, String)> {
 	if line.len() >= 2 {
 		let first_char = line.chars().next().unwrap();
@@ -215,6 +241,33 @@ mod tests {
 		); // Empty item
 		assert_eq!(detect_list_item("-Item with no space"), None);
 		assert_eq!(detect_list_item("1.No space"), None);
+	}
+
+	#[test]
+	fn test_is_empty_list_item_unordered() {
+		assert!(is_empty_list_item("-"));
+		assert!(is_empty_list_item("- "));
+		assert!(is_empty_list_item("*"));
+		assert!(is_empty_list_item("*  "));
+		assert!(is_empty_list_item("+"));
+		assert!(is_empty_list_item("  - "));
+		assert!(!is_empty_list_item("- item"));
+		assert!(!is_empty_list_item("--"));
+		assert!(!is_empty_list_item("**"));
+		assert!(!is_empty_list_item(""));
+		assert!(!is_empty_list_item("   "));
+	}
+
+	#[test]
+	fn test_is_empty_list_item_ordered() {
+		assert!(is_empty_list_item("1."));
+		assert!(is_empty_list_item("1. "));
+		assert!(is_empty_list_item("10)"));
+		assert!(is_empty_list_item("2)  "));
+		assert!(!is_empty_list_item("1. item"));
+		assert!(!is_empty_list_item("1.2"));
+		assert!(!is_empty_list_item("1 . "));
+		assert!(!is_empty_list_item("123"));
 	}
 
 	#[test]

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.9] - 2026-08-17
+
+### Fixed
+
+- Empty List Items: Fixed markdown formatter to remove empty list items (e.g. a trailing `- ` line with no content) instead of preserving a dangling marker line.
+- Code Block Language in Lists: Auto add `text` language specifier to unlabelled code fences nested inside list items during formatting, matching the existing behavior for top-level code blocks.
+
 ## [0.2.8] - 2026-08-02
 
 ### Fixed
