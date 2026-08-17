@@ -11,7 +11,7 @@ All notable changes to this project will be documented in this file.
 
 ### Tests
 
-- Empty List Items: Added 29 unit tests covering marker edge cases (`-`, `*`, `+`, `1.`, `1)`), indentation variants (spaces, tabs), list boundaries (start, middle, end, consecutive, before headings and paragraphs), code block content preservation, and direct `format_list_items` behavior.
+- Empty List Items: Added 34 unit tests covering marker edge cases (`-`, `*`, `+`, `1.`, `1)`), indentation variants (spaces, tabs), list boundaries (start, middle, end, consecutive, before headings and paragraphs), code block content preservation, consecutive code blocks (unlabelled, mixed languages, separated by horizontal rules), and direct `format_list_items` behavior.
 
 ## [0.2.8] - 2026-08-02
 

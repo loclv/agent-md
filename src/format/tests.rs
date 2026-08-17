@@ -1530,6 +1530,46 @@ fn test_format_markdown_code_block_default_text_language() {
 }
 
 #[test]
+fn test_format_markdown_consecutive_code_blocks_default_text() {
+	let content = "```\nabc\n```\n```\nxyz\n```\n";
+	let expected = "```text\nabc\n```\n\n```text\nxyz\n```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_consecutive_code_blocks_first_unlabelled_second_labelled() {
+	let content = "```\nabc\n```\n```ts\nxyz\n```\n";
+	let expected = "```text\nabc\n```\n\n```ts\nxyz\n```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_consecutive_code_blocks_first_labelled_second_unlabelled() {
+	let content = "```ts\nxyz\n```\n```\nabc\n```\n";
+	let expected = "```ts\nxyz\n```\n\n```text\nabc\n```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_consecutive_code_blocks_with_blank_line_between() {
+	let content = "```\nabc\n```\n\n```\nxyz\n```\n";
+	let expected = "```text\nabc\n```\n\n```text\nxyz\n```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_consecutive_code_blocks_separated_by_horizontal_rule() {
+	let content = "```\nabc\n```\n---\n```ts\n```\nxxx\n```\nxyz\n```\n";
+	let expected = "```text\nabc\n```\n\n```ts\n```\n\nxxx\n\n```text\nxyz\n```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
 fn test_format_markdown_code_block_default_text_language_nested_in_list() {
 	let content = "- item:\n  ```\n  code\n  ```\n";
 	let expected = "- item:\n  ```text\n  code\n  ```\n";
