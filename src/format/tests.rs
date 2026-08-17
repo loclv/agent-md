@@ -1560,3 +1560,175 @@ fn test_format_markdown_empty_list_item_ordered_removed() {
 	let result = format_markdown(content);
 	assert_eq!(result, expected);
 }
+
+#[test]
+fn test_format_markdown_empty_list_item_at_start() {
+	let content = "- \n- abc\n";
+	let expected = "- abc\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_empty_list_item_multiple_consecutive() {
+	let content = "- \n- \n- abc\n";
+	let expected = "- abc\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_empty_list_item_only() {
+	let content = "- \n";
+	let result = format_markdown(content);
+	assert_eq!(result, "");
+}
+
+#[test]
+fn test_format_markdown_empty_list_item_asterisk_marker() {
+	let content = "* a\n* \n";
+	let expected = "* a\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_empty_list_item_plus_marker() {
+	let content = "+ a\n+ \n";
+	let expected = "+ a\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_empty_list_item_mixed_markers() {
+	let content = "- a\n* \n- b\n";
+	let expected = "- a\n- b\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_empty_list_item_ordered_parenthesis() {
+	let content = "1) a\n2) \n";
+	let expected = "1) a\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_empty_list_item_no_trailing_newline() {
+	let content = "- abc\n- ";
+	let expected = "- abc";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_empty_list_item_before_heading() {
+	let content = "- a\n- \n# Heading\n";
+	let expected = "- a\n\n# Heading\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_empty_list_item_before_paragraph() {
+	let content = "- a\n- \nText\n";
+	let expected = "- a\n\nText\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_empty_list_item_indented_nested() {
+	let content = "- a\n  - \n  - sub\n- b\n";
+	let expected = "- a\n  - sub\n- b\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_empty_list_item_with_blank_line() {
+	let content = "- abc\n- \n\n";
+	let expected = "- abc\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_list_code_block_content_marker_lines_preserved() {
+	let content = "- item:\n  ```\n  - \n  - code\n  ```\n";
+	let expected = "- item:\n  ```text\n  - \n  - code\n  ```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_code_block_content_marker_lines_preserved() {
+	let content = "```\n- \n- code\n```\n";
+	let expected = "```text\n- \n- code\n```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_nested_list_code_fence_language_preserved() {
+	let content = "- item:\n  ```ts\n  code\n  ```\n";
+	let expected = "- item:\n  ```ts\n  code\n  ```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_nested_list_code_fence_deeper_indent() {
+	let content = "- a\n  - b:\n    ```\n    c\n    ```\n";
+	let expected = "- a\n  - b:\n    ```text\n    c\n    ```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_list_multiple_code_blocks() {
+	let content = "- a:\n  ```\n  x\n  ```\n- b:\n  ```\n  y\n  ```\n";
+	let expected = "- a:\n  ```text\n  x\n  ```\n- b:\n  ```text\n  y\n  ```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_list_fence_with_text_already_present() {
+	let content = "- item:\n  ```text\n  code\n  ```\n";
+	let expected = "- item:\n  ```text\n  code\n  ```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_list_items_drops_empty_items() {
+	let items = vec!["- a".to_string(), "- ".to_string(), "- b".to_string()];
+	let result = super::lines::format_list_items(&items);
+	assert_eq!(result, vec!["- a".to_string(), "- b".to_string()]);
+}
+
+#[test]
+fn test_format_list_items_drops_empty_sub_items() {
+	let items = vec!["- a".to_string(), "  - ".to_string(), "  - sub".to_string()];
+	let result = super::lines::format_list_items(&items);
+	assert_eq!(result, vec!["- a".to_string(), "  - sub".to_string()]);
+}
+
+#[test]
+fn test_format_list_items_keeps_marker_lines_inside_code_block() {
+	let items = vec![
+		"- item:".to_string(),
+		"  ```".to_string(),
+		"  - ".to_string(),
+		"  - code".to_string(),
+		"  ```".to_string(),
+	];
+	let result = super::lines::format_list_items(&items);
+	assert_eq!(result[2], "  - ");
+	assert_eq!(result[3], "  - code");
+	assert_eq!(result.len(), 5);
+}

@@ -296,6 +296,60 @@ mod tests {
 	}
 
 	#[test]
+	fn test_parse_empty_list_item_solo() {
+		let content = "- \n";
+		let parsed = parse(content);
+		assert_eq!(parsed.blocks.len(), 1);
+		match &parsed.blocks[0] {
+			MarkdownBlock::List { items, .. } => assert_eq!(items.len(), 1),
+			_ => panic!("Expected List"),
+		}
+	}
+
+	#[test]
+	fn test_parse_empty_list_item_tab_indented() {
+		let content = "\t- \n\t- b\n";
+		let parsed = parse(content);
+		assert_eq!(parsed.blocks.len(), 1);
+		match &parsed.blocks[0] {
+			MarkdownBlock::List { items, .. } => assert_eq!(items.len(), 2),
+			_ => panic!("Expected List"),
+		}
+	}
+
+	#[test]
+	fn test_parse_empty_list_item_does_not_break_list() {
+		let content = "- a\n- \n- b";
+		let parsed = parse(content);
+		assert_eq!(parsed.blocks.len(), 1);
+		match &parsed.blocks[0] {
+			MarkdownBlock::List { items, .. } => assert_eq!(items.len(), 3),
+			_ => panic!("Expected List"),
+		}
+	}
+
+	#[test]
+	fn test_parse_empty_list_item_blank_line_breaks_list() {
+		let content = "- a\n- \n\n- b";
+		let parsed = parse(content);
+		assert_eq!(parsed.blocks.len(), 3);
+		assert!(matches!(parsed.blocks[0], MarkdownBlock::List { .. }));
+		assert!(matches!(parsed.blocks[1], MarkdownBlock::BlankLine));
+		assert!(matches!(parsed.blocks[2], MarkdownBlock::List { .. }));
+	}
+
+	#[test]
+	fn test_parse_empty_list_item_within_code_block_in_list() {
+		let content = "- item:\n  ```\n  - \n  - code\n  ```\n";
+		let parsed = parse(content);
+		assert_eq!(parsed.blocks.len(), 1);
+		match &parsed.blocks[0] {
+			MarkdownBlock::List { items, .. } => assert_eq!(items.len(), 5),
+			_ => panic!("Expected List"),
+		}
+	}
+
+	#[test]
 	fn test_parse_mixed_content() {
 		let content =
 			"# Title\n\nIntro.\n\n- L1\n- L2\n\n```js\nconst x = 1;\n```\n\n| H |\n|---|\n| V |\n";

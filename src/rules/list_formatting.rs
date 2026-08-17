@@ -271,6 +271,42 @@ mod tests {
 	}
 
 	#[test]
+	fn test_is_empty_list_item_tab_indentation() {
+		assert!(is_empty_list_item("\t-"));
+		assert!(is_empty_list_item("\t- "));
+		assert!(is_empty_list_item("  \t* "));
+		assert!(is_empty_list_item("\t1. "));
+		assert!(!is_empty_list_item("\t- item"));
+	}
+
+	#[test]
+	fn test_is_empty_list_item_non_marker_content() {
+		assert!(!is_empty_list_item("-1.")); // negative number
+		assert!(!is_empty_list_item("+1"));
+		assert!(!is_empty_list_item("*2"));
+		assert!(!is_empty_list_item("- x"));
+		assert!(!is_empty_list_item("- é"));
+		assert!(!is_empty_list_item("- 🎉"));
+		assert!(!is_empty_list_item("---")); // horizontal rule
+		assert!(!is_empty_list_item("***")); // horizontal rule
+		assert!(!is_empty_list_item("___")); // horizontal rule
+		assert!(!is_empty_list_item("- - ")); // nested marker with content
+		assert!(!is_empty_list_item("1.x"));
+		assert!(!is_empty_list_item("12.3"));
+		assert!(!is_empty_list_item("1234"));
+	}
+
+	#[test]
+	fn test_is_empty_list_item_trailing_whitespace_only() {
+		assert!(is_empty_list_item("- \t"));
+		assert!(is_empty_list_item("-  \t "));
+		assert!(is_empty_list_item("1.  "));
+		assert!(!is_empty_list_item("   \t")); // whitespace only, not a marker
+		assert!(!is_empty_list_item(""));
+		assert!(!is_empty_list_item("\n"));
+	}
+
+	#[test]
 	fn test_extract_number_from_marker_valid() {
 		assert_eq!(extract_number_from_marker("1."), Some(1));
 		assert_eq!(extract_number_from_marker("2)"), Some(2));

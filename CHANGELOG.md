@@ -9,6 +9,10 @@ All notable changes to this project will be documented in this file.
 - Empty List Items: Fixed markdown formatter to remove empty list items (e.g. a trailing `- ` line with no content) instead of preserving a dangling marker line.
 - Code Block Language in Lists: Auto add `text` language specifier to unlabelled code fences nested inside list items during formatting, matching the existing behavior for top-level code blocks.
 
+### Tests
+
+- Empty List Items: Added 29 unit tests covering marker edge cases (`-`, `*`, `+`, `1.`, `1)`), indentation variants (spaces, tabs), list boundaries (start, middle, end, consecutive, before headings and paragraphs), code block content preservation, and direct `format_list_items` behavior.
+
 ## [0.2.8] - 2026-08-02
 
 ### Fixed
