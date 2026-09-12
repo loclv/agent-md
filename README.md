@@ -348,7 +348,7 @@ The formatter applies compact rules by default to reduce token count:
 |---|---|
 | `remove_bold` | Removes `**bold**` and `__bold__` markers |
 | `compact_blank_lines` | Collapses multiple consecutive blank lines (preserves single blank lines around headings) |
-| `collapse_spaces` | Collapses multiple spaces between words |
+| `collapse_spaces` | Collapses multiple spaces between words (preserves spaces inside inline code) |
 | `remove_horizontal_rules` | Removes `---`, `***`, `___` lines |
 | `remove_emphasis` | Removes `*italic*` and `_italic_` markers |
 | `blanks_around_lists` | Ensures lists are surrounded by blank lines (configured in `.agent-md.json` or `.markdownlint.json`) |

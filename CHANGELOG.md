@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Inline Code Space Preservation: Preserved consecutive spaces inside inline code spans during formatting with `collapse_spaces`, preventing spans like `` `|  |` `` from being erroneously collapsed to `` `| |` ``.
 - Line-Length Code Block Exemption: Moved line-length validation into the primary line-scanning pass, correctly exempting content within code blocks from `max-line-length` warnings.
 - Unicode Character Counting: Updated `line-length` checking to count Unicode characters via `chars().count()` rather than raw UTF-8 byte length.
 - Duplicate Headings Alias Support: Unified `no-duplicate-heading` (singular) and `no-duplicate-headings` (plural) configuration resolution and rule checking so either alias takes effect.
@@ -30,6 +31,7 @@ All notable changes to this project will be documented in this file.
 
 - Config Tests: Added 40+ unit tests for `ResolvedConfig`, `resolve_config`, config value helpers, edge cases (invalid JSON, empty files, nonexistent paths, priority ordering, serialization).
 - Linter Config Tests: Added 20+ unit tests verifying linter behavior with different config combinations (hard tabs, first-line-heading, duplicate headings, blanks-around-headings, line-length).
+- Inline Code Formatting Tests: Added unit tests verifying that spaces inside single and multi-backtick inline code spans are preserved while multiple spaces outside code spans are collapsed.
 
 ## [0.2.10] - 2026-09-12
 

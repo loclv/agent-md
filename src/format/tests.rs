@@ -617,6 +617,35 @@ fn test_format_options_collapse_spaces_in_heading_preserved() {
 }
 
 #[test]
+fn test_format_options_collapse_spaces_preserves_inline_code() {
+	let content = "- Table Empty Cell Formatting: Fixed table row formatting so empty cells format as `| |` (single space) instead of auto-adding an extra space to format as `|  |`.\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_options_collapse_spaces_preserves_inline_code_variations() {
+	let content = "Some    text   with   `foo   bar`   and  `` `|  |` ``   code.\n";
+	let expected = "Some text with `foo   bar` and `` `|  |` `` code.\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_find_code_span_end() {
+	use super::lines::find_code_span_end;
+
+	let s: Vec<char> = "`hello`".chars().collect();
+	assert_eq!(find_code_span_end(&s, 0), Some(6));
+
+	let s2: Vec<char> = "`` `hello` ``".chars().collect();
+	assert_eq!(find_code_span_end(&s2, 0), Some(12));
+
+	let s3: Vec<char> = "`unclosed".chars().collect();
+	assert_eq!(find_code_span_end(&s3, 0), None);
+}
+
+#[test]
 fn test_format_options_remove_horizontal_rules() {
 	let content = "Before\n\n---\n\nAfter";
 	let options = FormatOptions {

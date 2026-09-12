@@ -96,7 +96,7 @@ When formatting markdown, `strip_bold_from_cell` automatically removes `**` and 
 Bold text creates visual noise for AI agents and doesn't add semantic meaning that can't be conveyed through other means like headings or code formatting.
 Code blocks are exempt because they preserve original syntax and formatting for programming languages, documentation, and other contexts where bold characters may have specific meaning or be part of the code syntax itself.
 
-Table cells are auto-formatted — bold markers are stripped during `agent-md fmt` so the resulting table contains plain text. Inline code within table cells is preserved unchanged.
+Table cells are auto-formatted — bold markers are stripped during `agent-md fmt` so the resulting table contains plain text. Inline code within table cells and throughout markdown is preserved unchanged, including spaces inside backticks.
 
 ## Rule 2: Simple Table Syntax
 

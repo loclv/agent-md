@@ -54,20 +54,13 @@ pub fn remove_bold_markers(line: &str) -> String {
 	while i < chars.len() {
 		// Skip inline code blocks (e.g., `code with **bold**`)
 		if chars[i] == '`' {
-			let mut code_end = i + 1;
-			while code_end < chars.len() {
-				if chars[code_end] == '`' {
-					break;
+			if let Some(code_end) = find_code_span_end(&chars, i) {
+				for &c in &chars[i..=code_end] {
+					result.push(c);
 				}
-				code_end += 1;
+				i = code_end + 1;
+				continue;
 			}
-			for j in i..=code_end {
-				if j < chars.len() {
-					result.push(chars[j]);
-				}
-			}
-			i = code_end + 1;
-			continue;
 		}
 
 		// Check for **bold** pattern
@@ -159,20 +152,13 @@ pub fn remove_emphasis_markers(line: &str) -> String {
 	while i < chars.len() {
 		// Skip inline code spans
 		if chars[i] == '`' {
-			let mut code_end = i + 1;
-			while code_end < chars.len() {
-				if chars[code_end] == '`' {
-					break;
+			if let Some(code_end) = find_code_span_end(&chars, i) {
+				for &c in &chars[i..=code_end] {
+					result.push(c);
 				}
-				code_end += 1;
+				i = code_end + 1;
+				continue;
 			}
-			for j in i..=code_end {
-				if j < chars.len() {
-					result.push(chars[j]);
-				}
-			}
-			i = code_end + 1;
-			continue;
 		}
 
 		// Skip markdown link labels [label]
@@ -255,17 +241,64 @@ pub fn remove_emphasis_markers(line: &str) -> String {
 	result
 }
 
-/// Collapse multiple consecutive space characters into a single space while preserving leading indentation.
+/// Find the end index (inclusive) of an inline code span starting at `start` where `chars[start] == '`'`.
+/// In Markdown, a code span begins with a delimiter run of N backticks and ends with the first
+/// subsequent delimiter run of exactly N backticks.
+pub fn find_code_span_end(chars: &[char], start: usize) -> Option<usize> {
+	if start >= chars.len() || chars[start] != '`' {
+		return None;
+	}
+
+	let mut tick_count = 0;
+	while start + tick_count < chars.len() && chars[start + tick_count] == '`' {
+		tick_count += 1;
+	}
+
+	let mut idx = start + tick_count;
+	while idx < chars.len() {
+		if chars[idx] == '`' {
+			let mut close_count = 0;
+			while idx + close_count < chars.len() && chars[idx + close_count] == '`' {
+				close_count += 1;
+			}
+			if close_count == tick_count {
+				return Some(idx + close_count - 1);
+			}
+			idx += close_count;
+		} else {
+			idx += 1;
+		}
+	}
+
+	None
+}
+
+/// Collapse multiple consecutive space characters into a single space while preserving leading indentation
+/// and preserving spaces inside inline code spans.
 pub fn collapse_multiple_spaces(line: &str) -> String {
 	// Preserve leading whitespace (indentation)
 	let leading_len = line.chars().take_while(|&c| c == ' ').count();
 	let leading = &line[..leading_len];
 	let rest = &line[leading_len..];
 
+	let chars: Vec<char> = rest.chars().collect();
 	let mut result = String::from(leading);
 	let mut prev_was_space = false;
+	let mut i = 0;
 
-	for c in rest.chars() {
+	while i < chars.len() {
+		if chars[i] == '`' {
+			if let Some(code_end) = find_code_span_end(&chars, i) {
+				for &c in &chars[i..=code_end] {
+					result.push(c);
+				}
+				i = code_end + 1;
+				prev_was_space = false;
+				continue;
+			}
+		}
+
+		let c = chars[i];
 		if c == ' ' {
 			if !prev_was_space {
 				result.push(c);
@@ -275,6 +308,7 @@ pub fn collapse_multiple_spaces(line: &str) -> String {
 			result.push(c);
 			prev_was_space = false;
 		}
+		i += 1;
 	}
 
 	result
