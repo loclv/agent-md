@@ -1,13 +1,8 @@
 use crate::rules;
 use crate::types::{LintError, LintResult, LintWarning};
-use std::fs;
 
 pub fn get_markdownlint_config() -> Option<serde_json::Value> {
-	if let Ok(content) = fs::read_to_string(".markdownlint.json") {
-		serde_json::from_str(&content).ok()
-	} else {
-		None
-	}
+	crate::config::get_config(None)
 }
 
 pub fn validate_markdown(content: &str) -> LintResult {

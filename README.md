@@ -249,6 +249,33 @@ agent-md lint-file <path>
 # Returns: Human-readable linting output with errors, warnings, and summary
 ```
 
+### Check configuration
+
+Checks configuration file resolution and status. Configuration files are resolved in the following priority order:
+
+1. `.agent-md.json`
+2. `agent-md.json`
+3. `.markdownlint.json` (fallback)
+
+A sample configuration file is provided in `samples/.agent-md.json`.
+
+```bash
+agent-md config
+# Returns: {exists, path, config}
+
+agent-md config --check
+# Returns: {exists, path}
+
+agent-md config samples
+# Inspect configuration in directory
+
+agent-md config custom.json
+# Inspect specific configuration path
+
+agent-md --config samples/.agent-md.json fmt document.md
+# Use specific configuration file via global --config flag
+```
+
 ### Format markdown
 
 - Formats the markdown file in-place, trimming leading and trailing spaces from table cells.
@@ -303,9 +330,9 @@ The formatter applies compact rules by default to reduce token count:
 | `collapse_spaces` | Collapses multiple spaces between words |
 | `remove_horizontal_rules` | Removes `---`, `***`, `___` lines |
 | `remove_emphasis` | Removes `*italic*` and `_italic_` markers |
-| `blanks_around_lists` | Ensures lists are surrounded by blank lines (configured in `.markdownlint.json`) |
-| `blanks_around_fences` | Ensures fenced code blocks are surrounded by blank lines (configured in `.markdownlint.json`) |
-| `blanks_around_headings` | Ensures headings are surrounded by blank lines (configured in `.markdownlint.json`) |
+| `blanks_around_lists` | Ensures lists are surrounded by blank lines (configured in `.agent-md.json` or `.markdownlint.json`) |
+| `blanks_around_fences` | Ensures fenced code blocks are surrounded by blank lines (configured in `.agent-md.json` or `.markdownlint.json`) |
+| `blanks_around_headings` | Ensures headings are surrounded by blank lines (configured in `.agent-md.json` or `.markdownlint.json`) |
 
 Example:
 

@@ -1,0 +1,15 @@
+{
+	"default": true,
+	"blanks-around-headings": false,
+	"blanks-around-lists": false,
+	"blanks-around-fences": false,
+	"blanks-around-tables": false,
+	"first-line-heading": false,
+	"no-duplicate-heading": false,
+	"no-duplicate-headings": false,
+	"line-length": false,
+	"ol-prefix": false,
+	"table-column-style": false,
+	"no-hard-tabs": false,
+	"no-inline-html": false
+}

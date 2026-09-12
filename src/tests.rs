@@ -1791,4 +1791,40 @@ This web site is using `markedjs/marked`.
 		assert!(readme_md.contains("update `README.md`"));
 		assert!(readme_md.contains("write unit tests for your changes"));
 	}
+
+	#[test]
+	fn test_cli_parse_config_command() {
+		let cli = Cli::parse_from(["agent-md", "config"]);
+		match cli.command {
+			Some(Commands::Config { path, check }) => {
+				assert_eq!(path, None);
+				assert!(!check);
+			}
+			_ => panic!("Expected Commands::Config"),
+		}
+
+		let cli_check = Cli::parse_from(["agent-md", "config", "--check"]);
+		match cli_check.command {
+			Some(Commands::Config { path, check }) => {
+				assert_eq!(path, None);
+				assert!(check);
+			}
+			_ => panic!("Expected Commands::Config"),
+		}
+
+		let cli_custom = Cli::parse_from(["agent-md", "config", ".agent-md.json"]);
+		match cli_custom.command {
+			Some(Commands::Config { path, check }) => {
+				assert_eq!(path, Some(".agent-md.json".to_string()));
+				assert!(!check);
+			}
+			_ => panic!("Expected Commands::Config"),
+		}
+	}
+
+	#[test]
+	fn test_cli_parse_global_config_flag() {
+		let cli = Cli::parse_from(["agent-md", "--config", "custom.json", "lint", "file.md"]);
+		assert_eq!(cli.config, Some("custom.json".to_string()));
+	}
 }

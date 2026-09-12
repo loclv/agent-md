@@ -1035,3 +1035,8 @@ pub fn cmd_lint_file(path: &str, human: bool) {
 		}
 	}
 }
+
+pub fn cmd_config(custom_path: Option<&str>, check: bool, human: bool) {
+	let status = crate::config::get_config_status(custom_path, !check);
+	println!("{}", json_output(&status, human));
+}

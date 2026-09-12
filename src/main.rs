@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 
 pub mod commands;
+pub mod config;
 mod format;
 mod html_tests;
 pub mod linter;
@@ -17,8 +18,14 @@ pub mod types;
 pub struct Cli {
 	#[arg(short = 'v', long = "version", help = "Print version information")]
 	pub version: bool,
-	#[arg(long = "human", help = "Pretty print JSON output")]
+	#[arg(long = "human", global = true, help = "Pretty print JSON output")]
 	pub human: bool,
+	#[arg(
+		long = "config",
+		global = true,
+		help = "Path to custom configuration file or directory"
+	)]
+	pub config: Option<String>,
 
 	/// Markdown file path (implies fmt command if no subcommand given)
 	#[arg(value_name = "PATH")]
@@ -30,6 +37,12 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
+	Config {
+		#[arg(help = "Optional configuration file path or directory")]
+		path: Option<String>,
+		#[arg(long, help = "Only check if configuration file exists")]
+		check: bool,
+	},
 	Read {
 		#[arg(help = "Markdown file path")]
 		path: String,
@@ -158,25 +171,26 @@ fn get_format_options(
 	collapse_spaces: bool,
 	remove_horizontal_rules: bool,
 	remove_emphasis: bool,
+	custom_config: Option<&str>,
 ) -> format::FormatOptions {
 	let mut blanks_around_lists = true;
 	let mut blanks_around_fences = true;
 	let mut blanks_around_headings = true;
 
-	if let Some(config) = linter::get_markdownlint_config() {
+	if let Some(config) = config::get_config(custom_config) {
 		if let Some(val) = config.get("blanks-around-lists") {
-			if val.is_boolean() {
-				blanks_around_lists = val.as_bool().unwrap();
+			if let Some(b) = val.as_bool() {
+				blanks_around_lists = b;
 			}
 		}
 		if let Some(val) = config.get("blanks-around-fences") {
-			if val.is_boolean() {
-				blanks_around_fences = val.as_bool().unwrap();
+			if let Some(b) = val.as_bool() {
+				blanks_around_fences = b;
 			}
 		}
 		if let Some(val) = config.get("blanks-around-headings") {
-			if val.is_boolean() {
-				blanks_around_headings = val.as_bool().unwrap();
+			if let Some(b) = val.as_bool() {
+				blanks_around_headings = b;
 			}
 		}
 	}
@@ -203,6 +217,10 @@ fn main() {
 	}
 
 	match cli.command {
+		Some(Commands::Config { path, check }) => {
+			let custom = path.as_deref().or(cli.config.as_deref());
+			commands::cmd_config(custom, check, cli.human);
+		}
 		Some(Commands::Read {
 			path,
 			field,
@@ -247,6 +265,7 @@ fn main() {
 				collapse_spaces,
 				remove_horizontal_rules,
 				remove_emphasis,
+				cli.config.as_deref(),
 			);
 			if stdin {
 				format::cmd_fmt_stdin(options)
@@ -260,7 +279,8 @@ fn main() {
 		None => {
 			// If path provided without command, treat as fmt
 			if let Some(path) = cli.path {
-				let options = get_format_options(true, true, true, true, true);
+				let options =
+					get_format_options(true, true, true, true, true, cli.config.as_deref());
 				format::cmd_fmt(&path, cli.human, options)
 			} else {
 				// If no command and not version, show help

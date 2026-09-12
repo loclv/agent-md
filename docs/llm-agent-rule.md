@@ -50,6 +50,13 @@ agent-md lint --content "<content>"
 agent-md lint --content "# Hello\n\nThis is a test"
 ```
 
+### Check Configuration
+
+```bash
+agent-md config --check
+# check if configuration file exists
+```
+
 ## Integration Pattern
 
 ```bash

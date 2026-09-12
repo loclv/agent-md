@@ -12,33 +12,35 @@ Development setup and guidelines for contributing to agent-md.
 
 ```text
 agent-md/
-├── src/
-│   ├── main.rs # CLI Entrypoint & Clap Parsers
-│   ├── types.rs # Common types, structures and utilities
-│   ├── linter.rs # Lint rules orchestration
-│   ├── commands.rs # CLI Subcommand handlers and parsing logic
-│   ├── parser.rs # Structured Markdown parser (block-based)
-│   ├── format/ # Formatting modules
-│   │   ├── mod.rs # Structured formatter orchestration
-│   │   ├── tables.rs # Table formatting (separator compaction, row formatting)
-│   │   ├── bold_tables.rs # Bold stripping from table cells
-│   │   ├── blockquotes.rs
-│   │   ├── code_blocks.rs
-│   │   └── frontmatter.rs
-│   ├── rules/ # Validation rule modules
-│   ├── tests.rs # Core unit tests
-│   └── html_tests.rs # HTML rendering tests
-├── docs/ # Documentation
-├── test-md/ # Test markdown files
-└── Makefile # Convenience commands
+├─src/
+│ ├─main.rs # CLI Entrypoint & Clap Parsers
+│ ├─types.rs # Common types, structures and utilities
+│ ├─config.rs # Configuration file resolution and reading
+│ ├─linter.rs # Lint rules orchestration
+│ ├─commands.rs # CLI Subcommand handlers and parsing logic
+│ ├─parser.rs # Structured Markdown parser (block-based)
+│ ├─format/ # Formatting modules
+│ │ ├─mod.rs # Structured formatter orchestration
+│ │ ├─tables.rs # Table formatting (separator compaction, row formatting)
+│ │ ├─bold_tables.rs # Bold stripping from table cells
+│ │ ├─blockquotes.rs
+│ │ ├─code_blocks.rs
+│ │ └─frontmatter.rs
+│ ├─rules/ # Validation rule modules
+│ ├─tests.rs # Core unit tests
+│ └─html_tests.rs # HTML rendering tests
+├─docs/ # Documentation
+├─samples/ # Sample configuration files
+├─test-md/ # Test markdown files
+└─Makefile # Convenience commands
 ```
 
 ## Architecture: Structured Parsing and Formatting
 
-`agent-md` follows a **Parse-then-Format** architecture:
+agent-md follows a *Parse-then-Format* architecture:
 
-1.  **Parsing**: The `src/parser.rs` module decomposes the raw Markdown text into a sequence of `MarkdownBlock` elements (e.g., `Heading`, `CodeBlock`, `List`, `Table`). This stage also extracts YAML frontmatter.
-2.  **Formatting**: The `format_markdown_structured` function in `src/format/mod.rs` iterates over these blocks and applies formatting rules based on the block type and user configuration.
+1. *Parsing*: The `src/parser.rs` module decomposes the raw Markdown text into a sequence of `MarkdownBlock` elements (e.g., `Heading`, `CodeBlock`, `List`, `Table`). This stage also extracts YAML frontmatter.
+2. *Formatting*: The `format_markdown_structured` function in `src/format/mod.rs` iterates over these blocks and applies formatting rules based on the block type and user configuration (from `.agent-md.json`, `agent-md.json`, or `.markdownlint.json`).
 
 This approach is more robust than simple line-based processing, especially for complex structures like nested lists or tables.
 

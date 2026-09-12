@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Folder Structure Formatting: Added automatic detection and formatting for folder tree structures in code blocks with language `text`, `txt`, or unlabelled.
+- Configuration File Support: Added support for reading and resolving configuration files across `.agent-md.json` (highest priority), `agent-md.json`, and `.markdownlint.json` (fallback).
+- Config Subcommand: Added `agent-md config` command with `--check` flag to inspect configuration file existence, path, and parsed content.
 
 ### Fixed
 
@@ -15,6 +17,7 @@ All notable changes to this project will be documented in this file.
 ### Tests
 
 - Folder Structure Tests: Added unit tests and integration tests covering language validation, syntax detection, idempotent formatting, nested folder trees, and end-to-end markdown formatting.
+- Configuration Tests: Added tests for configuration file priority resolution, existence checks, parsing, and CLI commands.
 
 ## [0.2.9] - 2026-08-17
 

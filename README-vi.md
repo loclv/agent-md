@@ -238,9 +238,37 @@ agent-md lint-file <path>
 # Trả về: đầu ra kiểm tra dễ đọc với lỗi, cảnh báo, và tóm tắt
 ```
 
+### Kiểm tra cấu hình
+
+Kiểm tra độ ưu tiên phân giải và trạng thái tệp cấu hình. Các tệp cấu hình được ưu tiên theo thứ tự sau:
+
+1. `.agent-md.json`
+2. `agent-md.json`
+3. `.markdownlint.json` (dự phòng)
+
+Tệp cấu hình mẫu được cung cấp tại `samples/.agent-md.json`.
+
+```bash
+agent-md config
+# Trả về: {exists, path, config}
+
+agent-md config --check
+# Trả về: {exists, path}
+
+agent-md config samples
+# Kiểm tra cấu hình trong thư mục
+
+agent-md config custom.json
+# Kiểm tra đường dẫn cấu hình cụ thể
+
+agent-md --config samples/.agent-md.json fmt document.md
+# Sử dụng tệp cấu hình cụ thể qua cờ toàn cục --config
+```
+
 ### Định dạng markdown
 
 - Định dạng tệp markdown tại chỗ, loại bỏ các khoảng trắng thừa trong ô bảng.
+- Định dạng cấu trúc thư mục trong các khối mã `text`, `txt`, hoặc không gắn nhãn bằng cách thu gọn thành các tiền tố một gạch ngang (`├─` và `└─`), loại bỏ các dòng đệm dọc (`│`), và căn chỉnh các bình luận `#`.
 - Loại bỏ dấu hai chấm ở cuối tiêu đề (ví dụ: `## header:` thành `## header`).
 - Tự động thêm thẻ ngôn ngữ `text` cho các khối mã chưa khai báo ngôn ngữ (ví dụ: ` ``` ` thành ` ```text `).
 - Bảo toàn các dòng phân tách và nội dung khối mã.
@@ -262,8 +290,9 @@ Trình định dạng áp dụng các quy tắc thu gọn theo mặc định đ�
 | `collapse_spaces` | Thu gọn nhiều khoảng trắng giữa các từ |
 | `remove_horizontal_rules` | Xóa các dòng `---`, `***`, `___` |
 | `remove_emphasis` | Xóa các dấu `*italic*` và `_italic_` |
-| `blanks_around_lists` | Đảm bảo danh sách được bao quanh bởi các dòng trống (cấu hình trong `.markdownlint.json`) |
-| `blanks_around_fences` | Đảm bảo các khối mã được bao quanh bởi các dòng trống (cấu hình trong `.markdownlint.json`) |
+| `blanks_around_lists` | Đảm bảo danh sách được bao quanh bởi các dòng trống (cấu hình trong `.agent-md.json` hoặc `.markdownlint.json`) |
+| `blanks_around_fences` | Đảm bảo các khối mã được bao quanh bởi các dòng trống (cấu hình trong `.agent-md.json` hoặc `.markdownlint.json`) |
+| `blanks_around_headings` | Đảm bảo tiêu đề được bao quanh bởi các dòng trống (cấu hình trong `.agent-md.json` hoặc `.markdownlint.json`) |
 
 Ví dụ:
 ```bash
