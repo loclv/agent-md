@@ -115,16 +115,16 @@ pub fn resolve_config(config: Option<&serde_json::Value>) -> ResolvedConfig {
 		);
 		resolved.first_line_heading =
 			get_bool_config(Some(cfg), "first-line-heading", defaults.first_line_heading);
-		resolved.no_duplicate_heading = get_bool_config(
-			Some(cfg),
-			"no-duplicate-heading",
-			defaults.no_duplicate_heading,
-		);
-		resolved.no_duplicate_headings = get_bool_config(
-			Some(cfg),
-			"no-duplicate-headings",
-			defaults.no_duplicate_headings,
-		);
+		let no_duplicate = match (
+			cfg.get("no-duplicate-heading"),
+			cfg.get("no-duplicate-headings"),
+		) {
+			(Some(v), _) if v.is_boolean() => v.as_bool().unwrap_or(defaults.no_duplicate_heading),
+			(_, Some(v)) if v.is_boolean() => v.as_bool().unwrap_or(defaults.no_duplicate_headings),
+			_ => defaults.no_duplicate_heading,
+		};
+		resolved.no_duplicate_heading = no_duplicate;
+		resolved.no_duplicate_headings = no_duplicate;
 		resolved.line_length = get_bool_config(Some(cfg), "line-length", defaults.line_length);
 		resolved.max_line_length =
 			get_u64_config(Some(cfg), "max-line-length", defaults.max_line_length);
@@ -386,6 +386,26 @@ mod tests {
 		assert!(!cfg.ol_prefix);
 		assert!(!cfg.table_column_style);
 		assert!(!cfg.no_inline_html);
+	}
+
+	#[test]
+	fn test_resolve_config_singular_duplicate_heading() {
+		let json = serde_json::json!({
+			"no-duplicate-heading": false
+		});
+		let cfg = resolve_config(Some(&json));
+		assert!(!cfg.no_duplicate_heading);
+		assert!(!cfg.no_duplicate_headings);
+	}
+
+	#[test]
+	fn test_resolve_config_plural_duplicate_heading() {
+		let json = serde_json::json!({
+			"no-duplicate-headings": false
+		});
+		let cfg = resolve_config(Some(&json));
+		assert!(!cfg.no_duplicate_heading);
+		assert!(!cfg.no_duplicate_headings);
 	}
 
 	#[test]

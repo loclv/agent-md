@@ -8,6 +8,11 @@ pub fn get_resolved_config() -> ResolvedConfig {
 	resolve_config(get_config(None).as_ref())
 }
 
+/// Resolve the full configuration from an optional custom config path or directory.
+pub fn get_resolved_config_custom(custom_path: Option<&str>) -> ResolvedConfig {
+	resolve_config(get_config(custom_path).as_ref())
+}
+
 pub fn get_markdownlint_config() -> Option<serde_json::Value> {
 	get_config(None)
 }
@@ -79,6 +84,22 @@ pub fn validate_markdown_with_config(content: &str, config: &ResolvedConfig) -> 
 			continue;
 		}
 
+		// line-length check (only applies outside code blocks)
+		if config.line_length && config.max_line_length > 0 {
+			let char_count = line.chars().count() as u64;
+			if char_count > config.max_line_length {
+				warnings.push(LintWarning {
+					line: line_num,
+					column: config.max_line_length as usize + 1,
+					message: format!(
+						"Line length {} exceeds maximum of {}",
+						char_count, config.max_line_length
+					),
+					rule: "line-length".to_string(),
+				});
+			}
+		}
+
 		for col in rules::find_bold_text(line) {
 			errors.push(LintError {
 				line: line_num,
@@ -143,8 +164,10 @@ pub fn validate_markdown_with_config(content: &str, config: &ResolvedConfig) -> 
 			if !config.first_line_heading && issue.rule == "first-line-h1" {
 				continue;
 			}
-			// Respect no-duplicate-headings config
-			if !config.no_duplicate_headings && issue.rule == "no-duplicate-headings" {
+			// Respect no-duplicate-headings config (checks both plural and singular aliases)
+			if (!config.no_duplicate_headings || !config.no_duplicate_heading)
+				&& issue.rule == "no-duplicate-headings"
+			{
 				continue;
 			}
 
@@ -201,25 +224,6 @@ pub fn validate_markdown_with_config(content: &str, config: &ResolvedConfig) -> 
 		});
 	}
 
-	// line-length check
-	if config.line_length && config.max_line_length > 0 {
-		for (line_num, line) in content.lines().enumerate() {
-			let line_num = line_num + 1;
-			if !in_code_block && line.len() as u64 > config.max_line_length {
-				warnings.push(LintWarning {
-					line: line_num,
-					column: config.max_line_length as usize + 1,
-					message: format!(
-						"Line length {} exceeds maximum of {}",
-						line.len(),
-						config.max_line_length
-					),
-					rule: "line-length".to_string(),
-				});
-			}
-		}
-	}
-
 	LintResult {
 		valid: errors.is_empty(),
 		errors,
@@ -230,6 +234,15 @@ pub fn validate_markdown_with_config(content: &str, config: &ResolvedConfig) -> 
 /// Validate markdown content using the default configuration.
 pub fn validate_markdown(content: &str) -> LintResult {
 	let config = get_resolved_config();
+	validate_markdown_with_config(content, &config)
+}
+
+/// Validate markdown content using an optional custom configuration path or directory.
+pub fn validate_markdown_with_custom_config(
+	content: &str,
+	custom_path: Option<&str>,
+) -> LintResult {
+	let config = get_resolved_config_custom(custom_path);
 	validate_markdown_with_config(content, &config)
 }
 
@@ -325,6 +338,19 @@ mod tests {
 			.any(|w| w.rule == "no-duplicate-headings"));
 	}
 
+	#[test]
+	fn test_linter_duplicate_headings_disabled_via_singular() {
+		let mut config = default_config();
+		config.no_duplicate_heading = false;
+		config.no_duplicate_headings = true; // singular flag should still disable rule
+		let content = "# Title\n\n## Section\n\n## Section\n";
+		let result = validate_markdown_with_config(content, &config);
+		assert!(!result
+			.warnings
+			.iter()
+			.any(|w| w.rule == "no-duplicate-headings"));
+	}
+
 	// --- blanks-around-headings config ---
 
 	#[test]
@@ -393,6 +419,29 @@ mod tests {
 		let content = "# Title\n\nA very long line\n";
 		let result = validate_markdown_with_config(content, &config);
 		// max_line_length=0 means disabled
+		assert!(!result.warnings.iter().any(|w| w.rule == "line-length"));
+	}
+
+	#[test]
+	fn test_linter_line_length_ignored_in_code_block() {
+		let mut config = default_config();
+		config.line_length = true;
+		config.max_line_length = 10;
+		let content = "# Title\n\n```text\nThis is a very long line inside a code block\n```\n";
+		let result = validate_markdown_with_config(content, &config);
+		// Code blocks are exempt from line length
+		assert!(!result.warnings.iter().any(|w| w.rule == "line-length"));
+	}
+
+	#[test]
+	fn test_linter_line_length_counts_unicode_characters() {
+		let mut config = default_config();
+		config.line_length = true;
+		config.max_line_length = 10;
+		// 8 Vietnamese characters with diacritics - each character is 2-3 bytes, total > 15 bytes
+		// But in characters, it is 8 characters, which is <= 10.
+		let content = "# Tiêu đề\n\nXin chào\n";
+		let result = validate_markdown_with_config(content, &config);
 		assert!(!result.warnings.iter().any(|w| w.rule == "line-length"));
 	}
 

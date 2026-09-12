@@ -248,8 +248,12 @@ fn main() {
 		Some(Commands::Headings { path }) => commands::cmd_headings(&path, cli.human),
 		Some(Commands::Stats { path }) => commands::cmd_stats(&path, cli.human),
 		Some(Commands::ToJsonl { path }) => commands::cmd_to_jsonl(&path, cli.human),
-		Some(Commands::Lint { path, content }) => commands::cmd_lint(&path, content, cli.human),
-		Some(Commands::LintFile { path }) => commands::cmd_lint_file(&path, cli.human),
+		Some(Commands::Lint { path, content }) => {
+			commands::cmd_lint(&path, content, cli.human, cli.config.as_deref())
+		}
+		Some(Commands::LintFile { path }) => {
+			commands::cmd_lint_file(&path, cli.human, cli.config.as_deref())
+		}
 		Some(Commands::Fmt {
 			path,
 			stdin,

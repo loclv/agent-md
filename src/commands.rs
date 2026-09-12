@@ -3,7 +3,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 
-use crate::linter::validate_markdown;
+use crate::linter::{validate_markdown, validate_markdown_with_custom_config};
 use crate::rules::extract_heading_level;
 use crate::types::{
 	json_output, unescape_content, Document, EditResult, Heading, JsonlEntry, LintError,
@@ -941,7 +941,7 @@ pub fn cmd_to_jsonl(path: &str, human: bool) {
 	}
 }
 
-pub fn cmd_lint(path: &str, is_content: bool, human: bool) {
+pub fn cmd_lint(path: &str, is_content: bool, human: bool, custom_config: Option<&str>) {
 	let content = if is_content {
 		unescape_content(path)
 	} else {
@@ -969,17 +969,17 @@ pub fn cmd_lint(path: &str, is_content: bool, human: bool) {
 		}
 	};
 
-	let result = validate_markdown(&content);
+	let result = validate_markdown_with_custom_config(&content, custom_config);
 	println!("{}", json_output(&result, human));
 	if !result.valid {
 		std::process::exit(1);
 	}
 }
 
-pub fn cmd_lint_file(path: &str, human: bool) {
+pub fn cmd_lint_file(path: &str, human: bool, custom_config: Option<&str>) {
 	match fs::read_to_string(path) {
 		Ok(content) => {
-			let result = validate_markdown(&content);
+			let result = validate_markdown_with_custom_config(&content, custom_config);
 			println!("{}", json_output(&result, human));
 
 			// Print file path

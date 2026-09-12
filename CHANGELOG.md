@@ -12,6 +12,13 @@ All notable changes to this project will be documented in this file.
 - Config-Driven Linter: Updated the linter to use `ResolvedConfig` for all rule toggles: `no-hard-tabs`, `first-line-heading`, `no-duplicate-headings`, `blanks-around-headings`, and `line-length` with `max-line-length` support.
 - Linter Config Integration: The `validate_markdown_with_config` function now respects all config options to enable/disable individual lint rules.
 
+### Fixed
+
+- Line-Length Code Block Exemption: Moved line-length validation into the primary line-scanning pass, correctly exempting content within code blocks from `max-line-length` warnings.
+- Unicode Character Counting: Updated `line-length` checking to count Unicode characters via `chars().count()` rather than raw UTF-8 byte length.
+- Duplicate Headings Alias Support: Unified `no-duplicate-heading` (singular) and `no-duplicate-headings` (plural) configuration resolution and rule checking so either alias takes effect.
+- CLI Config Passing for Lint: Passed the global `--config` flag to `cmd_lint` and `cmd_lint_file` handlers via `validate_markdown_with_custom_config`.
+
 ### Tests
 
 - Config Tests: Added 40+ unit tests for `ResolvedConfig`, `resolve_config`, config value helpers, edge cases (invalid JSON, empty files, nonexistent paths, priority ordering, serialization).
