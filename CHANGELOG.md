@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.10] - 2026-09-12
+
+### Added
+
+- Folder Structure Formatting: Added automatic detection and formatting for folder tree structures in code blocks with language `text`, `txt`, or unlabelled.
+
+### Fixed
+
+- Folder Structure Syntax Compaction: Compacted tree branch markers by removing redundant dashes (`├──` to `├─`, `└──` to `└─`), stripping spacer lines consisting solely of vertical bars (`│`), removing spaces between branch markers and file/folder names, and collapsing multiple spaces before comments.
+
+### Tests
+
+- Folder Structure Tests: Added unit tests and integration tests covering language validation, syntax detection, idempotent formatting, nested folder trees, and end-to-end markdown formatting.
+
 ## [0.2.9] - 2026-08-17
 
 ### Fixed

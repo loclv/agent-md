@@ -259,6 +259,7 @@ agent-md lint-file <path>
 - Removes empty list items (e.g., a trailing `- ` line with no content).
 - Preserves code block content, including relative indentation and syntax inside nested code blocks within list items.
 - Collapses multiple spaces before `#` comments in shell code blocks (`bash`, `sh`, `shell`, `zsh`).
+- Formats folder structures in `text`, `txt`, or unlabelled code blocks by removing redundant `─` dashes (e.g., `├──` to `├─`, `└──` to `└─`), stripping spacer lines (`│`), removing spaces before file names, and collapsing spaces before comments.
 - Automatically converts 4 leading spaces of list item indentation to 2 spaces, and 2 leading tabs to 1 tab for sub-items, reducing token usage in nested lists.
 
 ```bash
@@ -277,6 +278,19 @@ echo hello # this is a comment
     # indented comment
 ```
 
+~~~
+
+#### Folder Structure Formatting
+
+For code blocks with language `text`, `txt`, or empty language tag containing folder structures, the formatter compacts branch markers to single-dash prefixes (`├─` and `└─`), removes vertical spacer lines (`│`), and aligns comments:
+
+~~~text
+```text
+data/
+├─input/ # input
+├─output/ # output
+└─logs/ # logs
+```
 ~~~
 
 #### Format Options

@@ -1772,3 +1772,86 @@ fn test_format_list_items_keeps_marker_lines_inside_code_block() {
 	assert_eq!(result[3], "  - code");
 	assert_eq!(result.len(), 5);
 }
+
+#[test]
+fn test_format_markdown_folder_structure_text() {
+	let content = r#"# Project Structure
+
+```text
+data/
+│
+├── input/     # input
+│
+├── output/    # output
+│
+└── logs/      # logs
+```
+"#;
+	let expected = r#"# Project Structure
+
+```text
+data/
+├─input/ # input
+├─output/ # output
+└─logs/ # logs
+```
+"#;
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_folder_structure_txt() {
+	let content = r#"```txt
+data/
+│
+├── input/     # input
+│
+└── logs/      # logs
+```
+"#;
+	let expected = r#"```txt
+data/
+├─input/ # input
+└─logs/ # logs
+```
+"#;
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_folder_structure_unlabelled() {
+	let content = r#"```
+data/
+│
+├── input/     # input
+│
+└── logs/      # logs
+```
+"#;
+	let expected = r#"```text
+data/
+├─input/ # input
+└─logs/ # logs
+```
+"#;
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_non_folder_code_block_unchanged() {
+	let content = r#"```text
+Just some arbitrary text
+with │ vertical bar and stuff
+```
+"#;
+	let expected = r#"```text
+Just some arbitrary text
+with │ vertical bar and stuff
+```
+"#;
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}

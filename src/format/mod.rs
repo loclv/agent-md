@@ -143,9 +143,15 @@ pub fn format_markdown_structured(content: &str, options: FormatOptions) -> Stri
 						if !cb_content.ends_with('\n') {
 							cb.push('\n');
 						}
+					} else if code_blocks::is_folder_structure_language(Some(lang))
+						&& code_blocks::is_folder_structure(cb_content)
+					{
+						cb.push_str(&code_blocks::format_folder_structure(cb_content));
 					} else {
 						cb.push_str(cb_content);
 					}
+				} else if code_blocks::is_folder_structure(cb_content) {
+					cb.push_str(&code_blocks::format_folder_structure(cb_content));
 				} else {
 					cb.push_str(cb_content);
 				}

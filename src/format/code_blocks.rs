@@ -97,6 +97,139 @@ pub fn is_shell_language(lang: &str) -> bool {
 	matches!(lang, "bash" | "sh" | "shell" | "zsh")
 }
 
+/// Check if the language is a code block language that can contain a folder structure.
+pub fn is_folder_structure_language(lang: Option<&str>) -> bool {
+	match lang {
+		None => true,
+		Some(s) => {
+			let t = s.trim();
+			t.is_empty() || t.eq_ignore_ascii_case("text") || t.eq_ignore_ascii_case("txt")
+		}
+	}
+}
+
+/// Check if a line is a spacer line in a folder structure (empty or only vertical connectors).
+fn is_spacer_line(line: &str) -> bool {
+	let trimmed = line.trim();
+	trimmed.is_empty()
+		|| trimmed
+			.chars()
+			.all(|c| c == '│' || c == '|' || c == ' ' || c == '\t')
+}
+
+/// Parse a line that may be a branch in a folder structure.
+/// Returns (prefix, branch_char, rest_after_dashes_and_spaces).
+fn parse_branch_line(line: &str) -> Option<(&str, char, &str)> {
+	let chars: Vec<(usize, char)> = line.char_indices().collect();
+	for (i, &(byte_idx, c)) in chars.iter().enumerate() {
+		if c == '├' || c == '└' {
+			let prefix = &line[..byte_idx];
+			if !prefix
+				.chars()
+				.all(|p| p == ' ' || p == '\t' || p == '│' || p == '|')
+			{
+				return None;
+			}
+			// Must have at least one dash after branch char
+			let mut dash_count = 0;
+			let mut after_dash_idx = chars.len();
+			for (j, &(_, next_c)) in chars.iter().enumerate().skip(i + 1) {
+				if next_c == '─' || next_c == '-' {
+					dash_count += 1;
+				} else {
+					after_dash_idx = j;
+					break;
+				}
+			}
+			if dash_count == 0 {
+				return None;
+			}
+			// Skip spaces after dashes
+			if after_dash_idx < chars.len() {
+				let rest_start = chars[after_dash_idx..]
+					.iter()
+					.find(|(_, ch)| *ch != ' ' && *ch != '\t')
+					.map(|(b, _)| *b)
+					.unwrap_or(line.len());
+				return Some((prefix, c, &line[rest_start..]));
+			} else {
+				return Some((prefix, c, ""));
+			}
+		}
+	}
+	None
+}
+
+/// Check if code block content follows folder structure syntax.
+///
+/// A folder structure is identified by:
+/// - Not containing box/diagram characters (`┌`, `┐`, `┘`, `┤`)
+/// - Containing at least one branch line (`├─` or `└─`)
+/// - Having at least one line using `└─` instead of `├─` at first position
+pub fn is_folder_structure(content: &str) -> bool {
+	if content.contains('┌')
+		|| content.contains('┐')
+		|| content.contains('┘')
+		|| content.contains('┤')
+	{
+		return false;
+	}
+
+	let mut has_branch = false;
+	let mut has_corner_branch = false;
+
+	for line in content.lines() {
+		let trimmed = line.trim();
+		if is_spacer_line(trimmed) {
+			continue;
+		}
+		if let Some((prefix, branch_char, _rest)) = parse_branch_line(line) {
+			has_branch = true;
+			if branch_char == '└'
+				&& (prefix.is_empty()
+					|| prefix.trim().is_empty()
+					|| prefix
+						.chars()
+						.all(|c| c == '│' || c == '|' || c == ' ' || c == '\t'))
+			{
+				has_corner_branch = true;
+			}
+		}
+	}
+
+	has_branch && has_corner_branch
+}
+
+/// Format folder structure content in a code block.
+///
+/// Transformations:
+/// - Removes spacer lines (lines with only vertical connectors like `│`)
+/// - Removes redundant `─` dashes (e.g. `├──` -> `├─`, `└──` -> `└─`)
+/// - Removes spaces between the branch connector and the file/folder name
+/// - Collapses multiple spaces before `#` comments to a single space
+pub fn format_folder_structure(content: &str) -> String {
+	let mut formatted_lines = Vec::new();
+
+	for line in content.lines() {
+		if is_spacer_line(line) {
+			continue;
+		}
+
+		if let Some((prefix, branch_char, rest)) = parse_branch_line(line) {
+			let formatted_rest = collapse_spaces_before_comment(rest.trim_end());
+			formatted_lines.push(format!("{}{}─{}", prefix, branch_char, formatted_rest));
+		} else {
+			formatted_lines.push(collapse_spaces_before_comment(line.trim_end()));
+		}
+	}
+
+	let mut result = formatted_lines.join("\n");
+	if (content.ends_with('\n') || !result.is_empty()) && !result.ends_with('\n') {
+		result.push('\n');
+	}
+	result
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -416,5 +549,75 @@ mod tests {
 		let input = "echo \"it's a 'test'\"   # comment";
 		let expected = "echo \"it's a 'test'\" # comment";
 		assert_eq!(collapse_spaces_before_comment(input), expected);
+	}
+
+	#[test]
+	fn test_is_folder_structure_language() {
+		assert!(is_folder_structure_language(None));
+		assert!(is_folder_structure_language(Some("")));
+		assert!(is_folder_structure_language(Some("   ")));
+		assert!(is_folder_structure_language(Some("text")));
+		assert!(is_folder_structure_language(Some("TEXT")));
+		assert!(is_folder_structure_language(Some("txt")));
+		assert!(is_folder_structure_language(Some("TXT")));
+		assert!(!is_folder_structure_language(Some("rust")));
+		assert!(!is_folder_structure_language(Some("bash")));
+		assert!(!is_folder_structure_language(Some("json")));
+	}
+
+	#[test]
+	fn test_is_folder_structure() {
+		let valid = "data/\n│\n├── input/     # input\n│\n├── output/    # output\n│\n└── logs/      # logs\n";
+		assert!(is_folder_structure(valid));
+
+		let formatted = "data/\n├─input/ # input\n├─output/ # output\n└─logs/ # logs\n";
+		assert!(is_folder_structure(formatted));
+
+		// Missing terminating corner branch (only ├─, no └─)
+		let no_corner = "data/\n├── input/\n├── output/\n";
+		assert!(!is_folder_structure(no_corner));
+
+		// Box diagram is not a folder structure
+		let box_diagram = "┌───┐\n│ A │\n└───┘\n";
+		assert!(!is_folder_structure(box_diagram));
+
+		// Plain text is not a folder structure
+		let plain_text = "Some regular text\nAnother line\n";
+		assert!(!is_folder_structure(plain_text));
+	}
+
+	#[test]
+	fn test_format_folder_structure_example() {
+		let input = "data/\n│\n├── input/     # input\n│\n├── output/    # output\n│\n└── logs/      # logs\n";
+		let expected = "data/\n├─input/ # input\n├─output/ # output\n└─logs/ # logs\n";
+		assert_eq!(format_folder_structure(input), expected);
+	}
+
+	#[test]
+	fn test_format_folder_structure_idempotent() {
+		let input = "data/\n├─input/ # input\n├─output/ # output\n└─logs/ # logs\n";
+		let expected = "data/\n├─input/ # input\n├─output/ # output\n└─logs/ # logs\n";
+		assert_eq!(format_folder_structure(input), expected);
+	}
+
+	#[test]
+	fn test_format_folder_structure_without_comments() {
+		let input = "data/\n│\n├── input/\n│\n└── logs/\n";
+		let expected = "data/\n├─input/\n└─logs/\n";
+		assert_eq!(format_folder_structure(input), expected);
+	}
+
+	#[test]
+	fn test_format_folder_structure_multiple_dashes() {
+		let input = "data/\n├─── input/   # in\n└─── logs/   # out\n";
+		let expected = "data/\n├─input/ # in\n└─logs/ # out\n";
+		assert_eq!(format_folder_structure(input), expected);
+	}
+
+	#[test]
+	fn test_format_folder_structure_nested() {
+		let input = "data/\n├── src/\n│   │\n│   ├── main.rs   # main\n│   │\n│   └── lib.rs    # lib\n└── tests/\n";
+		let expected = "data/\n├─src/\n│   ├─main.rs # main\n│   └─lib.rs # lib\n└─tests/\n";
+		assert_eq!(format_folder_structure(input), expected);
 	}
 }
