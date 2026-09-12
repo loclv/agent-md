@@ -1,0 +1,4 @@
+[install]
+linker = "isolated"
+# 3 days
+minimumReleaseAge = 259200
