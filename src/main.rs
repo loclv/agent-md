@@ -183,27 +183,7 @@ fn get_format_options(
 	remove_emphasis: bool,
 	custom_config: Option<&str>,
 ) -> format::FormatOptions {
-	let mut blanks_around_lists = true;
-	let mut blanks_around_fences = true;
-	let mut blanks_around_headings = true;
-
-	if let Some(config) = config::get_config(custom_config) {
-		if let Some(val) = config.get("blanks-around-lists") {
-			if let Some(b) = val.as_bool() {
-				blanks_around_lists = b;
-			}
-		}
-		if let Some(val) = config.get("blanks-around-fences") {
-			if let Some(b) = val.as_bool() {
-				blanks_around_fences = b;
-			}
-		}
-		if let Some(val) = config.get("blanks-around-headings") {
-			if let Some(b) = val.as_bool() {
-				blanks_around_headings = b;
-			}
-		}
-	}
+	let cfg = config::resolve_config(config::get_config(custom_config).as_ref());
 
 	format::FormatOptions {
 		remove_bold,
@@ -212,9 +192,9 @@ fn get_format_options(
 		collapse_spaces,
 		remove_horizontal_rules,
 		remove_emphasis,
-		blanks_around_lists,
-		blanks_around_fences,
-		blanks_around_headings,
+		blanks_around_lists: cfg.blanks_around_lists,
+		blanks_around_fences: cfg.blanks_around_fences,
+		blanks_around_headings: cfg.blanks_around_headings,
 	}
 }
 

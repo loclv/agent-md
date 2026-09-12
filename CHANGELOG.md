@@ -20,6 +20,12 @@ All notable changes to this project will be documented in this file.
 - Duplicate Headings Alias Support: Unified `no-duplicate-heading` (singular) and `no-duplicate-headings` (plural) configuration resolution and rule checking so either alias takes effect.
 - CLI Config Passing for Lint: Passed the global `--config` flag to `cmd_lint` and `cmd_lint_file` handlers via `validate_markdown_with_custom_config`.
 
+### Refactor
+
+- Configuration Resolution: Implemented `ResolvedConfig::from_json` with clean closures and combinators, streamlining `resolve_config`, `get_bool_config`, `get_u64_config`, and `get_string_config`.
+- Formatter Config Integration: Replaced manual JSON key extraction in `get_format_options` in `src/main.rs` with `resolve_config`.
+- Directory Config Search: Extracted `find_config_in_dir` helper in `src/config.rs` to simplify path resolution.
+
 ### Tests
 
 - Config Tests: Added 40+ unit tests for `ResolvedConfig`, `resolve_config`, config value helpers, edge cases (invalid JSON, empty files, nonexistent paths, priority ordering, serialization).

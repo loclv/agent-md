@@ -55,22 +55,67 @@ impl Default for ResolvedConfig {
 	}
 }
 
+impl ResolvedConfig {
+	/// Build a `ResolvedConfig` from an optional JSON value, falling back to defaults
+	/// for any missing or invalid keys.
+	pub fn from_json(config: Option<&serde_json::Value>) -> Self {
+		let defaults = Self::default();
+		let Some(cfg) = config else {
+			return defaults;
+		};
+
+		let get_bool = |key: &str, def: bool| -> bool {
+			cfg.get(key).and_then(|v| v.as_bool()).unwrap_or(def)
+		};
+		let get_u64 =
+			|key: &str, def: u64| -> u64 { cfg.get(key).and_then(|v| v.as_u64()).unwrap_or(def) };
+
+		let no_duplicate = match (
+			cfg.get("no-duplicate-heading"),
+			cfg.get("no-duplicate-headings"),
+		) {
+			(Some(v), _) if v.is_boolean() => v.as_bool().unwrap_or(defaults.no_duplicate_heading),
+			(_, Some(v)) if v.is_boolean() => v.as_bool().unwrap_or(defaults.no_duplicate_headings),
+			_ => defaults.no_duplicate_heading,
+		};
+
+		Self {
+			blanks_around_headings: get_bool(
+				"blanks-around-headings",
+				defaults.blanks_around_headings,
+			),
+			blanks_around_lists: get_bool("blanks-around-lists", defaults.blanks_around_lists),
+			blanks_around_fences: get_bool("blanks-around-fences", defaults.blanks_around_fences),
+			blanks_around_tables: get_bool("blanks-around-tables", defaults.blanks_around_tables),
+			first_line_heading: get_bool("first-line-heading", defaults.first_line_heading),
+			no_duplicate_heading: no_duplicate,
+			no_duplicate_headings: no_duplicate,
+			line_length: get_bool("line-length", defaults.line_length),
+			max_line_length: get_u64("max-line-length", defaults.max_line_length),
+			ol_prefix: get_bool("ol-prefix", defaults.ol_prefix),
+			table_column_style: get_bool("table-column-style", defaults.table_column_style),
+			no_hard_tabs: get_bool("no-hard-tabs", defaults.no_hard_tabs),
+			no_inline_html: get_bool("no-inline-html", defaults.no_inline_html),
+		}
+	}
+}
+
 /// Extract a boolean value from a JSON config object for the given key.
 /// Falls back to `default` when the key is missing or not a boolean.
 pub fn get_bool_config(config: Option<&serde_json::Value>, key: &str, default: bool) -> bool {
-	match config.and_then(|c| c.get(key)) {
-		Some(val) => val.as_bool().unwrap_or(default),
-		None => default,
-	}
+	config
+		.and_then(|c| c.get(key))
+		.and_then(|val| val.as_bool())
+		.unwrap_or(default)
 }
 
 /// Extract a u64 value from a JSON config object for the given key.
 /// Falls back to `default` when the key is missing or not a number.
 pub fn get_u64_config(config: Option<&serde_json::Value>, key: &str, default: u64) -> u64 {
-	match config.and_then(|c| c.get(key)) {
-		Some(val) => val.as_u64().unwrap_or(default),
-		None => default,
-	}
+	config
+		.and_then(|c| c.get(key))
+		.and_then(|val| val.as_u64())
+		.unwrap_or(default)
 }
 
 /// Extract a string value from a JSON config object for the given key.
@@ -80,63 +125,16 @@ pub fn get_string_config<'a>(
 	key: &str,
 	default: &'a str,
 ) -> &'a str {
-	match config.and_then(|c| c.get(key)) {
-		Some(val) => val.as_str().unwrap_or(default),
-		None => default,
-	}
+	config
+		.and_then(|c| c.get(key))
+		.and_then(|val| val.as_str())
+		.unwrap_or(default)
 }
 
 /// Resolve a `ResolvedConfig` from a JSON value, falling back to defaults
 /// for any missing or invalid keys.
 pub fn resolve_config(config: Option<&serde_json::Value>) -> ResolvedConfig {
-	let defaults = ResolvedConfig::default();
-	let mut resolved = defaults.clone();
-
-	if let Some(cfg) = config {
-		resolved.blanks_around_headings = get_bool_config(
-			Some(cfg),
-			"blanks-around-headings",
-			defaults.blanks_around_headings,
-		);
-		resolved.blanks_around_lists = get_bool_config(
-			Some(cfg),
-			"blanks-around-lists",
-			defaults.blanks_around_lists,
-		);
-		resolved.blanks_around_fences = get_bool_config(
-			Some(cfg),
-			"blanks-around-fences",
-			defaults.blanks_around_fences,
-		);
-		resolved.blanks_around_tables = get_bool_config(
-			Some(cfg),
-			"blanks-around-tables",
-			defaults.blanks_around_tables,
-		);
-		resolved.first_line_heading =
-			get_bool_config(Some(cfg), "first-line-heading", defaults.first_line_heading);
-		let no_duplicate = match (
-			cfg.get("no-duplicate-heading"),
-			cfg.get("no-duplicate-headings"),
-		) {
-			(Some(v), _) if v.is_boolean() => v.as_bool().unwrap_or(defaults.no_duplicate_heading),
-			(_, Some(v)) if v.is_boolean() => v.as_bool().unwrap_or(defaults.no_duplicate_headings),
-			_ => defaults.no_duplicate_heading,
-		};
-		resolved.no_duplicate_heading = no_duplicate;
-		resolved.no_duplicate_headings = no_duplicate;
-		resolved.line_length = get_bool_config(Some(cfg), "line-length", defaults.line_length);
-		resolved.max_line_length =
-			get_u64_config(Some(cfg), "max-line-length", defaults.max_line_length);
-		resolved.ol_prefix = get_bool_config(Some(cfg), "ol-prefix", defaults.ol_prefix);
-		resolved.table_column_style =
-			get_bool_config(Some(cfg), "table-column-style", defaults.table_column_style);
-		resolved.no_hard_tabs = get_bool_config(Some(cfg), "no-hard-tabs", defaults.no_hard_tabs);
-		resolved.no_inline_html =
-			get_bool_config(Some(cfg), "no-inline-html", defaults.no_inline_html);
-	}
-
-	resolved
+	ResolvedConfig::from_json(config)
 }
 
 /// Check if a configuration file exists.
@@ -152,12 +150,7 @@ pub fn find_config_file(custom_path: Option<&str>) -> Option<String> {
 			return Some(custom.to_string());
 		}
 		if path.is_dir() {
-			for &name in CONFIG_FILES {
-				let candidate = path.join(name);
-				if candidate.is_file() {
-					return candidate.to_str().map(|s| s.to_string());
-				}
-			}
+			return find_config_in_dir(path);
 		}
 		return None;
 	}
@@ -165,6 +158,16 @@ pub fn find_config_file(custom_path: Option<&str>) -> Option<String> {
 	for &name in CONFIG_FILES {
 		if Path::new(name).is_file() {
 			return Some(name.to_string());
+		}
+	}
+	None
+}
+
+fn find_config_in_dir(dir: &Path) -> Option<String> {
+	for &name in CONFIG_FILES {
+		let candidate = dir.join(name);
+		if candidate.is_file() {
+			return candidate.to_str().map(|s| s.to_string());
 		}
 	}
 	None
