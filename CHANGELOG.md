@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.11] - 2026-09-12
+
+### Added
+
+- ResolvedConfig Struct: Added `ResolvedConfig` struct to aggregate all configuration options into a single typed struct with defaults.
+- Config Value Helpers: Added `get_bool_config`, `get_u64_config`, and `get_string_config` helper functions for extracting typed values from JSON config with fallback defaults.
+- resolve_config Function: Added `resolve_config` function that builds a `ResolvedConfig` from a JSON value, falling back to defaults for missing or invalid keys.
+- Config-Driven Linter: Updated the linter to use `ResolvedConfig` for all rule toggles: `no-hard-tabs`, `first-line-heading`, `no-duplicate-headings`, `blanks-around-headings`, and `line-length` with `max-line-length` support.
+- Linter Config Integration: The `validate_markdown_with_config` function now respects all config options to enable/disable individual lint rules.
+
+### Tests
+
+- Config Tests: Added 40+ unit tests for `ResolvedConfig`, `resolve_config`, config value helpers, edge cases (invalid JSON, empty files, nonexistent paths, priority ordering, serialization).
+- Linter Config Tests: Added 20+ unit tests verifying linter behavior with different config combinations (hard tabs, first-line-heading, duplicate headings, blanks-around-headings, line-length).
+
 ## [0.2.10] - 2026-09-12
 
 ### Added

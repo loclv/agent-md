@@ -5,6 +5,9 @@ use std::path::Path;
 /// Candidate configuration file names in resolution priority order.
 pub const CONFIG_FILES: &[&str] = &[".agent-md.json", "agent-md.json", ".markdownlint.json"];
 
+/// Maximum line length default (0 means disabled).
+const DEFAULT_MAX_LINE_LENGTH: u64 = 0;
+
 /// Configuration status representation for JSON output.
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct ConfigStatus {
@@ -12,6 +15,128 @@ pub struct ConfigStatus {
 	pub path: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub config: Option<serde_json::Value>,
+}
+
+/// Fully resolved configuration with all options and their effective values.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct ResolvedConfig {
+	pub blanks_around_headings: bool,
+	pub blanks_around_lists: bool,
+	pub blanks_around_fences: bool,
+	pub blanks_around_tables: bool,
+	pub first_line_heading: bool,
+	pub no_duplicate_heading: bool,
+	pub no_duplicate_headings: bool,
+	pub line_length: bool,
+	pub max_line_length: u64,
+	pub ol_prefix: bool,
+	pub table_column_style: bool,
+	pub no_hard_tabs: bool,
+	pub no_inline_html: bool,
+}
+
+impl Default for ResolvedConfig {
+	fn default() -> Self {
+		Self {
+			blanks_around_headings: true,
+			blanks_around_lists: true,
+			blanks_around_fences: true,
+			blanks_around_tables: false,
+			first_line_heading: true,
+			no_duplicate_heading: true,
+			no_duplicate_headings: true,
+			line_length: false,
+			max_line_length: DEFAULT_MAX_LINE_LENGTH,
+			ol_prefix: false,
+			table_column_style: false,
+			no_hard_tabs: true,
+			no_inline_html: false,
+		}
+	}
+}
+
+/// Extract a boolean value from a JSON config object for the given key.
+/// Falls back to `default` when the key is missing or not a boolean.
+pub fn get_bool_config(config: Option<&serde_json::Value>, key: &str, default: bool) -> bool {
+	match config.and_then(|c| c.get(key)) {
+		Some(val) => val.as_bool().unwrap_or(default),
+		None => default,
+	}
+}
+
+/// Extract a u64 value from a JSON config object for the given key.
+/// Falls back to `default` when the key is missing or not a number.
+pub fn get_u64_config(config: Option<&serde_json::Value>, key: &str, default: u64) -> u64 {
+	match config.and_then(|c| c.get(key)) {
+		Some(val) => val.as_u64().unwrap_or(default),
+		None => default,
+	}
+}
+
+/// Extract a string value from a JSON config object for the given key.
+/// Falls back to `default` when the key is missing or not a string.
+pub fn get_string_config<'a>(
+	config: Option<&'a serde_json::Value>,
+	key: &str,
+	default: &'a str,
+) -> &'a str {
+	match config.and_then(|c| c.get(key)) {
+		Some(val) => val.as_str().unwrap_or(default),
+		None => default,
+	}
+}
+
+/// Resolve a `ResolvedConfig` from a JSON value, falling back to defaults
+/// for any missing or invalid keys.
+pub fn resolve_config(config: Option<&serde_json::Value>) -> ResolvedConfig {
+	let defaults = ResolvedConfig::default();
+	let mut resolved = defaults.clone();
+
+	if let Some(cfg) = config {
+		resolved.blanks_around_headings = get_bool_config(
+			Some(cfg),
+			"blanks-around-headings",
+			defaults.blanks_around_headings,
+		);
+		resolved.blanks_around_lists = get_bool_config(
+			Some(cfg),
+			"blanks-around-lists",
+			defaults.blanks_around_lists,
+		);
+		resolved.blanks_around_fences = get_bool_config(
+			Some(cfg),
+			"blanks-around-fences",
+			defaults.blanks_around_fences,
+		);
+		resolved.blanks_around_tables = get_bool_config(
+			Some(cfg),
+			"blanks-around-tables",
+			defaults.blanks_around_tables,
+		);
+		resolved.first_line_heading =
+			get_bool_config(Some(cfg), "first-line-heading", defaults.first_line_heading);
+		resolved.no_duplicate_heading = get_bool_config(
+			Some(cfg),
+			"no-duplicate-heading",
+			defaults.no_duplicate_heading,
+		);
+		resolved.no_duplicate_headings = get_bool_config(
+			Some(cfg),
+			"no-duplicate-headings",
+			defaults.no_duplicate_headings,
+		);
+		resolved.line_length = get_bool_config(Some(cfg), "line-length", defaults.line_length);
+		resolved.max_line_length =
+			get_u64_config(Some(cfg), "max-line-length", defaults.max_line_length);
+		resolved.ol_prefix = get_bool_config(Some(cfg), "ol-prefix", defaults.ol_prefix);
+		resolved.table_column_style =
+			get_bool_config(Some(cfg), "table-column-style", defaults.table_column_style);
+		resolved.no_hard_tabs = get_bool_config(Some(cfg), "no-hard-tabs", defaults.no_hard_tabs);
+		resolved.no_inline_html =
+			get_bool_config(Some(cfg), "no-inline-html", defaults.no_inline_html);
+	}
+
+	resolved
 }
 
 /// Check if a configuration file exists.
@@ -89,13 +214,14 @@ mod tests {
 	use std::fs::File;
 	use std::io::Write;
 
+	// ---------- existing tests ----------
+
 	#[test]
 	fn test_find_config_file_priority() {
 		let temp_dir = std::env::temp_dir().join("agent_md_test_config_priority");
 		let _ = fs::remove_dir_all(&temp_dir);
 		fs::create_dir_all(&temp_dir).unwrap();
 
-		// Case 1: only .markdownlint.json exists
 		let md_lint = temp_dir.join(".markdownlint.json");
 		let mut f = File::create(&md_lint).unwrap();
 		writeln!(f, r#"{{"default": true}}"#).unwrap();
@@ -103,7 +229,6 @@ mod tests {
 		let found = find_config_file(temp_dir.to_str());
 		assert_eq!(found, Some(md_lint.to_str().unwrap().to_string()));
 
-		// Case 2: agent-md.json is added, should take precedence over .markdownlint.json
 		let agent_md = temp_dir.join("agent-md.json");
 		let mut f = File::create(&agent_md).unwrap();
 		writeln!(f, r#"{{"blanks-around-headings": false}}"#).unwrap();
@@ -111,7 +236,6 @@ mod tests {
 		let found = find_config_file(temp_dir.to_str());
 		assert_eq!(found, Some(agent_md.to_str().unwrap().to_string()));
 
-		// Case 3: .agent-md.json is added, should take highest precedence
 		let dot_agent_md = temp_dir.join(".agent-md.json");
 		let mut f = File::create(&dot_agent_md).unwrap();
 		writeln!(f, r#"{{"blanks-around-headings": true}}"#).unwrap();
@@ -119,7 +243,6 @@ mod tests {
 		let found = find_config_file(temp_dir.to_str());
 		assert_eq!(found, Some(dot_agent_md.to_str().unwrap().to_string()));
 
-		// Read config value check
 		let config_val = get_config(temp_dir.to_str());
 		assert!(config_val.is_some());
 		assert_eq!(
@@ -154,13 +277,11 @@ mod tests {
 		let _ = fs::remove_dir_all(&temp_dir);
 		fs::create_dir_all(&temp_dir).unwrap();
 
-		// Non-existent
 		let status = get_config_status(temp_dir.to_str(), true);
 		assert!(!status.exists);
 		assert_eq!(status.path, None);
 		assert_eq!(status.config, None);
 
-		// Existent with content
 		let cfg_path = temp_dir.join("agent-md.json");
 		let mut f = File::create(&cfg_path).unwrap();
 		writeln!(f, r#"{{"test-key": "test-val"}}"#).unwrap();
@@ -174,6 +295,572 @@ mod tests {
 		assert!(status_check_only.exists);
 		assert!(status_check_only.path.is_some());
 		assert_eq!(status_check_only.config, None);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	// ---------- ResolvedConfig tests ----------
+
+	#[test]
+	fn test_resolved_config_defaults() {
+		let cfg = ResolvedConfig::default();
+		assert!(cfg.blanks_around_headings);
+		assert!(cfg.blanks_around_lists);
+		assert!(cfg.blanks_around_fences);
+		assert!(!cfg.blanks_around_tables);
+		assert!(cfg.first_line_heading);
+		assert!(cfg.no_duplicate_heading);
+		assert!(cfg.no_duplicate_headings);
+		assert!(!cfg.line_length);
+		assert_eq!(cfg.max_line_length, 0);
+		assert!(!cfg.ol_prefix);
+		assert!(!cfg.table_column_style);
+		assert!(cfg.no_hard_tabs);
+		assert!(!cfg.no_inline_html);
+	}
+
+	#[test]
+	fn test_resolve_config_none_returns_defaults() {
+		let cfg = resolve_config(None);
+		assert_eq!(cfg, ResolvedConfig::default());
+	}
+
+	#[test]
+	fn test_resolve_config_empty_json_returns_defaults() {
+		let json = serde_json::json!({});
+		let cfg = resolve_config(Some(&json));
+		assert_eq!(cfg, ResolvedConfig::default());
+	}
+
+	#[test]
+	fn test_resolve_config_override_all_booleans() {
+		let json = serde_json::json!({
+			"blanks-around-headings": false,
+			"blanks-around-lists": false,
+			"blanks-around-fences": false,
+			"blanks-around-tables": true,
+			"first-line-heading": false,
+			"no-duplicate-heading": false,
+			"no-duplicate-headings": false,
+			"line-length": true,
+			"max-line-length": 120,
+			"ol-prefix": true,
+			"table-column-style": true,
+			"no-hard-tabs": false,
+			"no-inline-html": true
+		});
+		let cfg = resolve_config(Some(&json));
+		assert!(!cfg.blanks_around_headings);
+		assert!(!cfg.blanks_around_lists);
+		assert!(!cfg.blanks_around_fences);
+		assert!(cfg.blanks_around_tables);
+		assert!(!cfg.first_line_heading);
+		assert!(!cfg.no_duplicate_heading);
+		assert!(!cfg.no_duplicate_headings);
+		assert!(cfg.line_length);
+		assert_eq!(cfg.max_line_length, 120);
+		assert!(cfg.ol_prefix);
+		assert!(cfg.table_column_style);
+		assert!(!cfg.no_hard_tabs);
+		assert!(cfg.no_inline_html);
+	}
+
+	#[test]
+	fn test_resolve_config_partial_override() {
+		let json = serde_json::json!({
+			"blanks-around-headings": false,
+			"no-hard-tabs": false
+		});
+		let cfg = resolve_config(Some(&json));
+		assert!(!cfg.blanks_around_headings);
+		assert!(!cfg.no_hard_tabs);
+		// All other values should remain defaults
+		assert!(cfg.blanks_around_lists);
+		assert!(cfg.blanks_around_fences);
+		assert!(!cfg.blanks_around_tables);
+		assert!(cfg.first_line_heading);
+		assert!(cfg.no_duplicate_heading);
+		assert!(cfg.no_duplicate_headings);
+		assert!(!cfg.line_length);
+		assert_eq!(cfg.max_line_length, 0);
+		assert!(!cfg.ol_prefix);
+		assert!(!cfg.table_column_style);
+		assert!(!cfg.no_inline_html);
+	}
+
+	#[test]
+	fn test_resolve_config_invalid_types_fallback_to_defaults() {
+		let json = serde_json::json!({
+			"blanks-around-headings": "not-a-bool",
+			"max-line-length": "not-a-number",
+			"line-length": 42,
+			"first-line-heading": null
+		});
+		let cfg = resolve_config(Some(&json));
+		// Invalid types should fall back to defaults
+		assert!(cfg.blanks_around_headings);
+		assert_eq!(cfg.max_line_length, 0);
+		// Non-boolean number should also fallback
+		assert!(cfg.first_line_heading);
+		// line-length: 42 is a number, not bool, so falls back
+		assert!(!cfg.line_length);
+	}
+
+	#[test]
+	fn test_resolve_config_unknown_keys_ignored() {
+		let json = serde_json::json!({
+			"unknown-key": true,
+			"another-unknown": 123,
+			"blanks-around-headings": false
+		});
+		let cfg = resolve_config(Some(&json));
+		assert!(!cfg.blanks_around_headings);
+		// All other values should remain defaults
+		assert!(cfg.blanks_around_lists);
+	}
+
+	// ---------- get_bool_config tests ----------
+
+	#[test]
+	fn test_get_bool_config_none_config() {
+		assert!(get_bool_config(None, "blanks-around-headings", true));
+		assert!(!get_bool_config(None, "some-key", false));
+	}
+
+	#[test]
+	fn test_get_bool_config_missing_key() {
+		let json = serde_json::json!({ "other": true });
+		assert!(get_bool_config(Some(&json), "blanks-around-headings", true));
+		assert!(!get_bool_config(Some(&json), "missing", false));
+	}
+
+	#[test]
+	fn test_get_bool_config_valid_value() {
+		let json = serde_json::json!({ "flag": false });
+		assert!(!get_bool_config(Some(&json), "flag", true));
+
+		let json = serde_json::json!({ "flag": true });
+		assert!(get_bool_config(Some(&json), "flag", false));
+	}
+
+	#[test]
+	fn test_get_bool_config_invalid_type_fallback() {
+		let json = serde_json::json!({ "flag": "string" });
+		assert!(get_bool_config(Some(&json), "flag", true));
+
+		let json = serde_json::json!({ "flag": 123 });
+		assert!(!get_bool_config(Some(&json), "flag", false));
+	}
+
+	// ---------- get_u64_config tests ----------
+
+	#[test]
+	fn test_get_u64_config_none_config() {
+		assert_eq!(get_u64_config(None, "max-line-length", 80), 80);
+	}
+
+	#[test]
+	fn test_get_u64_config_missing_key() {
+		let json = serde_json::json!({ "other": 100 });
+		assert_eq!(get_u64_config(Some(&json), "max-line-length", 80), 80);
+	}
+
+	#[test]
+	fn test_get_u64_config_valid_value() {
+		let json = serde_json::json!({ "max-line-length": 120 });
+		assert_eq!(get_u64_config(Some(&json), "max-line-length", 80), 120);
+	}
+
+	#[test]
+	fn test_get_u64_config_invalid_type_fallback() {
+		let json = serde_json::json!({ "max-line-length": "not-a-number" });
+		assert_eq!(get_u64_config(Some(&json), "max-line-length", 80), 80);
+
+		let json = serde_json::json!({ "max-line-length": -5 });
+		// Negative numbers are not valid u64, so fallback
+		assert_eq!(get_u64_config(Some(&json), "max-line-length", 80), 80);
+	}
+
+	#[test]
+	fn test_get_u64_config_zero_value() {
+		let json = serde_json::json!({ "val": 0 });
+		assert_eq!(get_u64_config(Some(&json), "val", 99), 0);
+	}
+
+	// ---------- get_string_config tests ----------
+
+	#[test]
+	fn test_get_string_config_none_config() {
+		assert_eq!(get_string_config(None, "format", "markdown"), "markdown");
+	}
+
+	#[test]
+	fn test_get_string_config_missing_key() {
+		let json = serde_json::json!({ "other": "value" });
+		assert_eq!(
+			get_string_config(Some(&json), "format", "markdown"),
+			"markdown"
+		);
+	}
+
+	#[test]
+	fn test_get_string_config_valid_value() {
+		let json = serde_json::json!({ "format": "html" });
+		assert_eq!(get_string_config(Some(&json), "format", "markdown"), "html");
+	}
+
+	#[test]
+	fn test_get_string_config_invalid_type_fallback() {
+		let json = serde_json::json!({ "format": 123 });
+		assert_eq!(
+			get_string_config(Some(&json), "format", "markdown"),
+			"markdown"
+		);
+	}
+
+	#[test]
+	fn test_get_string_config_empty_string() {
+		let json = serde_json::json!({ "format": "" });
+		assert_eq!(get_string_config(Some(&json), "format", "markdown"), "");
+	}
+
+	// ---------- find_config_file edge cases ----------
+
+	#[test]
+	fn test_find_config_file_none_path() {
+		// Without config files in cwd this returns None (or a cwd file)
+		let result = find_config_file(None);
+		// We just verify it doesn't panic
+		let _ = result;
+	}
+
+	#[test]
+	fn test_find_config_file_custom_path_to_file() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_custom_file");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let custom = temp_dir.join("my-config.json");
+		let mut f = File::create(&custom).unwrap();
+		writeln!(f, "{{}}").unwrap();
+
+		let found = find_config_file(Some(custom.to_str().unwrap()));
+		assert_eq!(found, Some(custom.to_str().unwrap().to_string()));
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_find_config_file_custom_path_to_nonexistent_file() {
+		let result = find_config_file(Some("/nonexistent/path/config.json"));
+		assert_eq!(result, None);
+	}
+
+	#[test]
+	fn test_find_config_file_custom_path_to_empty_dir() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_empty_dir");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let found = find_config_file(Some(temp_dir.to_str().unwrap()));
+		assert_eq!(found, None);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_find_config_file_custom_dir_with_only_agent_md() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_custom_dir_agent");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let agent_md = temp_dir.join("agent-md.json");
+		let mut f = File::create(&agent_md).unwrap();
+		writeln!(f, "{{}}").unwrap();
+
+		let found = find_config_file(Some(temp_dir.to_str().unwrap()));
+		assert_eq!(found, Some(agent_md.to_str().unwrap().to_string()));
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_find_config_file_custom_dir_priority_order() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_custom_dir_priority");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		// Only .markdownlint.json
+		let md_lint = temp_dir.join(".markdownlint.json");
+		let mut f = File::create(&md_lint).unwrap();
+		writeln!(f, "{{}}").unwrap();
+		assert_eq!(
+			find_config_file(temp_dir.to_str()),
+			Some(md_lint.to_str().unwrap().to_string())
+		);
+
+		// Add .agent-md.json (higher priority)
+		let dot = temp_dir.join(".agent-md.json");
+		let mut f = File::create(&dot).unwrap();
+		writeln!(f, "{{}}").unwrap();
+		assert_eq!(
+			find_config_file(temp_dir.to_str()),
+			Some(dot.to_str().unwrap().to_string())
+		);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	// ---------- read_config edge cases ----------
+
+	#[test]
+	fn test_read_config_invalid_json() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_invalid_json");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let cfg_path = temp_dir.join(".agent-md.json");
+		let mut f = File::create(&cfg_path).unwrap();
+		writeln!(f, "not valid json {{{{").unwrap();
+
+		let result = read_config(temp_dir.to_str());
+		assert!(result.is_none()); // Invalid JSON should return None
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_read_config_empty_file() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_empty_file");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let cfg_path = temp_dir.join(".agent-md.json");
+		let mut f = File::create(&cfg_path).unwrap();
+		// Empty file is valid JSON (empty string)
+		writeln!(f).unwrap();
+
+		let result = read_config(temp_dir.to_str());
+		assert!(result.is_none()); // Empty file is not valid JSON
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_read_config_valid_complex_json() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_complex_json");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let cfg_path = temp_dir.join("agent-md.json");
+		let mut f = File::create(&cfg_path).unwrap();
+		writeln!(
+			f,
+			r#"{{"blanks-around-headings": true, "max-line-length": 100, "nested": {{"key": "val"}}}}"#
+		)
+		.unwrap();
+
+		let result = read_config(temp_dir.to_str());
+		assert!(result.is_some());
+		let (path, val) = result.unwrap();
+		assert_eq!(path, cfg_path.to_str().unwrap());
+		assert_eq!(val.get("blanks-around-headings").unwrap(), true);
+		assert_eq!(val.get("max-line-length").unwrap(), 100);
+		assert!(val.get("nested").is_some());
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	// ---------- get_config_status edge cases ----------
+
+	#[test]
+	fn test_get_config_status_invalid_json_file() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_status_invalid");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let cfg_path = temp_dir.join(".agent-md.json");
+		let mut f = File::create(&cfg_path).unwrap();
+		writeln!(f, "not json").unwrap();
+
+		let status = get_config_status(temp_dir.to_str(), true);
+		assert!(status.exists);
+		assert!(status.path.is_some());
+		// Config should be None because JSON is invalid
+		assert_eq!(status.config, None);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_get_config_status_custom_path_nonexistent() {
+		let status = get_config_status(Some("/nonexistent/path"), true);
+		assert!(!status.exists);
+		assert_eq!(status.path, None);
+		assert_eq!(status.config, None);
+	}
+
+	// ---------- ResolvedConfig serialization ----------
+
+	#[test]
+	fn test_resolved_config_serialization() {
+		let cfg = ResolvedConfig::default();
+		let json = serde_json::to_string(&cfg).unwrap();
+		assert!(json.contains("blanks_around_headings"));
+		assert!(json.contains("max_line_length"));
+		assert!(json.contains("no_hard_tabs"));
+	}
+
+	#[test]
+	fn test_config_status_serialization() {
+		let status = ConfigStatus {
+			exists: true,
+			path: Some("test.json".to_string()),
+			config: Some(serde_json::json!({ "key": "val" })),
+		};
+		let json = serde_json::to_string(&status).unwrap();
+		assert!(json.contains("exists"));
+		assert!(json.contains("path"));
+		assert!(json.contains("config"));
+	}
+
+	#[test]
+	fn test_config_status_serialization_skip_none_config() {
+		let status = ConfigStatus {
+			exists: true,
+			path: Some("test.json".to_string()),
+			config: None,
+		};
+		let json = serde_json::to_string(&status).unwrap();
+		assert!(!json.contains("config"));
+	}
+
+	// ---------- resolve_config with all sample config options ----------
+
+	#[test]
+	fn test_resolve_config_matches_sample_config() {
+		// Match the sample .agent-md.json but with values flipped to false
+		let json = serde_json::json!({
+			"default": true,
+			"blanks-around-headings": false,
+			"blanks-around-lists": false,
+			"blanks-around-fences": false,
+			"blanks-around-tables": false,
+			"first-line-heading": false,
+			"no-duplicate-heading": false,
+			"no-duplicate-headings": false,
+			"line-length": false,
+			"ol-prefix": false,
+			"table-column-style": false,
+			"no-hard-tabs": false,
+			"no-inline-html": false
+		});
+		let cfg = resolve_config(Some(&json));
+		assert!(!cfg.blanks_around_headings);
+		assert!(!cfg.blanks_around_lists);
+		assert!(!cfg.blanks_around_fences);
+		assert!(!cfg.blanks_around_tables);
+		assert!(!cfg.first_line_heading);
+		assert!(!cfg.no_duplicate_heading);
+		assert!(!cfg.no_duplicate_headings);
+		assert!(!cfg.line_length);
+		assert!(!cfg.ol_prefix);
+		assert!(!cfg.table_column_style);
+		assert!(!cfg.no_hard_tabs);
+		assert!(!cfg.no_inline_html);
+	}
+
+	#[test]
+	fn test_resolve_config_all_enabled() {
+		let json = serde_json::json!({
+			"blanks-around-headings": true,
+			"blanks-around-lists": true,
+			"blanks-around-fences": true,
+			"blanks-around-tables": true,
+			"first-line-heading": true,
+			"no-duplicate-heading": true,
+			"no-duplicate-headings": true,
+			"line-length": true,
+			"max-line-length": 200,
+			"ol-prefix": true,
+			"table-column-style": true,
+			"no-hard-tabs": true,
+			"no-inline-html": true
+		});
+		let cfg = resolve_config(Some(&json));
+		assert!(cfg.blanks_around_headings);
+		assert!(cfg.blanks_around_lists);
+		assert!(cfg.blanks_around_fences);
+		assert!(cfg.blanks_around_tables);
+		assert!(cfg.first_line_heading);
+		assert!(cfg.no_duplicate_heading);
+		assert!(cfg.no_duplicate_headings);
+		assert!(cfg.line_length);
+		assert_eq!(cfg.max_line_length, 200);
+		assert!(cfg.ol_prefix);
+		assert!(cfg.table_column_style);
+		assert!(cfg.no_hard_tabs);
+		assert!(cfg.no_inline_html);
+	}
+
+	// ---------- has_config_file edge cases ----------
+
+	#[test]
+	fn test_has_config_file_none() {
+		// Should not panic; result depends on cwd
+		let _ = has_config_file(None);
+	}
+
+	#[test]
+	fn test_has_config_file_nonexistent_custom_path() {
+		assert!(!has_config_file(Some("/nonexistent/path")));
+	}
+
+	#[test]
+	fn test_has_config_file_custom_path_to_existing_config() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_has_existing");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let cfg = temp_dir.join("agent-md.json");
+		let mut f = File::create(&cfg).unwrap();
+		writeln!(f, "{{}}").unwrap();
+
+		assert!(has_config_file(temp_dir.to_str()));
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	// ---------- get_config edge cases ----------
+
+	#[test]
+	fn test_get_config_returns_none_when_no_file() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_get_config_none");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let result = get_config(temp_dir.to_str());
+		assert!(result.is_none());
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_get_config_returns_value_when_file_exists() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_get_config_some");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let cfg = temp_dir.join(".agent-md.json");
+		let mut f = File::create(&cfg).unwrap();
+		writeln!(f, r#"{{"key": "value"}}"#).unwrap();
+
+		let result = get_config(temp_dir.to_str());
+		assert!(result.is_some());
+		assert_eq!(
+			result.unwrap().get("key").unwrap(),
+			&serde_json::Value::String("value".to_string())
+		);
 
 		let _ = fs::remove_dir_all(&temp_dir);
 	}

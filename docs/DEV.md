@@ -80,13 +80,6 @@ cargo test -- --nocapture
 make test
 ```
 
-### Test Coverage
-
-- 400+ unit tests across all validation and formatting modules
-- Integration tests for complete workflows
-- Performance tests for large documents
-- Edge case testing for all parsing functions
-
 ## Code Quality
 
 The project enforces strict code quality standards:
@@ -118,29 +111,50 @@ make ci
 3. Tests: Add comprehensive tests to `src/tests.rs`
 4. Documentation: Update relevant sections in `docs/`
 
+### Configuration System
+
+agent-md uses a `ResolvedConfig` struct to aggregate all configuration options:
+
+```rust
+// In src/config.rs
+pub struct ResolvedConfig {
+    pub blanks_around_headings: bool,
+    pub blanks_around_lists: bool,
+    pub blanks_around_fences: bool,
+    pub blanks_around_tables: bool,
+    pub first_line_heading: bool,
+    pub no_duplicate_heading: bool,
+    pub no_duplicate_headings: bool,
+    pub line_length: bool,
+    pub max_line_length: u64,
+    pub ol_prefix: bool,
+    pub table_column_style: bool,
+    pub no_hard_tabs: bool,
+    pub no_inline_html: bool,
+}
+```
+
+Config values are extracted using typed helpers: `get_bool_config`, `get_u64_config`, `get_string_config`. Invalid or missing values fall back to defaults.
+
 ### Example: Adding a New Validation Rule
 
 ```rust
 // In src/linter.rs
-fn validate_new_rule(line: &str) -> Option<usize> {
-    // Validation logic here
-    None
-}
-
-// In validate_markdown function in src/linter.rs
-if let Some(col) = validate_new_rule(line) {
-    warnings.push(LintWarning {
-        line: line_num,
-        column: col,
-        message: "Rule violation".to_string(),
-        rule: "new-rule".to_string(),
-    });
+// Use validate_markdown_with_config for config-aware rules
+pub fn validate_markdown_with_config(content: &str, config: &ResolvedConfig) -> LintResult {
+    // Access config options:
+    if config.no_hard_tabs {
+        // Check for hard tabs
+    }
+    // ...
 }
 
 // In src/tests.rs
-#[test]
 fn test_validate_new_rule() {
-    // Test cases here
+    let mut config = ResolvedConfig::default();
+    config.no_hard_tabs = false; // Disable rule
+    let result = validate_markdown_with_config("content", &config);
+    assert!(result.errors.iter().all(|e| e.rule != "no-hard-tabs"));
 }
 ```
 
