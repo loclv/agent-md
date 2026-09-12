@@ -37,10 +37,10 @@ agent-md/
 
 ## Architecture: Structured Parsing and Formatting
 
-agent-md follows a *Parse-then-Format* architecture:
+agent-md follows a Parse-then-Format architecture:
 
-1. *Parsing*: The `src/parser.rs` module decomposes the raw Markdown text into a sequence of `MarkdownBlock` elements (e.g., `Heading`, `CodeBlock`, `List`, `Table`). This stage also extracts YAML frontmatter.
-2. *Formatting*: The `format_markdown_structured` function in `src/format/mod.rs` iterates over these blocks and applies formatting rules based on the block type and user configuration (from `.agent-md.json`, `agent-md.json`, or `.markdownlint.json`).
+1. Parsing: The `src/parser.rs` module decomposes the raw Markdown text into a sequence of `MarkdownBlock` elements (e.g., `Heading`, `CodeBlock`, `List`, `Table`). This stage also extracts YAML frontmatter.
+2. Formatting: The `format_markdown_structured` function in `src/format/mod.rs` iterates over these blocks and applies formatting rules based on the block type and user configuration (from `.agent-md.json`, `agent-md.json`, or `.markdownlint.json`).
 
 This approach is more robust than simple line-based processing, especially for complex structures like nested lists or tables.
 
