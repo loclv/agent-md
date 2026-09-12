@@ -134,7 +134,7 @@ pub struct ResolvedConfig {
 }
 ```
 
-Config values are extracted using typed helpers: `get_bool_config`, `get_u64_config`, `get_string_config`. Invalid or missing values fall back to defaults.
+Config values are extracted using typed helpers: `get_bool_config`, `get_u64_config`, `get_string_config`. Invalid or missing values fall back to defaults. Configuration files can be created using `init_config` or the `agent-md init` subcommand.
 
 ### Example: Adding a New Validation Rule
 

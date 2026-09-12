@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - resolve_config Function: Added `resolve_config` function that builds a `ResolvedConfig` from a JSON value, falling back to defaults for missing or invalid keys.
 - Config-Driven Linter: Updated the linter to use `ResolvedConfig` for all rule toggles: `no-hard-tabs`, `first-line-heading`, `no-duplicate-headings`, `blanks-around-headings`, and `line-length` with `max-line-length` support.
 - Linter Config Integration: The `validate_markdown_with_config` function now respects all config options to enable/disable individual lint rules.
+- Init Subcommand: Added `init` subcommand and `config --init` flag to generate a default `.agent-md.json` configuration file with support for custom paths and `--force` overwrite.
 
 ### Fixed
 

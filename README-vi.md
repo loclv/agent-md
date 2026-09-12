@@ -238,6 +238,27 @@ agent-md lint-file <path>
 # Trả về: đầu ra kiểm tra dễ đọc với lỗi, cảnh báo, và tóm tắt
 ```
 
+### Khởi tạo cấu hình
+
+Khởi tạo tệp cấu hình mặc định `.agent-md.json` tại thư mục hiện tại hoặc đường dẫn được chỉ định.
+
+```bash
+agent-md init
+# Khởi tạo .agent-md.json trong thư mục hiện tại
+
+agent-md init custom.json
+# Khởi tạo cấu hình tại đường dẫn tệp cụ thể
+
+agent-md init path/to/dir
+# Khởi tạo .agent-md.json bên trong thư mục được chỉ định
+
+agent-md init --force
+# Ghi đè tệp cấu hình đã tồn tại (hỗ trợ cờ -f)
+
+agent-md config --init
+# Tùy chọn thay thế qua lệnh con config với cờ --force tùy chọn
+```
+
 ### Kiểm tra cấu hình
 
 Kiểm tra độ ưu tiên phân giải và trạng thái tệp cấu hình. Các tệp cấu hình được ưu tiên theo thứ tự sau:

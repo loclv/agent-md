@@ -1,6 +1,6 @@
 use serde::Serialize;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Candidate configuration file names in resolution priority order.
 pub const CONFIG_FILES: &[&str] = &[".agent-md.json", "agent-md.json", ".markdownlint.json"];
@@ -206,6 +206,81 @@ pub fn get_config_status(custom_path: Option<&str>, include_content: bool) -> Co
 			config: None,
 		}
 	}
+}
+
+/// Default template content for newly initialized configuration files.
+pub const DEFAULT_CONFIG_TEMPLATE: &str = r#"{
+	"default": true,
+	"blanks-around-headings": true,
+	"blanks-around-lists": true,
+	"blanks-around-fences": true,
+	"blanks-around-tables": false,
+	"first-line-heading": true,
+	"no-duplicate-heading": true,
+	"no-duplicate-headings": true,
+	"line-length": false,
+	"max-line-length": 80,
+	"ol-prefix": false,
+	"table-column-style": false,
+	"no-hard-tabs": true,
+	"no-inline-html": false
+}
+"#;
+
+/// Result of initializing a configuration file.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct InitConfigResult {
+	pub success: bool,
+	pub path: String,
+	pub message: String,
+}
+
+/// Initialize a configuration file at the specified path or directory.
+/// If `custom_path` is None, creates `.agent-md.json` in the current working directory.
+/// If `custom_path` is a directory, creates `.agent-md.json` inside that directory.
+/// If `force` is false and the target file already exists, returns an error without overwriting.
+pub fn init_config(custom_path: Option<&str>, force: bool) -> Result<String, String> {
+	let target_path = match custom_path {
+		Some(p) => {
+			let path = Path::new(p);
+			if path.is_dir() {
+				path.join(".agent-md.json")
+			} else {
+				path.to_path_buf()
+			}
+		}
+		None => PathBuf::from(".agent-md.json"),
+	};
+
+	let path_str = target_path.display().to_string();
+
+	if target_path.exists() && !force {
+		return Err(format!(
+			"Configuration file already exists at '{}'. Use --force to overwrite.",
+			path_str
+		));
+	}
+
+	if let Some(parent) = target_path.parent() {
+		if !parent.as_os_str().is_empty() && !parent.exists() {
+			if let Err(e) = fs::create_dir_all(parent) {
+				return Err(format!(
+					"Failed to create parent directory '{}': {}",
+					parent.display(),
+					e
+				));
+			}
+		}
+	}
+
+	if let Err(e) = fs::write(&target_path, DEFAULT_CONFIG_TEMPLATE) {
+		return Err(format!(
+			"Failed to write configuration file '{}': {}",
+			path_str, e
+		));
+	}
+
+	Ok(path_str)
 }
 
 #[cfg(test)]
@@ -880,6 +955,115 @@ mod tests {
 		assert_eq!(
 			result.unwrap().get("key").unwrap(),
 			&serde_json::Value::String("value".to_string())
+		);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	// ---------- init_config tests ----------
+
+	#[test]
+	fn test_init_config_template_is_valid_json() {
+		let parsed: serde_json::Value =
+			serde_json::from_str(DEFAULT_CONFIG_TEMPLATE).expect("Template should be valid JSON");
+		assert!(parsed.is_object());
+		assert_eq!(parsed.get("default"), Some(&serde_json::json!(true)));
+
+		let resolved = resolve_config(Some(&parsed));
+		assert!(resolved.blanks_around_headings);
+		assert!(resolved.blanks_around_lists);
+		assert!(resolved.blanks_around_fences);
+		assert!(!resolved.blanks_around_tables);
+		assert!(resolved.first_line_heading);
+		assert!(resolved.no_duplicate_heading);
+		assert!(resolved.no_duplicate_headings);
+		assert!(!resolved.line_length);
+		assert_eq!(resolved.max_line_length, 80);
+		assert!(resolved.no_hard_tabs);
+	}
+
+	#[test]
+	fn test_init_config_creates_in_directory() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_init_dir");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let res = init_config(temp_dir.to_str(), false);
+		assert!(res.is_ok());
+		let created_path = res.unwrap();
+		assert!(created_path.ends_with(".agent-md.json"));
+		assert!(Path::new(&created_path).is_file());
+
+		// Verify content
+		let content = fs::read_to_string(&created_path).unwrap();
+		assert_eq!(content, DEFAULT_CONFIG_TEMPLATE);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_init_config_creates_custom_file_path() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_init_custom");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let custom_file = temp_dir.join("my-config.json");
+		let res = init_config(custom_file.to_str(), false);
+		assert!(res.is_ok());
+		assert!(custom_file.is_file());
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_init_config_creates_nested_directories() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_init_nested");
+		let _ = fs::remove_dir_all(&temp_dir);
+
+		let nested_file = temp_dir.join("sub").join("nested").join("agent-md.json");
+		let res = init_config(nested_file.to_str(), false);
+		assert!(res.is_ok());
+		assert!(nested_file.is_file());
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_init_config_already_exists_fails_without_force() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_init_exists");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let file_path = temp_dir.join(".agent-md.json");
+		fs::write(&file_path, "existing content").unwrap();
+
+		let res = init_config(file_path.to_str(), false);
+		assert!(res.is_err());
+		let err_msg = res.unwrap_err();
+		assert!(err_msg.contains("already exists"));
+
+		// Verify existing content was not modified
+		assert_eq!(fs::read_to_string(&file_path).unwrap(), "existing content");
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_init_config_already_exists_overwrites_with_force() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_init_force");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let file_path = temp_dir.join(".agent-md.json");
+		fs::write(&file_path, "existing content").unwrap();
+
+		let res = init_config(file_path.to_str(), true);
+		assert!(res.is_ok());
+
+		// Verify content was overwritten with default template
+		assert_eq!(
+			fs::read_to_string(&file_path).unwrap(),
+			DEFAULT_CONFIG_TEMPLATE
 		);
 
 		let _ = fs::remove_dir_all(&temp_dir);

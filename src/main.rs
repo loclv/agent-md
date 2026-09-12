@@ -37,11 +37,21 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
+	Init {
+		#[arg(help = "Optional configuration file path or target directory")]
+		path: Option<String>,
+		#[arg(short = 'f', long, help = "Overwrite existing configuration file")]
+		force: bool,
+	},
 	Config {
 		#[arg(help = "Optional configuration file path or directory")]
 		path: Option<String>,
 		#[arg(long, help = "Only check if configuration file exists")]
 		check: bool,
+		#[arg(long, help = "Initialize a default configuration file")]
+		init: bool,
+		#[arg(short = 'f', long, help = "Overwrite existing configuration file")]
+		force: bool,
 	},
 	Read {
 		#[arg(help = "Markdown file path")]
@@ -217,9 +227,18 @@ fn main() {
 	}
 
 	match cli.command {
-		Some(Commands::Config { path, check }) => {
+		Some(Commands::Init { path, force }) => {
 			let custom = path.as_deref().or(cli.config.as_deref());
-			commands::cmd_config(custom, check, cli.human);
+			commands::cmd_init(custom, force, cli.human);
+		}
+		Some(Commands::Config {
+			path,
+			check,
+			init,
+			force,
+		}) => {
+			let custom = path.as_deref().or(cli.config.as_deref());
+			commands::cmd_config(custom, check, init, force, cli.human);
 		}
 		Some(Commands::Read {
 			path,

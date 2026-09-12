@@ -1036,7 +1036,35 @@ pub fn cmd_lint_file(path: &str, human: bool, custom_config: Option<&str>) {
 	}
 }
 
-pub fn cmd_config(custom_path: Option<&str>, check: bool, human: bool) {
+pub fn cmd_init(custom_path: Option<&str>, force: bool, human: bool) {
+	match crate::config::init_config(custom_path, force) {
+		Ok(path) => {
+			let result = crate::config::InitConfigResult {
+				success: true,
+				path,
+				message: "Configuration file initialized successfully".to_string(),
+			};
+			println!("{}", json_output(&result, human));
+		}
+		Err(msg) => {
+			let path = custom_path.unwrap_or(".agent-md.json").to_string();
+			let result = crate::config::InitConfigResult {
+				success: false,
+				path,
+				message: msg,
+			};
+			println!("{}", json_output(&result, human));
+			std::process::exit(1);
+		}
+	}
+}
+
+pub fn cmd_config(custom_path: Option<&str>, check: bool, init: bool, force: bool, human: bool) {
+	if init {
+		cmd_init(custom_path, force, human);
+		return;
+	}
+
 	let status = crate::config::get_config_status(custom_path, !check);
 	println!("{}", json_output(&status, human));
 }

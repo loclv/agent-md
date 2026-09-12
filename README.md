@@ -249,6 +249,27 @@ agent-md lint-file <path>
 # Returns: Human-readable linting output with errors, warnings, and summary
 ```
 
+### Initialize configuration
+
+Initializes a default `.agent-md.json` configuration file in the current directory or a specified path.
+
+```bash
+agent-md init
+# Initializes .agent-md.json in the current directory
+
+agent-md init custom.json
+# Initializes configuration at a specific file path
+
+agent-md init path/to/dir
+# Initializes .agent-md.json inside the specified directory
+
+agent-md init --force
+# Overwrites existing configuration file (-f also supported)
+
+agent-md config --init
+# Alternative via config subcommand with optional --force flag
+```
+
 ### Check configuration
 
 Checks configuration file resolution and status. Configuration files are resolved in the following priority order:

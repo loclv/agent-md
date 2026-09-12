@@ -1796,29 +1796,96 @@ This web site is using `markedjs/marked`.
 	fn test_cli_parse_config_command() {
 		let cli = Cli::parse_from(["agent-md", "config"]);
 		match cli.command {
-			Some(Commands::Config { path, check }) => {
+			Some(Commands::Config {
+				path,
+				check,
+				init,
+				force,
+			}) => {
 				assert_eq!(path, None);
 				assert!(!check);
+				assert!(!init);
+				assert!(!force);
 			}
 			_ => panic!("Expected Commands::Config"),
 		}
 
 		let cli_check = Cli::parse_from(["agent-md", "config", "--check"]);
 		match cli_check.command {
-			Some(Commands::Config { path, check }) => {
+			Some(Commands::Config {
+				path,
+				check,
+				init,
+				force,
+			}) => {
 				assert_eq!(path, None);
 				assert!(check);
+				assert!(!init);
+				assert!(!force);
 			}
 			_ => panic!("Expected Commands::Config"),
 		}
 
 		let cli_custom = Cli::parse_from(["agent-md", "config", ".agent-md.json"]);
 		match cli_custom.command {
-			Some(Commands::Config { path, check }) => {
+			Some(Commands::Config {
+				path,
+				check,
+				init,
+				force,
+			}) => {
 				assert_eq!(path, Some(".agent-md.json".to_string()));
 				assert!(!check);
+				assert!(!init);
+				assert!(!force);
 			}
 			_ => panic!("Expected Commands::Config"),
+		}
+
+		let cli_config_init = Cli::parse_from(["agent-md", "config", "--init", "--force"]);
+		match cli_config_init.command {
+			Some(Commands::Config {
+				path,
+				check,
+				init,
+				force,
+			}) => {
+				assert_eq!(path, None);
+				assert!(!check);
+				assert!(init);
+				assert!(force);
+			}
+			_ => panic!("Expected Commands::Config"),
+		}
+	}
+
+	#[test]
+	fn test_cli_parse_init_command() {
+		let cli_init = Cli::parse_from(["agent-md", "init"]);
+		match cli_init.command {
+			Some(Commands::Init { path, force }) => {
+				assert_eq!(path, None);
+				assert!(!force);
+			}
+			_ => panic!("Expected Commands::Init"),
+		}
+
+		let cli_init_custom = Cli::parse_from(["agent-md", "init", "custom.json", "--force"]);
+		match cli_init_custom.command {
+			Some(Commands::Init { path, force }) => {
+				assert_eq!(path, Some("custom.json".to_string()));
+				assert!(force);
+			}
+			_ => panic!("Expected Commands::Init"),
+		}
+
+		let cli_init_short_force = Cli::parse_from(["agent-md", "init", "-f"]);
+		match cli_init_short_force.command {
+			Some(Commands::Init { path, force }) => {
+				assert_eq!(path, None);
+				assert!(force);
+			}
+			_ => panic!("Expected Commands::Init"),
 		}
 	}
 
