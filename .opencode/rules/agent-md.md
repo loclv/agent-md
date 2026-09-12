@@ -7,9 +7,9 @@ When working with markdown files in this project, always use the `agent-md` CLI 
 ### Read Files
 
 ```bash
-agent-md read <path> --field content   # Get content
-agent-md read <path> --field headings  # Get headings
-agent-md read <path> -f word_count     # Get word count
+agent-md read <path> --field content # Get content
+agent-md read <path> --field headings # Get headings
+agent-md read <path> -f word_count # Get word count
 ```
 
 ### Write Files
