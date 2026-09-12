@@ -12,27 +12,27 @@ The agent-md project is a Rust-based Markdown editor specifically designed for A
 
 ```text
 agent-md/
-├── .github/workflows/
-│   └── ci.yml                 # GitHub Actions CI/CD pipeline
-├── .vscode/
-│   ├── settings.json          # VS Code configuration
-│   └── tasks.json             # VS Code tasks
-├── .windsurf/workflows/
-│   └── agent-md-project-guide.md  # Project skill documentation
-├── docs/
-│   └── markdown-writing-rules.md   # Comprehensive validation rules
-├── src/
-│   └── main.rs                # Main application source code
-├── test-md/                   # Test markdown files
-├── Cargo.toml                 # Rust project configuration
-├── Cargo.lock                 # Dependency lock file
-├── Makefile                   # Development commands
-├── README.md                  # Project documentation
-├── LINTING.md                 # Linting setup guide
-├── rust-toolchain.toml        # Rust version specification
-├── rustfmt.toml               # Code formatting configuration
-├── clippy.toml                # Clippy linting configuration
-└── .pre-commit-config.yaml    # Pre-commit hooks (optional)
+├─.github/workflows/
+│   └─ci.yml # GitHub Actions CI/CD pipeline
+├─.vscode/
+│   ├─settings.json # VS Code configuration
+│   └─tasks.json # VS Code tasks
+├─.windsurf/workflows/
+│   └─agent-md-project-guide.md # Project skill documentation
+├─docs/
+│   └─markdown-writing-rules.md # Comprehensive validation rules
+├─src/
+│   └─main.rs # Main application source code
+├─test-md/ # Test markdown files
+├─Cargo.toml # Rust project configuration
+├─Cargo.lock # Dependency lock file
+├─Makefile # Development commands
+├─README.md # Project documentation
+├─LINTING.md # Linting setup guide
+├─rust-toolchain.toml # Rust version specification
+├─rustfmt.toml # Code formatting configuration
+├─clippy.toml # Clippy linting configuration
+└─.pre-commit-config.yaml # Pre-commit hooks (optional)
 ```
 
 ## Core Components
