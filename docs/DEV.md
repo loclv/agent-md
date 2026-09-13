@@ -214,6 +214,9 @@ make ci
 # 4. Build release
 cargo build --release
 
+# Or install to ~/bin
+cargo build --release --target-dir ~/bin
+
 # 5. Tag release
 git tag -a v0.1.0 -m "Release version 0.1.0"
 git push origin v0.1.0
