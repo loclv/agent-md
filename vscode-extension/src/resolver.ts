@@ -13,14 +13,17 @@ export interface ResolverOptions {
 }
 
 /**
- * Expands leading `~` or `~/` to the user's home directory.
+ * Expands leading `~` or `~/` or `~\` to the user's home directory.
  */
 export function expandHome(filePath: string, homeDir: string = os.homedir()): string {
   if (filePath === "~") {
     return homeDir;
   }
   if (filePath.startsWith("~/") || filePath.startsWith("~\\")) {
-    return path.join(homeDir, filePath.slice(2));
+    const subPath = filePath.slice(2);
+    // Use backslash if input had backslash or if homeDir contains backslashes
+    const separator = filePath.startsWith("~\\") || homeDir.includes("\\") ? "\\" : "/";
+    return `${homeDir}${separator}${subPath}`;
   }
   return filePath;
 }
@@ -28,7 +31,10 @@ export function expandHome(filePath: string, homeDir: string = os.homedir()): st
 /**
  * Checks if a file exists and is executable.
  */
-export function isExecutable(filePath: string): boolean {
+export function isExecutable(
+  filePath: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
   try {
     if (!fs.existsSync(filePath)) {
       return false;
@@ -37,7 +43,7 @@ export function isExecutable(filePath: string): boolean {
     if (!stat.isFile()) {
       return false;
     }
-    if (process.platform === "win32") {
+    if (platform === "win32") {
       return true;
     }
     fs.accessSync(filePath, fs.constants.X_OK);
@@ -52,20 +58,30 @@ export function isExecutable(filePath: string): boolean {
  */
 export function findInPath(
   executable: string,
-  envPath: string = process.env.PATH || "",
+  envPath: string = process.env.PATH || process.env.Path || "",
   isExecutableFn: (p: string) => boolean = isExecutable,
+  platform: NodeJS.Platform = process.platform,
 ): string | undefined {
   if (!envPath) {
     return undefined;
   }
-  const dirs = envPath.split(path.delimiter);
+  const pathMod = platform === "win32" ? path.win32 : path;
+  const delimiter = platform === "win32" || envPath.includes(";") ? ";" : pathMod.delimiter;
+  const dirs = envPath.split(delimiter);
   for (const dir of dirs) {
     if (!dir) {
       continue;
     }
-    const fullPath = path.join(dir, executable);
+    const fullPath = pathMod.join(dir, executable);
     if (isExecutableFn(fullPath)) {
       return fullPath;
+    }
+    // On Windows, also test with .exe suffix if not already present
+    if (!executable.toLowerCase().endsWith(".exe")) {
+      const fullPathExe = pathMod.join(dir, `${executable}.exe`);
+      if (isExecutableFn(fullPathExe)) {
+        return fullPathExe;
+      }
     }
   }
   return undefined;
@@ -73,31 +89,46 @@ export function findInPath(
 
 /**
  * Resolves the path to the agent-md executable:
- * 1. Honors explicitly configured path (with ~ expansion and relative path handling).
- * 2. If configured path is default 'agent-md', checks PATH.
+ * 1. Honors explicitly configured path (with ~ expansion, .exe resolution, and relative path handling).
+ * 2. If configured path is default ('agent-md' / 'agent-md.exe'), checks PATH.
  * 3. Falls back to workspace target directories (target/release, target/debug, parent target).
- * 4. Falls back to common user and system install directories (~/.cargo/bin, ~/.local/bin, ~/bin/release, ~/bin, /usr/local/bin, /opt/homebrew/bin).
- * 5. Returns 'agent-md' if no candidate was found so the spawn error handler can report.
+ * 4. Falls back to common user and system install directories:
+ *    - Windows: ~/.cargo/bin, ~/scoop/shims, %LOCALAPPDATA%/Microsoft/WinGet/Links, Chocolatey, etc.
+ *    - Unix: ~/.cargo/bin, ~/.local/bin, ~/bin/release, ~/bin, /usr/local/bin, /opt/homebrew/bin.
+ * 5. Returns platform default binary name ('agent-md.exe' on Windows, 'agent-md' on Unix) if not found.
  */
 export function resolveAgentMdPath(options: ResolverOptions = {}): string {
   const platform = options.platform ?? process.platform;
+  const pathMod = platform === "win32" ? path.win32 : path;
   const binaryName = platform === "win32" ? "agent-md.exe" : "agent-md";
   const configured = options.configuredPath?.trim();
   const homeDir = options.homeDir ?? os.homedir();
-  const checkExecutable = options.isExecutableFn ?? isExecutable;
+  const checkExecutable = options.isExecutableFn ?? ((p: string) => isExecutable(p, platform));
 
   // 1. Explicitly configured path (non-default)
   if (configured && configured !== "agent-md" && configured !== "agent-md.exe") {
-    const expanded = expandHome(configured, homeDir);
-    if (path.isAbsolute(expanded)) {
+    let expanded = expandHome(configured, homeDir);
+    if (platform === "win32" && !expanded.toLowerCase().endsWith(".exe")) {
+      const withExe = `${expanded}.exe`;
+      if (checkExecutable(withExe)) {
+        expanded = withExe;
+      }
+    }
+    if (pathMod.isAbsolute(expanded)) {
       return expanded;
     }
     // Check if relative to workspace folders
     if (options.workspaceFolders && options.workspaceFolders.length > 0) {
       for (const folder of options.workspaceFolders) {
-        const candidate = path.resolve(folder, expanded);
+        const candidate = pathMod.resolve(folder, expanded);
         if (checkExecutable(candidate)) {
           return candidate;
+        }
+        if (platform === "win32" && !candidate.toLowerCase().endsWith(".exe")) {
+          const candidateExe = `${candidate}.exe`;
+          if (checkExecutable(candidateExe)) {
+            return candidateExe;
+          }
         }
       }
     }
@@ -105,8 +136,8 @@ export function resolveAgentMdPath(options: ResolverOptions = {}): string {
   }
 
   // 2. Check system PATH
-  const envPath = options.envPath ?? process.env.PATH ?? "";
-  const foundInPath = findInPath(binaryName, envPath, checkExecutable);
+  const envPath = options.envPath ?? process.env.PATH ?? process.env.Path ?? "";
+  const foundInPath = findInPath(binaryName, envPath, checkExecutable, platform);
   if (foundInPath) {
     return binaryName;
   }
@@ -119,7 +150,7 @@ export function resolveAgentMdPath(options: ResolverOptions = {}): string {
         candidateFolders.push(folder);
       }
       // Also check parent directory of workspace folder (e.g. repo root when workspace is vscode-extension)
-      const parentDir = path.dirname(folder);
+      const parentDir = pathMod.dirname(folder);
       if (!candidateFolders.includes(parentDir)) {
         candidateFolders.push(parentDir);
       }
@@ -127,37 +158,53 @@ export function resolveAgentMdPath(options: ResolverOptions = {}): string {
   }
 
   if (options.documentPath) {
-    let currentDir = path.dirname(options.documentPath);
-    while (currentDir && currentDir !== path.dirname(currentDir)) {
+    let currentDir = pathMod.dirname(options.documentPath);
+    while (currentDir && currentDir !== pathMod.dirname(currentDir)) {
       if (candidateFolders.length < 8 && !candidateFolders.includes(currentDir)) {
         candidateFolders.push(currentDir);
       } else {
         break;
       }
-      currentDir = path.dirname(currentDir);
+      currentDir = pathMod.dirname(currentDir);
     }
   }
 
   for (const folder of candidateFolders) {
-    const releasePath = path.join(folder, "target", "release", binaryName);
+    const releasePath = pathMod.join(folder, "target", "release", binaryName);
     if (checkExecutable(releasePath)) {
       return releasePath;
     }
-    const debugPath = path.join(folder, "target", "debug", binaryName);
+    const debugPath = pathMod.join(folder, "target", "debug", binaryName);
     if (checkExecutable(debugPath)) {
       return debugPath;
     }
   }
 
   // 4. Check common user and system install directories
-  const commonFallbacks = [
-    path.join(homeDir, ".cargo", "bin", binaryName),
-    path.join(homeDir, ".local", "bin", binaryName),
-    path.join(homeDir, "bin", "release", binaryName),
-    path.join(homeDir, "bin", binaryName),
-    path.join("/usr", "local", "bin", binaryName),
-    path.join("/opt", "homebrew", "bin", binaryName),
-  ];
+  const commonFallbacks: string[] = [];
+  if (platform === "win32") {
+    const localAppData = process.env.LOCALAPPDATA || pathMod.join(homeDir, "AppData", "Local");
+    const programData = process.env.ProgramData || "C:\\ProgramData";
+    const chocoInstall = process.env.ChocolateyInstall || pathMod.join(programData, "chocolatey");
+
+    commonFallbacks.push(
+      pathMod.join(homeDir, ".cargo", "bin", binaryName),
+      pathMod.join(homeDir, "scoop", "shims", binaryName),
+      pathMod.join(localAppData, "Microsoft", "WinGet", "Links", binaryName),
+      pathMod.join(localAppData, "bin", binaryName),
+      pathMod.join(chocoInstall, "bin", binaryName),
+      pathMod.join(homeDir, "bin", binaryName),
+    );
+  } else {
+    commonFallbacks.push(
+      pathMod.join(homeDir, ".cargo", "bin", binaryName),
+      pathMod.join(homeDir, ".local", "bin", binaryName),
+      pathMod.join(homeDir, "bin", "release", binaryName),
+      pathMod.join(homeDir, "bin", binaryName),
+      pathMod.join("/usr", "local", "bin", binaryName),
+      pathMod.join("/opt", "homebrew", "bin", binaryName),
+    );
+  }
 
   for (const candidate of commonFallbacks) {
     if (checkExecutable(candidate)) {
