@@ -1884,3 +1884,35 @@ with │ vertical bar and stuff
 	let result = format_markdown(content);
 	assert_eq!(result, expected);
 }
+
+#[test]
+fn test_format_markdown_inline_code_block_unchanged() {
+	let content = "code block: `let a = 1;`\n";
+	let expected = "code block: `let a = 1;`\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_inline_code_block_in_fenced_md() {
+	let content = "```md\ncode block: `let a = 1;`\n```\n";
+	let expected = "```md\ncode block: `let a = 1;`\n```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_inline_code_block_in_table() {
+	let content = "| Code | Description |\n|---|---|\n| `let a = 1;` | Variable assignment |\n";
+	let expected = "| Code | Description |\n|---|---|\n| `let a = 1;` | Variable assignment |\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_inline_code_block_in_list() {
+	let content = "- code block: `let a = 1;`\n";
+	let expected = "- code block: `let a = 1;`\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}

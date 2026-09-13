@@ -25,17 +25,13 @@ pub fn strip_bold_from_cell(cell: &str) -> String {
 	while i < chars.len() {
 		// Preserve inline code spans unchanged
 		if chars[i] == '`' {
-			let mut code_end = i + 1;
-			while code_end < chars.len() && chars[code_end] != '`' {
-				code_end += 1;
-			}
-			for j in i..=code_end {
-				if j < chars.len() {
-					result.push(chars[j]);
+			if let Some(code_end) = super::lines::find_code_span_end(&chars, i) {
+				for &c in &chars[i..=code_end] {
+					result.push(c);
 				}
+				i = code_end + 1;
+				continue;
 			}
-			i = code_end + 1;
-			continue;
 		}
 
 		// Check for **bold** pattern
@@ -134,5 +130,14 @@ mod tests {
 			strip_bold_from_cell("| `__x__` | **y** | `z` |"),
 			"| `__x__` | y | `z` |"
 		);
+	}
+
+	#[test]
+	fn test_strip_bold_from_cell_multi_backticks() {
+		assert_eq!(
+			strip_bold_from_cell("`` `let a = 1;` `` **bold**"),
+			"`` `let a = 1;` `` bold"
+		);
+		assert_eq!(strip_bold_from_cell("`let a = 1;`"), "`let a = 1;`");
 	}
 }

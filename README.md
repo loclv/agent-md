@@ -347,6 +347,16 @@ data/
 
 ~~~
 
+#### Inline Code Block Preservation
+
+Inline code blocks enclosed in backticks are preserved as-is without any formatting modifications:
+
+~~~text
+code block: `let a = 1;`
+~~~
+
+The output remains unchanged.
+
 #### Format Options
 
 The formatter applies compact rules by default to reduce token count:

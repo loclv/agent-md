@@ -9,6 +9,12 @@ All notable changes to this project will be documented in this file.
 - VS Code Extension Fallback Resolution: Added automatic binary detection in `vscode-extension` to discover `agent-md` in workspace `target/release`, `target/debug`, `~/.cargo/bin`, `~/.local/bin`, and standard user paths when not present in IDE process `PATH`.
 - VS Code Extension Tilde Expansion: Added support for `~` and `~/` expansion in `agentMd.path` settings.
 - VS Code Extension Tests: Added unit test suite using `bun:test` verifying path resolution and fallbacks.
+- Inline Code Block Preservation: Documented and verified that inline code blocks (such as `code block: `let a = 1;``) are preserved as-is without formatting modifications across paragraphs, lists, tables, and fenced markdown blocks.
+- Table Cell Inline Code Support: Updated `strip_bold_from_cell` in `src/format/bold_tables.rs` to use `find_code_span_end` to preserve multi-backtick inline code spans within table cells.
+
+### Tests
+
+- Inline Code Block Tests: Added unit tests in `src/format/tests.rs`, `src/format/bold_tables.rs`, and test fixture `test-md/format/inline-code.md` verifying inline code blocks are preserved unchanged.
 
 ## [0.2.11] - 2026-09-12
 

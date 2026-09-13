@@ -41,7 +41,7 @@ agent-md follows a Parse-then-Format architecture:
 
 1. Parsing: The `src/parser.rs` module decomposes the raw Markdown text into a sequence of `MarkdownBlock` elements (e.g., `Heading`, `CodeBlock`, `List`, `Table`). This stage also extracts YAML frontmatter.
 2. Formatting: The `format_markdown_structured` function in `src/format/mod.rs` iterates over these blocks and applies formatting rules based on the block type and user configuration (from `.agent-md.json`, `agent-md.json`, or `.markdownlint.json`).
-3. Inline Line Processing: The `src/format/lines.rs` module processes individual markdown lines, handling tasks such as collapsing redundant spaces while preserving spaces and content inside inline code spans (`find_code_span_end`), stripping bold and emphasis markers outside code, and standardizing list item indentations.
+3. Inline Line Processing: The `src/format/lines.rs` module processes individual markdown lines, handling tasks such as collapsing redundant spaces while preserving spaces and content inside inline code spans (`find_code_span_end`), stripping bold and emphasis markers outside code, and standardizing list item indentations. Inline code blocks throughout paragraphs, lists, and table cells (`src/format/bold_tables.rs`) are preserved unchanged.
 
 This approach is more robust than simple line-based processing, especially for complex structures like nested lists or tables.
 
