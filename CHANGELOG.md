@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.12] - 2026-09-13
+
 ### Added
 
 - VS Code Extension Fallback Resolution: Added automatic binary detection in `vscode-extension` to discover `agent-md` in workspace `target/release`, `target/debug`, `~/.cargo/bin`, `~/.local/bin`, and standard user paths when not present in IDE process `PATH`.
