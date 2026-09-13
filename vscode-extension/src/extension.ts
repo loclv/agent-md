@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { spawn } from "node:child_process";
+import { resolveAgentMdPath } from "./resolver";
 
 interface FormatOptions {
   removeBold: boolean;
@@ -20,14 +21,39 @@ function getFormatOptions(): FormatOptions {
   };
 }
 
-function getAgentMdPath(): string {
+function getAgentMdPath(document?: vscode.TextDocument): string {
   const config = vscode.workspace.getConfiguration("agentMd");
-  return config.get<string>("path", "agent-md");
+  const configuredPath = config.get<string>("path", "agent-md");
+
+  const workspaceFolders: string[] = [];
+  if (document) {
+    const docFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+    if (docFolder) {
+      workspaceFolders.push(docFolder.uri.fsPath);
+    }
+  }
+  if (vscode.workspace.workspaceFolders) {
+    for (const folder of vscode.workspace.workspaceFolders) {
+      if (!workspaceFolders.includes(folder.uri.fsPath)) {
+        workspaceFolders.push(folder.uri.fsPath);
+      }
+    }
+  }
+
+  return resolveAgentMdPath({
+    configuredPath,
+    workspaceFolders,
+    documentPath: document?.uri.scheme === "file" ? document.uri.fsPath : undefined,
+  });
 }
 
-function formatWithAgentMd(content: string, options: FormatOptions): Promise<string> {
+function formatWithAgentMd(
+  content: string,
+  options: FormatOptions,
+  document?: vscode.TextDocument,
+): Promise<string> {
   return new Promise((resolve, reject) => {
-    const agentMdPath = getAgentMdPath();
+    const agentMdPath = getAgentMdPath(document);
 
     // Use --stdin for Prettier-style formatting (avoids file sync conflicts)
     const args: string[] = ["fmt", "--stdin"];
@@ -97,7 +123,7 @@ class AgentMdFormatter implements vscode.DocumentFormattingEditProvider {
 
     try {
       const originalContent = document.getText();
-      const formattedContent = await formatWithAgentMd(originalContent, formatOptions);
+      const formattedContent = await formatWithAgentMd(originalContent, formatOptions, document);
 
       if (formattedContent === originalContent) {
         return undefined;

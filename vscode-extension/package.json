@@ -1,7 +1,7 @@
 {
   "name": "agent-md-formatter",
   "displayName": "Agent-MD Formatter",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Format Markdown files using agent-md CLI",
   "categories": [
     "Formatters"
@@ -19,6 +19,7 @@
     "lint": "oxlint",
     "fmt": "oxfmt",
     "format": "oxfmt",
+    "test": "bun test",
     "package": "vsce package --no-dependencies"
   },
   "devDependencies": {
@@ -36,7 +37,7 @@
         "agentMd.path": {
           "type": "string",
           "default": "agent-md",
-          "description": "Path to the agent-md executable"
+          "description": "Path to the agent-md executable. If not found in PATH, auto-detects target/release, ~/.cargo/bin, and common local paths."
         },
         "agentMd.format.removeBold": {
           "type": "boolean",

@@ -25,7 +25,7 @@ cargo build --release
 
 This extension contributes the following settings:
 
-- `agentMd.path`: Path to the agent-md executable (default: `agent-md`)
+- `agentMd.path`: Path to the agent-md executable (default: `agent-md`). Automatically detects workspace `target/release`, `~/.cargo/bin`, and common local paths when not found in `PATH`.
 - `agentMd.format.removeBold`: Remove bold markers (`**` and `__`) (default: `true`)
 - `agentMd.format.compactBlankLines`: Compact blank lines (default: `true`)
 - `agentMd.format.collapseSpaces`: Collapse multiple spaces between words (default: `true`)

@@ -580,7 +580,7 @@ code --install-extension vscode-extension/agent-md-formatter-0.1.0.vsix
 
 ### Settings
 
-- `agentMd.path`: Path to agent-md executable
+- `agentMd.path`: Path to agent-md executable (default: `agent-md`, automatically detects workspace `target/release`, `~/.cargo/bin`, and common local paths)
 - `agentMd.format.removeBold`: Remove bold markers (default: true)
 - `agentMd.format.compactBlankLines`: Compact blank lines (default: true)
 - `agentMd.format.collapseSpaces`: Collapse multiple spaces (default: true)
