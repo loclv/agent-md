@@ -24,6 +24,7 @@ cargo build --release
 ## Extension Settings
 
 This extension contributes the following settings:
+
 - `agentMd.path`: Path to the agent-md executable (default: `agent-md`)
 - `agentMd.format.removeBold`: Remove bold markers (`**` and `__`) (default: `true`)
 - `agentMd.format.compactBlankLines`: Compact blank lines (default: `true`)
@@ -60,6 +61,7 @@ None at this time.
 ### 0.1.0
 
 Initial release:
+
 - Document formatting support for Markdown files
 - Configurable formatting options matching agent-md CLI flags
 - Error handling for missing agent-md executable
