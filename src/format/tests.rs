@@ -89,6 +89,7 @@ Another paragraph.
 			blanks_around_lists: false,
 			blanks_around_fences: false,
 			blanks_around_headings: true,
+			minify_html: true,
 		},
 	);
 	assert_eq!(result, expected);
@@ -217,6 +218,7 @@ More text.
 			blanks_around_lists: false,
 			blanks_around_fences: false,
 			blanks_around_headings: true,
+			minify_html: true,
 		},
 	);
 	assert_eq!(result, expected);
@@ -308,6 +310,7 @@ Some text.
 			blanks_around_lists: false,
 			blanks_around_fences: false,
 			blanks_around_headings: true,
+			minify_html: true,
 		},
 	);
 	assert_eq!(result, expected);
@@ -373,6 +376,7 @@ fn test_format_markdown_only_newlines() {
 			blanks_around_lists: false,
 			blanks_around_fences: false,
 			blanks_around_headings: true,
+			minify_html: true,
 		},
 	);
 	assert_eq!(result, "\n\n\n");
@@ -539,6 +543,7 @@ fn test_format_options_compact_blank_lines() {
 		blanks_around_lists: false,
 		blanks_around_fences: false,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	assert_eq!(result, "Line 1\n\nLine 2\n\nLine 3");
@@ -557,6 +562,7 @@ fn test_format_options_remove_bold_disabled() {
 		blanks_around_lists: false,
 		blanks_around_fences: false,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	assert_eq!(result, "This is **bold** text");
@@ -575,6 +581,7 @@ fn test_format_options_trim_trailing_whitespace() {
 		blanks_around_lists: false,
 		blanks_around_fences: false,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	assert_eq!(result, "Text with trailing\nMore text");
@@ -593,6 +600,7 @@ fn test_format_options_collapse_spaces() {
 		blanks_around_lists: false,
 		blanks_around_fences: false,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	assert_eq!(result, "This has multiple spaces");
@@ -611,6 +619,7 @@ fn test_format_options_collapse_spaces_in_heading_preserved() {
 		blanks_around_lists: false,
 		blanks_around_fences: false,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	assert_eq!(result, "# Heading   with    spaces");
@@ -658,6 +667,7 @@ fn test_format_options_remove_horizontal_rules() {
 		blanks_around_lists: false,
 		blanks_around_fences: false,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	assert!(!result.contains("---"));
@@ -678,6 +688,7 @@ fn test_format_options_remove_horizontal_rules_variations() {
 		blanks_around_lists: false,
 		blanks_around_fences: false,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	assert!(!result.contains("***"));
@@ -700,6 +711,7 @@ fn test_format_options_remove_emphasis() {
 		blanks_around_lists: false,
 		blanks_around_fences: false,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	assert_eq!(result, "This is italic text");
@@ -718,6 +730,7 @@ fn test_format_options_remove_emphasis_underscore() {
 		blanks_around_lists: false,
 		blanks_around_fences: false,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	assert_eq!(result, "This is italic text");
@@ -736,6 +749,7 @@ fn test_format_options_remove_emphasis_in_heading_preserved() {
 		blanks_around_lists: false,
 		blanks_around_fences: false,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	assert_eq!(result, "# *Heading* with emphasis");
@@ -754,6 +768,7 @@ fn test_format_options_remove_emphasis_in_code_preserved() {
 		blanks_around_lists: false,
 		blanks_around_fences: false,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	assert_eq!(result, "Use `*italic*` in code");
@@ -1172,6 +1187,7 @@ fn test_format_markdown_blockquote_with_emphasis_and_underscores() {
 		blanks_around_lists: false,
 		blanks_around_fences: false,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	assert_eq!(result, expected);
@@ -1320,6 +1336,7 @@ fn test_format_options_blanks_around_fences_add() {
 		blanks_around_lists: false,
 		blanks_around_fences: true,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	let expected = "Text\n\n```rust\nfn main() {}\n```\n\nEnd";
@@ -1339,6 +1356,7 @@ fn test_format_options_blanks_around_fences_disabled() {
 		blanks_around_lists: false,
 		blanks_around_fences: false,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	let expected = "Text\n\n```rust\nfn main() {}\n```\n\nEnd";
@@ -1358,6 +1376,7 @@ fn test_format_options_blanks_around_fences_compact() {
 		blanks_around_lists: false,
 		blanks_around_fences: true,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	let expected = "Text\n\n```rust\nfn main() {}\n```\n\nEnd";
@@ -1408,6 +1427,7 @@ fn test_format_options_blanks_around_headings_enabled() {
 		blanks_around_lists: false,
 		blanks_around_fences: false,
 		blanks_around_headings: true,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	let expected = "Text\n\n# Heading\n\nParagraph";
@@ -1427,6 +1447,7 @@ fn test_format_options_blanks_around_headings_disabled() {
 		blanks_around_lists: false,
 		blanks_around_fences: false,
 		blanks_around_headings: false,
+		minify_html: true,
 	};
 	let result = format_markdown_with_options(content, options);
 	let expected = "Text\n# Heading\nParagraph";
@@ -1913,6 +1934,124 @@ fn test_format_markdown_inline_code_block_in_table() {
 fn test_format_markdown_inline_code_block_in_list() {
 	let content = "- code block: `let a = 1;`\n";
 	let expected = "- code block: `let a = 1;`\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_html_minification_user_case() {
+	let content = r#"<p align="center">
+  <img src="https://img.shields.io/badge/Markdown-000000?style=for-the-badge&logo=markdown&logoColor=white" alt="Markdown" />
+</p>
+"#;
+	let expected = r#"<p align="center">
+<img src="https://img.shields.io/badge/Markdown-000000?style=for-the-badge&logo=markdown&logoColor=white" alt="Markdown" /></p>
+"#;
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_html_multiline_tag() {
+	let content = r#"<p
+  align="center"
+>
+  <img
+    src="https://img.shields.io/badge/Markdown-000000"
+    alt="Markdown"
+  />
+</p>
+"#;
+	let expected = r#"<p align="center">
+<img src="https://img.shields.io/badge/Markdown-000000" alt="Markdown" /></p>
+"#;
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_html_preserves_spaces_in_attribute_values() {
+	let content = r#"<p align="center">
+  <img src="badge.png" alt="Badge with   multiple   spaces" />
+</p>
+"#;
+	let expected = r#"<p align="center">
+<img src="badge.png" alt="Badge with   multiple   spaces" /></p>
+"#;
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_html_nested_elements() {
+	let content = r#"<div align="center">
+  <a href="https://example.com">
+    <img src="logo.svg" alt="logo" width="128" height="128" />
+  </a>
+</div>
+"#;
+	let expected = r#"<div align="center">
+<a href="https://example.com">
+<img src="logo.svg" alt="logo" width="128" height="128" /></a></div>
+"#;
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_html_multiple_children() {
+	let content = r#"<p align="center">
+  <img src="badge1.png" alt="1" />
+  <img src="badge2.png" alt="2" />
+</p>
+"#;
+	let expected = r#"<p align="center">
+<img src="badge1.png" alt="1" />
+<img src="badge2.png" alt="2" /></p>
+"#;
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_html_inline_tag_in_text() {
+	let content = "Click <a   href=\"https://example.com\"   target=\"_blank\"  >here</a> to view.";
+	let expected = "Click <a href=\"https://example.com\" target=\"_blank\">here</a> to view.";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_html_disabled_option() {
+	let content = r#"<p align="center">
+  <img src="badge.png" alt="Badge" />
+</p>
+"#;
+	let options = FormatOptions {
+		minify_html: false,
+		..FormatOptions::default()
+	};
+	let result = format_markdown_with_options(content, options);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_markdown_html_in_code_block_preserved() {
+	let content = r#"```html
+<p align="center">
+  <img src="test.png" />
+</p>
+```
+"#;
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_markdown_html_comments_preserved() {
+	let content = "<!-- Input: -->\n\n<p align=\"center\">\n  <img src=\"badge.png\" alt=\"Badge\" />\n</p>\n";
+	let expected =
+		"<!-- Input: -->\n\n<p align=\"center\">\n<img src=\"badge.png\" alt=\"Badge\" /></p>\n";
 	let result = format_markdown(content);
 	assert_eq!(result, expected);
 }

@@ -9,6 +9,7 @@ pub struct FormatOptions {
 	pub blanks_around_lists: bool,
 	pub blanks_around_fences: bool,
 	pub blanks_around_headings: bool,
+	pub minify_html: bool,
 }
 
 impl FormatOptions {
@@ -24,6 +25,7 @@ impl FormatOptions {
 			blanks_around_lists: true,
 			blanks_around_fences: true,
 			blanks_around_headings: true,
+			minify_html: true,
 		}
 	}
 }
@@ -40,6 +42,7 @@ impl Default for FormatOptions {
 			blanks_around_lists: true,
 			blanks_around_fences: true,
 			blanks_around_headings: true,
+			minify_html: true,
 		}
 	}
 }

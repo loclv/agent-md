@@ -2,6 +2,7 @@ mod blockquotes;
 mod bold_tables;
 mod code_blocks;
 pub mod frontmatter;
+pub mod html;
 mod tables;
 
 mod io;
@@ -211,6 +212,16 @@ pub fn format_markdown_structured(content: &str, options: FormatOptions) -> Stri
 				if options.blanks_around_lists {
 					ensure_newlines(&mut formatted_parts, 2, options.compact_blank_lines);
 				}
+				last_was_frontmatter = false;
+			}
+			crate::parser::MarkdownBlock::Html(raw) => {
+				ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+				if options.minify_html {
+					formatted_parts.push(html::format_html_block(raw));
+				} else {
+					formatted_parts.push(raw.clone());
+				}
+				formatted_parts.push("\n".to_string());
 				last_was_frontmatter = false;
 			}
 			crate::parser::MarkdownBlock::Paragraph(s) => {

@@ -34,6 +34,10 @@ pub fn process_markdown_line(line: &str, options: &FormatOptions, is_heading: bo
 	// Normalize blockquote lines (remove extra spaces after > markers)
 	processed_line = blockquotes::normalize_blockquote(&processed_line);
 
+	if options.minify_html {
+		processed_line = super::html::minify_html_tags_in_text(&processed_line);
+	}
+
 	if options.trim_trailing_whitespace {
 		processed_line = processed_line.trim_end().to_string();
 	}

@@ -314,10 +314,35 @@ Trình định dạng áp dụng các quy tắc thu gọn theo mặc định đ�
 | `blanks_around_lists` | Đảm bảo danh sách được bao quanh bởi các dòng trống (cấu hình trong `.agent-md.json` hoặc `.markdownlint.json`) |
 | `blanks_around_fences` | Đảm bảo các khối mã được bao quanh bởi các dòng trống (cấu hình trong `.agent-md.json` hoặc `.markdownlint.json`) |
 | `blanks_around_headings` | Đảm bảo tiêu đề được bao quanh bởi các dòng trống (cấu hình trong `.agent-md.json` hoặc `.markdownlint.json`) |
+| `minify_html` | Thu nhỏ các thẻ và khối HTML bằng cách loại bỏ khoảng trắng và dòng mới không cần thiết |
 
 Ví dụ:
+
 ```bash
 agent-md fmt document.md
+```
+
+##### Thu nhỏ HTML
+
+Các khối và thẻ HTML được thu nhỏ để giảm lãng phí token:
+- Loại bỏ khoảng trắng, tab và dòng mới không cần thiết bên trong thẻ HTML
+- Loại bỏ thụt đầu dòng thừa bên trong các khối HTML
+- Gộp các dòng chỉ chứa thẻ đóng với phần tử đứng trước
+- Giữ nguyên tên thẻ HTML, thuộc tính và giá trị thuộc tính
+
+Đầu vào:
+
+```html
+<p align="center">
+  <img src="badge.png" alt="Markdown" />
+</p>
+```
+
+Đầu ra:
+
+```html
+<p align="center">
+<img src="badge.png" alt="Markdown" /></p>
 ```
 
 ## Cách thức hoạt động: Phân tích cấu trúc (Structured Parsing)

@@ -1087,6 +1087,33 @@ When using the `agent-md lint` command, validation results are returned in JSON 
 - Start documents with an H1 heading
 - End files with a single newline character
 - Avoid multiple consecutive blank lines
+- Minify HTML tags and remove redundant indentation or newlines inside HTML elements
+
+## HTML Formatting and Minification
+
+When writing or formatting HTML inside Markdown files, agent-md applies minification rules to reduce token consumption:
+
+- Remove useless spaces, tabs, and newlines inside HTML tags
+- Strip redundant indentation from child lines inside HTML blocks
+- Merge standalone closing tag lines into the preceding element line
+- Preserve original HTML tag names, attribute names, and attribute values verbatim
+
+### HTML Formatting Examples
+
+Input:
+
+```html
+<p align="center">
+  <img src="badge.png" alt="Markdown" />
+</p>
+```
+
+Formatted output:
+
+```html
+<p align="center">
+<img src="badge.png" alt="Markdown" /></p>
+```
 
 ## Integration with agent-md
 

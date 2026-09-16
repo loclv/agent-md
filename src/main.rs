@@ -172,6 +172,12 @@ pub enum Commands {
 			default_value = "true"
 		)]
 		remove_emphasis: bool,
+		#[arg(
+			long,
+			help = "Minify HTML tags and remove useless whitespace",
+			default_value = "true"
+		)]
+		minify_html: bool,
 	},
 }
 
@@ -181,6 +187,7 @@ fn get_format_options(
 	collapse_spaces: bool,
 	remove_horizontal_rules: bool,
 	remove_emphasis: bool,
+	minify_html: bool,
 	custom_config: Option<&str>,
 ) -> format::FormatOptions {
 	let cfg = config::resolve_config(config::get_config(custom_config).as_ref());
@@ -195,6 +202,7 @@ fn get_format_options(
 		blanks_around_lists: cfg.blanks_around_lists,
 		blanks_around_fences: cfg.blanks_around_fences,
 		blanks_around_headings: cfg.blanks_around_headings,
+		minify_html,
 	}
 }
 
@@ -261,6 +269,7 @@ fn main() {
 			collapse_spaces,
 			remove_horizontal_rules,
 			remove_emphasis,
+			minify_html,
 		}) => {
 			let options = get_format_options(
 				remove_bold,
@@ -268,6 +277,7 @@ fn main() {
 				collapse_spaces,
 				remove_horizontal_rules,
 				remove_emphasis,
+				minify_html,
 				cli.config.as_deref(),
 			);
 			if stdin {
@@ -283,7 +293,7 @@ fn main() {
 			// If path provided without command, treat as fmt
 			if let Some(path) = cli.path {
 				let options =
-					get_format_options(true, true, true, true, true, cli.config.as_deref());
+					get_format_options(true, true, true, true, true, true, cli.config.as_deref());
 				format::cmd_fmt(&path, cli.human, options)
 			} else {
 				// If no command and not version, show help

@@ -1320,6 +1320,7 @@ Please contribute to the project.
 				blanks_around_lists: false,
 				blanks_around_fences: false,
 				blanks_around_headings: true,
+				minify_html: true,
 			},
 		);
 		assert_eq!(formatted, content);

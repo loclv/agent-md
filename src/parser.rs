@@ -23,6 +23,7 @@ pub enum MarkdownBlock {
 		items: Vec<String>,
 		raw: String,
 	},
+	Html(String),
 	Paragraph(String),
 	BlankLine,
 	HorizontalRule(String),
@@ -203,6 +204,58 @@ pub fn parse(content: &str) -> ParsedMarkdown {
 				rows: Vec::new(),         // Placeholder
 				raw: table_raw,
 			});
+			continue;
+		}
+
+		// HTML Block handling
+		if crate::format::html::is_html_block_start(trimmed) {
+			let mut html_raw = String::new();
+			let mut tag_stack: Vec<String> = Vec::new();
+			let mut in_comment = false;
+			let mut has_opened = false;
+
+			while i < lines.len() {
+				let current_line = lines[i];
+				let current_trimmed = current_line.trim();
+
+				if current_trimmed.is_empty() {
+					break;
+				}
+				if current_trimmed.starts_with("```") || current_trimmed.starts_with('#') {
+					break;
+				}
+				if has_opened
+					&& tag_stack.is_empty()
+					&& !in_comment && !crate::format::html::is_html_block_start(current_trimmed)
+				{
+					break;
+				}
+
+				html_raw.push_str(current_line);
+				html_raw.push('\n');
+
+				crate::format::html::update_tag_state(
+					current_line,
+					&mut tag_stack,
+					&mut in_comment,
+				);
+				if !tag_stack.is_empty() || in_comment {
+					has_opened = true;
+				}
+
+				i += 1;
+
+				if has_opened && tag_stack.is_empty() && !in_comment && i < lines.len() {
+					let next_trimmed = lines[i].trim();
+					if next_trimmed.is_empty()
+						|| !crate::format::html::is_html_block_start(next_trimmed)
+					{
+						break;
+					}
+				}
+			}
+
+			blocks.push(MarkdownBlock::Html(html_raw));
 			continue;
 		}
 

@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- HTML Minification in Formatter: Added `minify_html` formatter logic to strip useless spaces, tabs, and newlines inside HTML tags and elements while strictly preserving original HTML tag names, attribute names, and quoted attribute values.
+- HTML Block Parsing: Added `MarkdownBlock::Html` variant to the structured parser to detect and group multiline HTML blocks and comments.
+- HTML Tag Minification: Created `src/format/html.rs` with `minify_html_tag`, `minify_html_tags_in_text`, `format_html_block`, and helper functions to normalize multiline tags and merge standalone closing tags into preceding element lines.
+- CLI Option: Added `--minify-html` flag (default `true`) to `agent-md fmt` command and integrated into `FormatOptions`.
+- Documentation: Updated `README.md`, `README-vi.md`, and `docs/markdown-writing-rules.md` with HTML minification behavior and examples.
+
+### Tests
+
+- HTML Minification Tests: Added unit test suite in `src/format/tests.rs` covering single tags, multiline tags, nested HTML tags, attribute values with spaces, multiple children, comments, code block preservation, and option toggles.
+
 ## [0.2.12] - 2026-09-13
 
 ### Added

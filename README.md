@@ -370,6 +370,7 @@ The formatter applies compact rules by default to reduce token count:
 | `blanks_around_lists` | Ensures lists are surrounded by blank lines (configured in `.agent-md.json` or `.markdownlint.json`) |
 | `blanks_around_fences` | Ensures fenced code blocks are surrounded by blank lines (configured in `.agent-md.json` or `.markdownlint.json`) |
 | `blanks_around_headings` | Ensures headings are surrounded by blank lines (configured in `.agent-md.json` or `.markdownlint.json`) |
+| `minify_html` | Minifies HTML tags and blocks by removing useless whitespace and newlines |
 
 Example:
 
@@ -377,12 +378,35 @@ Example:
 agent-md fmt document.md
 ```
 
+##### HTML Minification
+
+HTML blocks and tags are minified to eliminate token waste:
+- Removes useless spaces, tabs, and newlines inside HTML tags
+- Strips redundant indentation inside HTML blocks
+- Merges standalone closing tag lines with preceding elements
+- Preserves original HTML tag names, attributes, and attribute values intact
+
+Input:
+
+```html
+<p align="center">
+  <img src="badge.png" alt="Markdown" />
+</p>
+```
+
+Output:
+
+```html
+<p align="center">
+<img src="badge.png" alt="Markdown" /></p>
+```
+
 ## How it Works: Structured Parsing
 
 Unlike simple line-based formatters, `agent-md` uses a structured parser that:
 
 1. Extracts YAML Frontmatter: Preserves metadata at the beginning of the document exactly as-is.
-2. Identifies Document Blocks: Recognizes headings, code blocks, tables, lists, and paragraphs.
+2. Identifies Document Blocks: Recognizes headings, code blocks, tables, lists, HTML blocks, and paragraphs.
 3. Applies Context-Aware Formatting: Formats each block according to its type and your configuration options.
 4. Optimizes for LLMs: Ensures the output is clean, consistent, and token-efficient while remaining human-readable.
 
