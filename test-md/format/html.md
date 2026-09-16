@@ -1,4 +1,8 @@
-HTML should be minified. Remove all useless spaces or newlines inside HTML tags. It should not change the original HTML tags, attributes, or values.
+# Format HTML
+
+## Rule: Remove useless spaces, tabs, or newlines inside HTML tags
+
+HTML should be minified. Remove all useless spaces, tabs, or newlines inside HTML tags. It should not change the original HTML tags, attributes, or values.
 
 <!-- Input: -->
 
