@@ -7,8 +7,7 @@ HTML should be minified. Remove all useless spaces, tabs, or newlines inside HTM
 <!-- Input: -->
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Markdown-000000?style=for-the-badge&logo=markdown&logoColor=white" alt="Markdown" />
-</p>
+<img src="https://img.shields.io/badge/Markdown-000000?style=for-the-badge&logo=markdown&logoColor=white" alt="Markdown" /></p>
 
 <!-- Correct Output should be: -->
 

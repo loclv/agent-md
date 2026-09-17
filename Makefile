@@ -1,7 +1,7 @@
 # Makefile for agent-md Rust project
 # Provides convenient commands for building, testing, and linting
 
-.PHONY: help build run test clean lint format check-format clippy audit watch
+.PHONY: help build run test clean lint format check-format clippy audit watch package bundle
 
 # Default target
 help:
@@ -9,6 +9,8 @@ help:
 	@echo "  build        - Build the project"
 	@echo "  run          - Build and run the project"
 	@echo "  test         - Run tests"
+	@echo "  package      - Package crate for distribution"
+	@echo "  bundle       - Alias for package"
 	@echo "  clean        - Clean build artifacts"
 	@echo "  lint         - Run all linting checks (clippy + format check)"
 	@echo "  format       - Format code with rustfmt"
@@ -21,6 +23,13 @@ help:
 # Build the project
 build:
 	cargo build --release
+
+# Package crate for publishing / distribution
+package:
+	cargo package --allow-dirty
+
+# Bundle alias
+bundle: package
 
 # Build and run
 run:

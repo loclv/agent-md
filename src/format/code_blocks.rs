@@ -16,6 +16,7 @@
 ///
 /// # Examples
 /// ```
+/// use agent_md::format::code_blocks::collapse_spaces_before_comment;
 /// let result = collapse_spaces_before_comment("cd              # goto");
 /// assert_eq!(result, "cd # goto");
 /// ```

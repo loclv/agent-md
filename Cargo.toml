@@ -2,6 +2,35 @@
 name = "agent-md"
 version = "0.2.13"
 edition = "2021"
+description = "Fast Markdown editor, linter, and formatter designed for AI agents"
+license = "MIT"
+repository = "https://github.com/loclv/agent-md"
+homepage = "https://github.com/loclv/agent-md"
+documentation = "https://github.com/loclv/agent-md"
+readme = "README.md"
+keywords = ["markdown", "ai", "agents", "linter", "formatter"]
+categories = ["command-line-utilities", "development-tools", "text-processing"]
+exclude = [
+  ".agents/*",
+  ".antigravitycli/*",
+  ".github/*",
+  ".opencode/*",
+  ".ralph/*",
+  ".vscode/*",
+  "codedb.snapshot",
+  "logs/*",
+  "markdownlint/*",
+  "test-md/*",
+  "vscode-extension/*",
+]
+
+[lib]
+name = "agent_md"
+path = "src/lib.rs"
+
+[[bin]]
+name = "agent-md"
+path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
@@ -15,7 +44,3 @@ chrono = "0.4"
 strip = true
 lto = true
 opt-level = "z"
-
-[[bin]]
-name = "agent-md"
-path = "src/main.rs"

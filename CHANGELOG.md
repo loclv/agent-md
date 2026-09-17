@@ -10,7 +10,11 @@ All notable changes to this project will be documented in this file.
 - HTML Block Parsing: Added `MarkdownBlock::Html` variant to the structured parser to detect and group multiline HTML blocks and comments.
 - HTML Tag Minification: Created `src/format/html.rs` with `minify_html_tag`, `minify_html_tags_in_text`, `format_html_block`, and helper functions to normalize multiline tags and merge standalone closing tags into preceding element lines.
 - CLI Option: Added `--minify-html` flag (default `true`) to `agent-md fmt` command and integrated into `FormatOptions`.
-- Documentation: Updated `README.md`, `README-vi.md`, and `docs/markdown-writing-rules.md` with HTML minification behavior and examples.
+- Library Crate Support: Converted `agent-md` into both a library crate and a binary crate with `src/lib.rs` and `[lib]` target configuration in `Cargo.toml`.
+- Programmatic APIs: Re-exported core APIs (`format_markdown`, `validate_markdown`, `parse_markdown`, `FormatOptions`, etc.) from root module for other Rust crates to consume.
+- Crate Packaging Metadata: Added description, repository, homepage, documentation, keywords, categories, and exclude list to `Cargo.toml`, plus root `LICENSE` file for publishing to crates.io.
+- Makefile Package Targets: Added `make package` and `make bundle` targets for building distribution packages.
+- Documentation: Updated `README.md`, `README-vi.md`, and `docs/markdown-writing-rules.md` with HTML minification behavior and Rust library usage examples.
 
 ### Tests
 

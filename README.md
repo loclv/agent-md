@@ -58,6 +58,33 @@ export PATH="/Users/username/w/agent-md/target/release:$PATH"
 
 Now you can use the `agent-md` command from anywhere.
 
+Or install directly via Cargo:
+
+```bash
+cargo install agent-md
+```
+
+### Use as a Rust Library
+
+Add `agent-md` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+agent-md = "0.2.13"
+```
+
+Use the programmatic APIs in your application:
+
+```rust
+use agent_md::{format_markdown, parse_markdown, validate_markdown};
+
+let input = "# Heading\n\nSome text with *emphasis*.";
+let formatted = format_markdown(input);
+
+let result = validate_markdown(&formatted);
+assert!(result.valid);
+```
+
 ## Specific Usage Example
 
 ### Input: Regular Markdown

@@ -47,6 +47,33 @@ export PATH="/Users/username/w/agent-md/target/release:$PATH"
 
 Bây giờ bạn có thể sử dụng lệnh `agent-md` từ bất cứ đâu.
 
+Hoặc cài đặt trực tiếp qua Cargo:
+
+```bash
+cargo install agent-md
+```
+
+### Sử dụng như một thư viện Rust
+
+Thêm `agent-md` vào `Cargo.toml`:
+
+```toml
+[dependencies]
+agent-md = "0.2.13"
+```
+
+Sử dụng các API lập trình trong ứng dụng của bạn:
+
+```rust
+use agent_md::{format_markdown, parse_markdown, validate_markdown};
+
+let input = "# Tiêu đề\n\nVăn bản với *in nghiêng*.";
+let formatted = format_markdown(input);
+
+let result = validate_markdown(&formatted);
+assert!(result.valid);
+```
+
 ## Ví dụ sử dụng cụ thể
 
 ### Đầu vào: Markdown thông thường

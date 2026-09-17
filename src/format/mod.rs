@@ -1,13 +1,12 @@
-mod blockquotes;
-mod bold_tables;
-mod code_blocks;
+pub mod blockquotes;
+pub mod bold_tables;
+pub mod code_blocks;
 pub mod frontmatter;
 pub mod html;
-mod tables;
-
-mod io;
-mod lines;
-mod options;
+pub mod io;
+pub mod lines;
+pub mod options;
+pub mod tables;
 
 #[cfg(test)]
 mod tests;
