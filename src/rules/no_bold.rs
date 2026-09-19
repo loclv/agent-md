@@ -1,25 +1,48 @@
 pub fn find_bold_text(line: &str) -> Vec<usize> {
 	let mut results = Vec::new();
 
-	let mut code_ranges = Vec::new();
+	let mut exempt_ranges = Vec::new();
 	let chars: Vec<char> = line.chars().collect();
-	let mut in_code = false;
-	let mut code_start = 0;
+	let mut i = 0;
 
-	for (i, &ch) in chars.iter().enumerate() {
-		if ch == '`' && (i == 0 || chars[i - 1] != '\\') {
-			if !in_code {
-				in_code = true;
-				code_start = i;
-			} else {
-				in_code = false;
-				code_ranges.push((code_start, i));
+	while i < chars.len() {
+		// Exempt inline code spans
+		if chars[i] == '`' {
+			if let Some(code_end) = crate::format::lines::find_code_span_end(&chars, i) {
+				exempt_ranges.push((i, code_end));
+				i = code_end + 1;
+				continue;
 			}
 		}
-	}
 
-	if in_code {
-		code_ranges.push((code_start, line.len() - 1));
+		// Exempt HTML tags, comments, and autolinks
+		if chars[i] == '<' && i + 1 < chars.len() {
+			let next_c = chars[i + 1];
+			if next_c.is_ascii_alphabetic() || next_c == '/' || next_c == '!' || next_c == '?' {
+				if let Some(tag_end) = crate::format::html::find_tag_end(&chars, i) {
+					exempt_ranges.push((i, tag_end));
+					i = tag_end + 1;
+					continue;
+				}
+			}
+		}
+
+		// Exempt link destinations in [text](url) or ![alt](url)
+		if chars[i] == ']' && i + 1 < chars.len() && chars[i + 1] == '(' {
+			if let Some(dest_end) = crate::format::lines::find_link_destination_end(&chars, i + 1) {
+				exempt_ranges.push((i + 1, dest_end));
+				i = dest_end + 1;
+				continue;
+			}
+		}
+
+		// Exempt reference link destinations in [id]: url
+		if chars[i] == ']' && i + 1 < chars.len() && chars[i + 1] == ':' {
+			exempt_ranges.push((i + 1, chars.len().saturating_sub(1)));
+			break;
+		}
+
+		i += 1;
 	}
 
 	let mut search_start = 0;
@@ -27,19 +50,19 @@ pub fn find_bold_text(line: &str) -> Vec<usize> {
 		if let Some(start) = line[search_start..].find("**") {
 			let abs_start = search_start + start;
 
-			let in_code_range = code_ranges
+			let in_exempt = exempt_ranges
 				.iter()
 				.any(|&(start, end)| abs_start >= start && abs_start <= end);
 
-			if !in_code_range {
+			if !in_exempt {
 				if let Some(end_offset) = line[abs_start + 2..].find("**") {
 					let abs_end = abs_start + 2 + end_offset;
 
-					let end_in_code_range = code_ranges
+					let end_in_exempt = exempt_ranges
 						.iter()
 						.any(|&(start, end)| abs_end >= start && abs_end <= end);
 
-					if !end_in_code_range {
+					if !end_in_exempt {
 						results.push(abs_start + 1);
 						search_start = abs_end + 2;
 						continue;
@@ -57,19 +80,19 @@ pub fn find_bold_text(line: &str) -> Vec<usize> {
 		if let Some(start) = line[search_start..].find("__") {
 			let abs_start = search_start + start;
 
-			let in_code_range = code_ranges
+			let in_exempt = exempt_ranges
 				.iter()
 				.any(|&(start, end)| abs_start >= start && abs_start <= end);
 
-			if !in_code_range {
+			if !in_exempt {
 				if let Some(end_offset) = line[abs_start + 2..].find("__") {
 					let abs_end = abs_start + 2 + end_offset;
 
-					let end_in_code_range = code_ranges
+					let end_in_exempt = exempt_ranges
 						.iter()
 						.any(|&(start, end)| abs_end >= start && abs_end <= end);
 
-					if !end_in_code_range {
+					if !end_in_exempt {
 						results.push(abs_start + 1);
 						search_start = abs_end + 2;
 						continue;
@@ -219,5 +242,41 @@ mod tests {
 		let result = find_bold_text(line);
 		assert_eq!(result.len(), 1);
 		assert_eq!(result[0], 27); // Position of first **
+	}
+
+	#[test]
+	fn test_find_bold_text_in_link_destination_exempt() {
+		let line = "[Package](https://github.com/org/repo/blob/main/__init__.py)";
+		let result = find_bold_text(line);
+		assert_eq!(result.len(), 0);
+	}
+
+	#[test]
+	fn test_find_bold_text_in_autolink_exempt() {
+		let line = "See <https://github.com/org/repo/blob/main/__init__.py>";
+		let result = find_bold_text(line);
+		assert_eq!(result.len(), 0);
+	}
+
+	#[test]
+	fn test_find_bold_text_in_html_tag_exempt() {
+		let line = "<a href=\"https://example.com/__init__.py\">Link</a>";
+		let result = find_bold_text(line);
+		assert_eq!(result.len(), 0);
+	}
+
+	#[test]
+	fn test_find_bold_text_in_reference_link_exempt() {
+		let line = "[1]: https://example.com/__init__.py";
+		let result = find_bold_text(line);
+		assert_eq!(result.len(), 0);
+	}
+
+	#[test]
+	fn test_find_bold_text_in_link_label_still_detected() {
+		let line = "[**Bold Link**](https://example.com/__init__.py)";
+		let result = find_bold_text(line);
+		assert_eq!(result.len(), 1);
+		assert_eq!(result[0], 2);
 	}
 }

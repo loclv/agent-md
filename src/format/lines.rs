@@ -67,6 +67,45 @@ pub fn remove_bold_markers(line: &str) -> String {
 			}
 		}
 
+		// Skip HTML tags and autolinks (e.g., <https://example.com/__init__.py> or <a href="...">)
+		if chars[i] == '<' && i + 1 < chars.len() {
+			let next_c = chars[i + 1];
+			if next_c.is_ascii_alphabetic() || next_c == '/' || next_c == '!' || next_c == '?' {
+				if let Some(tag_end) = super::html::find_tag_end(&chars, i) {
+					for &c in &chars[i..=tag_end] {
+						result.push(c);
+					}
+					i = tag_end + 1;
+					continue;
+				}
+			}
+		}
+
+		// Skip link destination in [text](url) or ![alt](url)
+		if chars[i] == ']' && i + 1 < chars.len() && chars[i + 1] == '(' {
+			result.push(']');
+			if let Some(dest_end) = find_link_destination_end(&chars, i + 1) {
+				for &c in &chars[i + 1..=dest_end] {
+					result.push(c);
+				}
+				i = dest_end + 1;
+				continue;
+			} else {
+				i += 1;
+				continue;
+			}
+		}
+
+		// Skip reference link destination in [id]: url
+		if chars[i] == ']' && i + 1 < chars.len() && chars[i + 1] == ':' {
+			result.push(']');
+			result.push(':');
+			for &c in &chars[i + 2..] {
+				result.push(c);
+			}
+			break;
+		}
+
 		// Check for **bold** pattern
 		if i + 1 < chars.len() && chars[i] == '*' && chars[i + 1] == '*' {
 			// Opening delimiter MUST NOT be followed by whitespace (e.g., "** bold")
@@ -165,19 +204,76 @@ pub fn remove_emphasis_markers(line: &str) -> String {
 			}
 		}
 
-		// Skip markdown link labels [label]
+		// Skip HTML tags and autolinks
+		if chars[i] == '<' && i + 1 < chars.len() {
+			let next_c = chars[i + 1];
+			if next_c.is_ascii_alphabetic() || next_c == '/' || next_c == '!' || next_c == '?' {
+				if let Some(tag_end) = super::html::find_tag_end(&chars, i) {
+					for &c in &chars[i..=tag_end] {
+						result.push(c);
+					}
+					i = tag_end + 1;
+					continue;
+				}
+			}
+		}
+
+		// Skip link destination in [text](url) or ![alt](url)
+		if chars[i] == ']' && i + 1 < chars.len() && chars[i + 1] == '(' {
+			result.push(']');
+			if let Some(dest_end) = find_link_destination_end(&chars, i + 1) {
+				for &c in &chars[i + 1..=dest_end] {
+					result.push(c);
+				}
+				i = dest_end + 1;
+				continue;
+			} else {
+				i += 1;
+				continue;
+			}
+		}
+
+		// Skip reference link destination in [id]: url
+		if chars[i] == ']' && i + 1 < chars.len() && chars[i + 1] == ':' {
+			result.push(']');
+			result.push(':');
+			for &c in &chars[i + 2..] {
+				result.push(c);
+			}
+			break;
+		}
+
+		// Skip markdown links [label](url), [id]: url, or [label]
 		if chars[i] == '[' {
 			let mut bracket_end = i;
 			while bracket_end < chars.len() && chars[bracket_end] != ']' {
 				bracket_end += 1;
 			}
-			for j in i..=bracket_end {
-				if j < chars.len() {
-					result.push(chars[j]);
+			if bracket_end < chars.len() {
+				for &c in &chars[i..=bracket_end] {
+					result.push(c);
 				}
+				// If followed by (url), copy (url) as well
+				if bracket_end + 1 < chars.len() && chars[bracket_end + 1] == '(' {
+					if let Some(dest_end) = find_link_destination_end(&chars, bracket_end + 1) {
+						for &c in &chars[bracket_end + 1..=dest_end] {
+							result.push(c);
+						}
+						i = dest_end + 1;
+						continue;
+					}
+				}
+				// If followed by : (reference link definition), copy remainder of line
+				if bracket_end + 1 < chars.len() && chars[bracket_end + 1] == ':' {
+					result.push(':');
+					for &c in &chars[bracket_end + 2..] {
+						result.push(c);
+					}
+					break;
+				}
+				i = bracket_end + 1;
+				continue;
 			}
-			i = bracket_end + 1;
-			continue;
 		}
 
 		// Check for single asterisk or underscore emphasis marker (*text* or _text_)
@@ -272,6 +368,31 @@ pub fn find_code_span_end(chars: &[char], start: usize) -> Option<usize> {
 		} else {
 			idx += 1;
 		}
+	}
+
+	None
+}
+
+/// Find matching closing `)` for a link destination starting at `paren_start` where `chars[paren_start] == '('`.
+pub fn find_link_destination_end(chars: &[char], paren_start: usize) -> Option<usize> {
+	if paren_start >= chars.len() || chars[paren_start] != '(' {
+		return None;
+	}
+
+	let mut depth = 1;
+	let mut idx = paren_start + 1;
+
+	while idx < chars.len() {
+		let c = chars[idx];
+		if c == '(' && (idx == 0 || chars[idx - 1] != '\\') {
+			depth += 1;
+		} else if c == ')' && (idx == 0 || chars[idx - 1] != '\\') {
+			depth -= 1;
+			if depth == 0 {
+				return Some(idx);
+			}
+		}
+		idx += 1;
 	}
 
 	None

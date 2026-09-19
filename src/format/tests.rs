@@ -2077,3 +2077,40 @@ fn test_format_markdown_preserves_email_autolink() {
 	let result = format_markdown(content);
 	assert_eq!(result, content);
 }
+
+#[test]
+fn test_format_markdown_preserves_url_underscores_in_link_destination() {
+	let content = "[Package](https://github.com/org/repo/blob/main/__init__.py)\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_markdown_strips_bold_in_link_label_but_preserves_url() {
+	let content = "[**Package**](https://github.com/org/repo/blob/main/__init__.py)\n";
+	let expected = "[Package](https://github.com/org/repo/blob/main/__init__.py)\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_preserves_url_in_reference_link() {
+	let content = "[1]: https://example.com/__init__.py\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_markdown_preserves_url_in_html_attribute() {
+	let content = "Click <a href=\"https://example.com/__init__.py\">here</a>.\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_markdown_preserves_url_underscores_in_table() {
+	let content =
+		"| Name | Link |\n|---|---|\n| File | [Init](https://example.com/__init__.py) |\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}

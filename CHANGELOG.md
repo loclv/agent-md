@@ -19,11 +19,14 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Markdown Autolink Preservation: Fixed an issue where Markdown autolinks like `<https://mise.en.dev/getting-started.html>` and `<user@example.com>` were misclassified as HTML tags during formatting, incorrectly truncating them into `<https: />`. Added `is_autolink`, `is_uri_autolink`, and `is_email_autolink` helpers to ensure CommonMark URI and email autolinks are preserved untouched.
+- URL and Link Destination Preservation: Fixed an issue where URLs containing underscores or asterisks in inline link destinations, reference link definitions, autolinks, or HTML attributes were corrupted by bold and emphasis stripping (e.g. `__init__.py` becoming `init.py`). Added protected link destination skipping to `remove_bold_markers`, `remove_emphasis_markers`, and `strip_bold_from_cell`.
+- Linter False Positive Exemptions for URLs: Updated `find_bold_text` and `validate_table_syntax` to exempt link destinations, autolinks, and HTML tags from `no-bold` errors and table inline formatting warnings.
 
 ### Tests
 
 - HTML Minification Tests: Added unit test suite in `src/format/tests.rs` covering single tags, multiline tags, nested HTML tags, attribute values with spaces, multiple children, comments, code block preservation, and option toggles.
 - Autolink Preservation Tests: Added unit tests verifying that URI and email autolinks within paragraphs, inline code, and text blocks remain unchanged during formatting.
+- URL and Link Destination Tests: Added unit tests in `src/format/tests.rs`, `src/rules/no_bold.rs`, and `src/rules/simple_tables.rs` verifying that URLs with underscores, reference links, and HTML attributes are preserved without lint errors or formatting corruption.
 
 ## [0.2.12] - 2026-09-13
 

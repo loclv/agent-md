@@ -34,6 +34,35 @@ pub fn strip_bold_from_cell(cell: &str) -> String {
 			}
 		}
 
+		// Skip HTML tags and autolinks
+		if chars[i] == '<' && i + 1 < chars.len() {
+			let next_c = chars[i + 1];
+			if next_c.is_ascii_alphabetic() || next_c == '/' || next_c == '!' || next_c == '?' {
+				if let Some(tag_end) = crate::format::html::find_tag_end(&chars, i) {
+					for &c in &chars[i..=tag_end] {
+						result.push(c);
+					}
+					i = tag_end + 1;
+					continue;
+				}
+			}
+		}
+
+		// Skip link destination in [text](url) or ![alt](url)
+		if chars[i] == ']' && i + 1 < chars.len() && chars[i + 1] == '(' {
+			result.push(']');
+			if let Some(dest_end) = super::lines::find_link_destination_end(&chars, i + 1) {
+				for &c in &chars[i + 1..=dest_end] {
+					result.push(c);
+				}
+				i = dest_end + 1;
+				continue;
+			} else {
+				i += 1;
+				continue;
+			}
+		}
+
 		// Check for **bold** pattern
 		if i + 1 < chars.len() && chars[i] == '*' && chars[i + 1] == '*' {
 			let mut j = i + 2;

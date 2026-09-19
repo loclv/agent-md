@@ -58,7 +58,54 @@ pub fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
 			return issues;
 		}
 
-		if trimmed.contains("**") || trimmed.contains("__") || trimmed.contains("*") {
+		let has_inline_formatting = {
+			let mut exempt_ranges = Vec::new();
+			let chars: Vec<char> = trimmed.chars().collect();
+			let mut i = 0;
+
+			while i < chars.len() {
+				if chars[i] == '`' {
+					if let Some(code_end) = crate::format::lines::find_code_span_end(&chars, i) {
+						exempt_ranges.push((i, code_end));
+						i = code_end + 1;
+						continue;
+					}
+				}
+
+				if chars[i] == '<' && i + 1 < chars.len() {
+					let next_c = chars[i + 1];
+					if next_c.is_ascii_alphabetic()
+						|| next_c == '/' || next_c == '!'
+						|| next_c == '?'
+					{
+						if let Some(tag_end) = crate::format::html::find_tag_end(&chars, i) {
+							exempt_ranges.push((i, tag_end));
+							i = tag_end + 1;
+							continue;
+						}
+					}
+				}
+
+				if chars[i] == ']' && i + 1 < chars.len() && chars[i + 1] == '(' {
+					if let Some(dest_end) =
+						crate::format::lines::find_link_destination_end(&chars, i + 1)
+					{
+						exempt_ranges.push((i + 1, dest_end));
+						i = dest_end + 1;
+						continue;
+					}
+				}
+
+				i += 1;
+			}
+
+			chars.iter().enumerate().any(|(idx, &c)| {
+				(c == '*' || (c == '_' && idx + 1 < chars.len() && chars[idx + 1] == '_'))
+					&& !exempt_ranges.iter().any(|&(s, e)| idx >= s && idx <= e)
+			})
+		};
+
+		if has_inline_formatting {
 			issues.push(TableIssue {
 				column: 1,
 				message: "inline formatting in table cells should be avoided".to_string(),
@@ -166,6 +213,13 @@ mod tests {
 		assert_eq!(result.len(), 1);
 		assert_eq!(result[0].severity, Severity::Warning);
 		assert!(result[0].message.contains("inline formatting"));
+	}
+
+	#[test]
+	fn test_validate_table_syntax_code_and_urls_exempt_from_inline_formatting() {
+		let line = "| `let a = b * c;` | [Init](https://example.com/__init__.py) |";
+		let result = validate_table_syntax(line);
+		assert_eq!(result.len(), 0);
 	}
 
 	#[test]
