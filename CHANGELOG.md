@@ -16,9 +16,14 @@ All notable changes to this project will be documented in this file.
 - Makefile Package Targets: Added `make package` and `make bundle` targets for building distribution packages.
 - Documentation: Updated `README.md`, `README-vi.md`, and `docs/markdown-writing-rules.md` with HTML minification behavior and Rust library usage examples.
 
+### Fixed
+
+- Markdown Autolink Preservation: Fixed an issue where Markdown autolinks like `<https://mise.en.dev/getting-started.html>` and `<user@example.com>` were misclassified as HTML tags during formatting, incorrectly truncating them into `<https: />`. Added `is_autolink`, `is_uri_autolink`, and `is_email_autolink` helpers to ensure CommonMark URI and email autolinks are preserved untouched.
+
 ### Tests
 
 - HTML Minification Tests: Added unit test suite in `src/format/tests.rs` covering single tags, multiline tags, nested HTML tags, attribute values with spaces, multiple children, comments, code block preservation, and option toggles.
+- Autolink Preservation Tests: Added unit tests verifying that URI and email autolinks within paragraphs, inline code, and text blocks remain unchanged during formatting.
 
 ## [0.2.12] - 2026-09-13
 

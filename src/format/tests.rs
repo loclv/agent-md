@@ -2055,3 +2055,25 @@ fn test_format_markdown_html_comments_preserved() {
 	let result = format_markdown(content);
 	assert_eq!(result, expected);
 }
+
+#[test]
+fn test_format_markdown_preserves_autolink_in_sentence() {
+	let content = "Root development tools are managed by `mise.toml` - <https://mise.en.dev/getting-started.html>.\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_markdown_preserves_various_autolinks() {
+	let content =
+		"# Links\n\nSee <http://example.com/path?query=1#hash> and <mailto:contact@domain.org>.\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_markdown_preserves_email_autolink() {
+	let content = "Contact us at <support@example.com>.\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}

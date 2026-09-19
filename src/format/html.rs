@@ -15,6 +15,102 @@ pub fn is_void_element(tag_name: &str) -> bool {
 	VOID_ELEMENTS.contains(&lower.as_str())
 }
 
+/// Check if the inner content between `<` and `>` matches a CommonMark URI autolink.
+pub fn is_uri_autolink(inner: &str) -> bool {
+	let colon_pos = match inner.find(':') {
+		Some(pos) => pos,
+		None => return false,
+	};
+
+	let scheme = &inner[..colon_pos];
+	if scheme.len() < 2 || scheme.len() > 32 {
+		return false;
+	}
+
+	let mut chars = scheme.chars();
+	let first = match chars.next() {
+		Some(c) => c,
+		None => return false,
+	};
+	if !first.is_ascii_alphabetic() {
+		return false;
+	}
+
+	for c in chars {
+		if !c.is_ascii_alphanumeric() && c != '+' && c != '.' && c != '-' {
+			return false;
+		}
+	}
+
+	let rest = &inner[colon_pos + 1..];
+	for c in rest.chars() {
+		if c.is_ascii_control() || c.is_whitespace() || c == '<' || c == '>' {
+			return false;
+		}
+	}
+
+	true
+}
+
+/// Check if the inner content between `<` and `>` matches a CommonMark email autolink.
+pub fn is_email_autolink(inner: &str) -> bool {
+	if inner.is_empty()
+		|| inner.contains(char::is_whitespace)
+		|| inner.contains('<')
+		|| inner.contains('>')
+	{
+		return false;
+	}
+
+	let at_pos = match inner.find('@') {
+		Some(pos) => pos,
+		None => return false,
+	};
+
+	let user = &inner[..at_pos];
+	let domain = &inner[at_pos + 1..];
+
+	if user.is_empty() || domain.is_empty() {
+		return false;
+	}
+
+	for c in user.chars() {
+		if !c.is_ascii_alphanumeric() && !".!#$%&'*+/=?^_`{|}~-".contains(c) {
+			return false;
+		}
+	}
+
+	for label in domain.split('.') {
+		if label.is_empty() || label.len() > 63 {
+			return false;
+		}
+		if label.starts_with('-') || label.ends_with('-') {
+			return false;
+		}
+		for c in label.chars() {
+			if !c.is_ascii_alphanumeric() && c != '-' {
+				return false;
+			}
+		}
+	}
+
+	true
+}
+
+/// Check if a tag-like string `<...>` is a Markdown autolink (URI or email) rather than an HTML tag.
+pub fn is_autolink(tag: &str) -> bool {
+	let trimmed = tag.trim();
+	if !trimmed.starts_with('<') || !trimmed.ends_with('>') || trimmed.len() < 3 {
+		return false;
+	}
+	let inner = &trimmed[1..trimmed.len() - 1];
+	if inner.contains(char::is_whitespace) || inner.contains('<') || inner.contains('>') {
+		return false;
+	}
+
+	is_uri_autolink(inner) || is_email_autolink(inner)
+}
+
 /// Find matching `>` for a tag starting at `start` where `chars[start] == '<'`.
 /// Respects single and double quotes to avoid terminating on `>` inside attribute values.
 pub fn find_tag_end(chars: &[char], start: usize) -> Option<usize> {
@@ -93,8 +189,16 @@ fn minify_open_or_self_closing_tag(tag: &str) -> String {
 			break;
 		}
 		if chars[i] == '/' {
-			is_self_closing = true;
-			break;
+			let mut check_slash = i + 1;
+			while check_slash < chars.len() && chars[check_slash].is_whitespace() {
+				check_slash += 1;
+			}
+			if check_slash < chars.len() && chars[check_slash] == '>' {
+				is_self_closing = true;
+				break;
+			}
+			i += 1;
+			continue;
 		}
 
 		// Read attribute name
@@ -186,6 +290,10 @@ pub fn minify_html_tag(tag: &str) -> String {
 	let trimmed = tag.trim();
 	if trimmed.starts_with("<!--") || trimmed.starts_with("<![CDATA[") || trimmed.starts_with("<?")
 	{
+		return tag.to_string();
+	}
+
+	if is_autolink(trimmed) {
 		return tag.to_string();
 	}
 
@@ -296,6 +404,11 @@ pub fn minify_html_tags_in_text(text: &str) -> String {
 			if is_tag_start {
 				if let Some(tag_end) = find_tag_end(&chars, i) {
 					let tag_str: String = chars[i..=tag_end].iter().collect();
+					if is_autolink(&tag_str) {
+						result.push_str(&tag_str);
+						i = tag_end + 1;
+						continue;
+					}
 					result.push_str(&minify_html_tag(&tag_str));
 					i = tag_end + 1;
 					continue;
@@ -319,6 +432,14 @@ pub fn is_html_block_start(line: &str) -> bool {
 	if trimmed.starts_with("<!--") || trimmed.starts_with("<!") || trimmed.starts_with("<?") {
 		return true;
 	}
+
+	// Autolinks like <http://...>, <https://...>, <mailto:...>, or <user@example.com> are not HTML blocks
+	if let Some(close_pos) = trimmed.find('>') {
+		if is_autolink(&trimmed[..=close_pos]) {
+			return false;
+		}
+	}
+
 	let after_bracket = if let Some(stripped) = trimmed.strip_prefix("</") {
 		stripped
 	} else if let Some(stripped) = trimmed.strip_prefix('<') {
@@ -327,27 +448,12 @@ pub fn is_html_block_start(line: &str) -> bool {
 		return false;
 	};
 
-	// Exclude autolinks like <http://...>, <https://...>, <mailto:...>, or <user@example.com>
-	if after_bracket.starts_with("http://")
-		|| after_bracket.starts_with("https://")
-		|| after_bracket.starts_with("mailto:")
-	{
-		return false;
-	}
 	if let Some(c) = after_bracket.chars().next() {
 		if !c.is_ascii_alphabetic() {
 			return false;
 		}
 	} else {
 		return false;
-	}
-
-	// If it contains @ before >, it is likely an email autolink
-	if let Some(close_pos) = after_bracket.find('>') {
-		let inside = &after_bracket[..close_pos];
-		if inside.contains('@') && !inside.contains(' ') && !inside.contains('=') {
-			return false;
-		}
 	}
 
 	true
@@ -388,6 +494,10 @@ pub fn update_tag_state(line: &str, tag_stack: &mut Vec<String>, in_comment: &mu
 			if let Some(tag_end) = find_tag_end(&chars, i) {
 				let tag_str: String = chars[i..=tag_end].iter().collect();
 				let trimmed = tag_str.trim();
+				if is_autolink(trimmed) {
+					i = tag_end + 1;
+					continue;
+				}
 				if trimmed.starts_with("</") {
 					let inner = &trimmed[2..trimmed.len().saturating_sub(1)];
 					let name = inner.trim().to_lowercase();
@@ -510,4 +620,56 @@ pub fn format_html_block(raw: &str) -> String {
 	}
 
 	merged_lines.join("\n")
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_is_uri_autolink() {
+		assert!(is_uri_autolink("https://mise.en.dev/getting-started.html"));
+		assert!(is_uri_autolink("http://example.com"));
+		assert!(is_uri_autolink("ftp://ftp.example.com/file.zip"));
+		assert!(is_uri_autolink("mailto:user@example.com"));
+		assert!(is_uri_autolink("tel:+123456789"));
+		assert!(!is_uri_autolink("div"));
+		assert!(!is_uri_autolink("span class=\"foo\""));
+		assert!(!is_uri_autolink("h:"));
+	}
+
+	#[test]
+	fn test_is_email_autolink() {
+		assert!(is_email_autolink("user@example.com"));
+		assert!(is_email_autolink("first.last+tag@domain.co.uk"));
+		assert!(!is_email_autolink("user@"));
+		assert!(!is_email_autolink("@domain.com"));
+		assert!(!is_email_autolink("not-an-email"));
+	}
+
+	#[test]
+	fn test_is_autolink() {
+		assert!(is_autolink("<https://mise.en.dev/getting-started.html>"));
+		assert!(is_autolink("<http://example.com>"));
+		assert!(is_autolink("<user@example.com>"));
+		assert!(!is_autolink("<div>"));
+		assert!(!is_autolink("<span class=\"foo\">"));
+		assert!(!is_autolink("<br />"));
+		assert!(!is_autolink("</p>"));
+	}
+
+	#[test]
+	fn test_minify_html_tags_preserves_autolinks() {
+		let input = "Root development tools are managed by `mise.toml` - <https://mise.en.dev/getting-started.html>.";
+		let result = minify_html_tags_in_text(input);
+		assert_eq!(result, input);
+	}
+
+	#[test]
+	fn test_minify_html_tags_with_html_and_autolink() {
+		let input = "<span  class=\"highlight\" >Link: <https://example.com></span>";
+		let expected = "<span class=\"highlight\">Link: <https://example.com></span>";
+		let result = minify_html_tags_in_text(input);
+		assert_eq!(result, expected);
+	}
 }

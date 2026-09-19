@@ -412,6 +412,7 @@ HTML blocks and tags are minified to eliminate token waste:
 - Strips redundant indentation inside HTML blocks
 - Merges standalone closing tag lines with preceding elements
 - Preserves original HTML tag names, attributes, and attribute values intact
+- Preserves Markdown autolinks (e.g., `<https://...>`, `<user@example.com>`) untouched
 
 Input:
 
