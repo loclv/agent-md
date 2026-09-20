@@ -406,10 +406,10 @@ The output remains unchanged.
 
 #### Format Options
 
-The formatter applies compact rules by default to reduce token count:
+The formatter applies compact rules by default to reduce token count. These can be configured in `.agent-md.json` or `agent-md.json` (using kebab-case or snake_case, top-level or under a `format` object) and overridden via CLI flags:
 | Option | Description |
 |---|---|
-| `remove_bold` | Removes `**bold**` and `__bold__` markers (preserves code spans, URLs, and link destinations) |
+| `remove_bold` | Removes `**bold**` and `__bold__` markers (preserves code spans, URLs, and link destinations; configurable via `remove_bold` or `remove-bold`) |
 | `compact_blank_lines` | Collapses multiple consecutive blank lines (preserves single blank lines around headings) |
 | `collapse_spaces` | Collapses multiple spaces between words (preserves spaces inside inline code) |
 | `remove_horizontal_rules` | Removes `---`, `***`, `___` lines |
@@ -423,6 +423,7 @@ Example:
 
 ```bash
 agent-md fmt document.md
+agent-md fmt --remove-bold=false document.md
 ```
 
 ##### HTML Minification

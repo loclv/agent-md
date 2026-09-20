@@ -569,6 +569,28 @@ fn test_format_options_remove_bold_disabled() {
 }
 
 #[test]
+fn test_format_options_remove_bold_disabled_with_emphasis_removal_enabled() {
+	let content = "This is **bold** text and __underlined__ with *italic* text";
+	let options = FormatOptions {
+		remove_bold: false,
+		compact_blank_lines: false,
+		trim_trailing_whitespace: false,
+		collapse_spaces: false,
+		remove_horizontal_rules: false,
+		remove_emphasis: true,
+		blanks_around_lists: false,
+		blanks_around_fences: false,
+		blanks_around_headings: true,
+		minify_html: true,
+	};
+	let result = format_markdown_with_options(content, options);
+	assert_eq!(
+		result,
+		"This is **bold** text and __underlined__ with italic text"
+	);
+}
+
+#[test]
 fn test_format_options_trim_trailing_whitespace() {
 	let content = "Text with trailing   \nMore text   ";
 	let options = FormatOptions {

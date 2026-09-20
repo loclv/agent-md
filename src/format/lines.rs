@@ -276,6 +276,17 @@ pub fn remove_emphasis_markers(line: &str) -> String {
 			}
 		}
 
+		// Skip double asterisks or underscores (bold markers) so they are preserved
+		if i + 1 < chars.len()
+			&& ((chars[i] == '*' && chars[i + 1] == '*')
+				|| (chars[i] == '_' && chars[i + 1] == '_'))
+		{
+			result.push(chars[i]);
+			result.push(chars[i + 1]);
+			i += 2;
+			continue;
+		}
+
 		// Check for single asterisk or underscore emphasis marker (*text* or _text_)
 		if i + 1 < chars.len()
 			&& ((chars[i] == '*' && chars[i + 1] != '*')
@@ -303,7 +314,14 @@ pub fn remove_emphasis_markers(line: &str) -> String {
 			}
 
 			let mut j = i + 1;
-			while j < chars.len() && chars[j] != marker {
+			while j < chars.len() {
+				if chars[j] == marker {
+					let is_double = (j + 1 < chars.len() && chars[j + 1] == marker)
+						|| (j > 0 && chars[j - 1] == marker);
+					if !is_double {
+						break;
+					}
+				}
 				j += 1;
 			}
 			if j < chars.len() && chars[j] == marker {

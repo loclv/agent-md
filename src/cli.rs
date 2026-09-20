@@ -201,68 +201,84 @@ pub enum Commands {
 		#[arg(long, help = "Read from stdin, write to stdout")]
 		stdin: bool,
 		/// Remove bold markers (** and __)
-		#[arg(long, help = "Remove bold markers (** and __)", default_value = "true")]
-		remove_bold: bool,
+		#[arg(
+			long,
+			help = "Remove bold markers (** and __)",
+			num_args = 0..=1,
+			default_missing_value = "true",
+			require_equals = true
+		)]
+		remove_bold: Option<bool>,
 		/// Compact blank lines (remove multiples)
 		#[arg(
 			long,
 			help = "Compact blank lines (remove multiples)",
-			default_value = "true"
+			num_args = 0..=1,
+			default_missing_value = "true",
+			require_equals = true
 		)]
-		compact_blank_lines: bool,
+		compact_blank_lines: Option<bool>,
 		/// Collapse multiple spaces between words
 		#[arg(
 			long,
 			help = "Collapse multiple spaces between words",
-			default_value = "true"
+			num_args = 0..=1,
+			default_missing_value = "true",
+			require_equals = true
 		)]
-		collapse_spaces: bool,
+		collapse_spaces: Option<bool>,
 		/// Remove horizontal rules (---, ***, ___)
 		#[arg(
 			long,
 			help = "Remove horizontal rules (---, ***, ___)",
-			default_value = "true"
+			num_args = 0..=1,
+			default_missing_value = "true",
+			require_equals = true
 		)]
-		remove_horizontal_rules: bool,
+		remove_horizontal_rules: Option<bool>,
 		/// Remove emphasis markers (* and _)
 		#[arg(
 			long,
 			help = "Remove emphasis markers (* and _)",
-			default_value = "true"
+			num_args = 0..=1,
+			default_missing_value = "true",
+			require_equals = true
 		)]
-		remove_emphasis: bool,
+		remove_emphasis: Option<bool>,
 		/// Minify HTML tags and remove useless whitespace
 		#[arg(
 			long,
 			help = "Minify HTML tags and remove useless whitespace",
-			default_value = "true"
+			num_args = 0..=1,
+			default_missing_value = "true",
+			require_equals = true
 		)]
-		minify_html: bool,
+		minify_html: Option<bool>,
 	},
 }
 
 /// Construct [`crate::format::FormatOptions`] based on CLI flags and configuration.
 pub fn get_format_options(
-	remove_bold: bool,
-	compact_blank_lines: bool,
-	collapse_spaces: bool,
-	remove_horizontal_rules: bool,
-	remove_emphasis: bool,
-	minify_html: bool,
+	remove_bold: Option<bool>,
+	compact_blank_lines: Option<bool>,
+	collapse_spaces: Option<bool>,
+	remove_horizontal_rules: Option<bool>,
+	remove_emphasis: Option<bool>,
+	minify_html: Option<bool>,
 	custom_config: Option<&str>,
 ) -> crate::format::FormatOptions {
 	let cfg = crate::config::resolve_config(crate::config::get_config(custom_config).as_ref());
 
 	crate::format::FormatOptions {
-		remove_bold,
-		compact_blank_lines,
+		remove_bold: remove_bold.unwrap_or(cfg.remove_bold),
+		compact_blank_lines: compact_blank_lines.unwrap_or(cfg.compact_blank_lines),
 		trim_trailing_whitespace: true,
-		collapse_spaces,
-		remove_horizontal_rules,
-		remove_emphasis,
+		collapse_spaces: collapse_spaces.unwrap_or(cfg.collapse_spaces),
+		remove_horizontal_rules: remove_horizontal_rules.unwrap_or(cfg.remove_horizontal_rules),
+		remove_emphasis: remove_emphasis.unwrap_or(cfg.remove_emphasis),
 		blanks_around_lists: cfg.blanks_around_lists,
 		blanks_around_fences: cfg.blanks_around_fences,
 		blanks_around_headings: cfg.blanks_around_headings,
-		minify_html,
+		minify_html: minify_html.unwrap_or(cfg.minify_html),
 	}
 }

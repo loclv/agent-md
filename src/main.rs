@@ -93,7 +93,7 @@ fn main() {
 			// If path provided without command, treat as fmt
 			if let Some(path) = cli.path {
 				let options =
-					get_format_options(true, true, true, true, true, true, cli.config.as_deref());
+					get_format_options(None, None, None, None, None, None, cli.config.as_deref());
 				format::cmd_fmt(&path, cli.human, options)
 			} else {
 				// If no command and not version, show help

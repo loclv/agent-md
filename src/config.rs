@@ -33,6 +33,12 @@ pub struct ResolvedConfig {
 	pub table_column_style: bool,
 	pub no_hard_tabs: bool,
 	pub no_inline_html: bool,
+	pub remove_bold: bool,
+	pub compact_blank_lines: bool,
+	pub collapse_spaces: bool,
+	pub remove_horizontal_rules: bool,
+	pub remove_emphasis: bool,
+	pub minify_html: bool,
 }
 
 impl Default for ResolvedConfig {
@@ -51,6 +57,12 @@ impl Default for ResolvedConfig {
 			table_column_style: false,
 			no_hard_tabs: true,
 			no_inline_html: false,
+			remove_bold: true,
+			compact_blank_lines: true,
+			collapse_spaces: true,
+			remove_horizontal_rules: true,
+			remove_emphasis: true,
+			minify_html: true,
 		}
 	}
 }
@@ -69,6 +81,22 @@ impl ResolvedConfig {
 		};
 		let get_u64 =
 			|key: &str, def: u64| -> u64 { cfg.get(key).and_then(|v| v.as_u64()).unwrap_or(def) };
+
+		let get_format_bool = |k1: &str, k2: &str, def: bool| -> bool {
+			let format_val = cfg
+				.get("format")
+				.and_then(|v| v.as_object())
+				.and_then(|obj| obj.get(k1).or_else(|| obj.get(k2)))
+				.and_then(|v| v.as_bool());
+			if let Some(val) = format_val {
+				return val;
+			}
+			match (cfg.get(k1), cfg.get(k2)) {
+				(Some(v), _) if v.is_boolean() => v.as_bool().unwrap_or(def),
+				(_, Some(v)) if v.is_boolean() => v.as_bool().unwrap_or(def),
+				_ => def,
+			}
+		};
 
 		let no_duplicate = match (
 			cfg.get("no-duplicate-heading"),
@@ -96,6 +124,28 @@ impl ResolvedConfig {
 			table_column_style: get_bool("table-column-style", defaults.table_column_style),
 			no_hard_tabs: get_bool("no-hard-tabs", defaults.no_hard_tabs),
 			no_inline_html: get_bool("no-inline-html", defaults.no_inline_html),
+			remove_bold: get_format_bool("remove-bold", "remove_bold", defaults.remove_bold),
+			compact_blank_lines: get_format_bool(
+				"compact-blank-lines",
+				"compact_blank_lines",
+				defaults.compact_blank_lines,
+			),
+			collapse_spaces: get_format_bool(
+				"collapse-spaces",
+				"collapse_spaces",
+				defaults.collapse_spaces,
+			),
+			remove_horizontal_rules: get_format_bool(
+				"remove-horizontal-rules",
+				"remove_horizontal_rules",
+				defaults.remove_horizontal_rules,
+			),
+			remove_emphasis: get_format_bool(
+				"remove-emphasis",
+				"remove_emphasis",
+				defaults.remove_emphasis,
+			),
+			minify_html: get_format_bool("minify-html", "minify_html", defaults.minify_html),
 		}
 	}
 }
@@ -226,7 +276,13 @@ pub const DEFAULT_CONFIG_TEMPLATE: &str = r#"{
 	"ol-prefix": false,
 	"table-column-style": false,
 	"no-hard-tabs": true,
-	"no-inline-html": false
+	"no-inline-html": false,
+	"remove-bold": true,
+	"compact-blank-lines": true,
+	"collapse-spaces": true,
+	"remove-horizontal-rules": true,
+	"remove-emphasis": true,
+	"minify-html": true
 }
 "#;
 
@@ -395,6 +451,12 @@ mod tests {
 		assert!(!cfg.table_column_style);
 		assert!(cfg.no_hard_tabs);
 		assert!(!cfg.no_inline_html);
+		assert!(cfg.remove_bold);
+		assert!(cfg.compact_blank_lines);
+		assert!(cfg.collapse_spaces);
+		assert!(cfg.remove_horizontal_rules);
+		assert!(cfg.remove_emphasis);
+		assert!(cfg.minify_html);
 	}
 
 	#[test]
@@ -441,6 +503,58 @@ mod tests {
 		assert!(cfg.table_column_style);
 		assert!(!cfg.no_hard_tabs);
 		assert!(cfg.no_inline_html);
+	}
+
+	#[test]
+	fn test_resolve_config_format_options_kebab_case() {
+		let json = serde_json::json!({
+			"remove-bold": false,
+			"compact-blank-lines": false,
+			"collapse-spaces": false,
+			"remove-horizontal-rules": false,
+			"remove-emphasis": false,
+			"minify-html": false
+		});
+		let cfg = resolve_config(Some(&json));
+		assert!(!cfg.remove_bold);
+		assert!(!cfg.compact_blank_lines);
+		assert!(!cfg.collapse_spaces);
+		assert!(!cfg.remove_horizontal_rules);
+		assert!(!cfg.remove_emphasis);
+		assert!(!cfg.minify_html);
+	}
+
+	#[test]
+	fn test_resolve_config_format_options_snake_case() {
+		let json = serde_json::json!({
+			"remove_bold": false,
+			"compact_blank_lines": false,
+			"collapse_spaces": false,
+			"remove_horizontal_rules": false,
+			"remove_emphasis": false,
+			"minify_html": false
+		});
+		let cfg = resolve_config(Some(&json));
+		assert!(!cfg.remove_bold);
+		assert!(!cfg.compact_blank_lines);
+		assert!(!cfg.collapse_spaces);
+		assert!(!cfg.remove_horizontal_rules);
+		assert!(!cfg.remove_emphasis);
+		assert!(!cfg.minify_html);
+	}
+
+	#[test]
+	fn test_resolve_config_format_options_nested() {
+		let json = serde_json::json!({
+			"format": {
+				"remove_bold": false,
+				"minify-html": false
+			}
+		});
+		let cfg = resolve_config(Some(&json));
+		assert!(!cfg.remove_bold);
+		assert!(!cfg.minify_html);
+		assert!(cfg.compact_blank_lines);
 	}
 
 	#[test]
@@ -983,6 +1097,12 @@ mod tests {
 		assert!(!resolved.line_length);
 		assert_eq!(resolved.max_line_length, 80);
 		assert!(resolved.no_hard_tabs);
+		assert!(resolved.remove_bold);
+		assert!(resolved.compact_blank_lines);
+		assert!(resolved.collapse_spaces);
+		assert!(resolved.remove_horizontal_rules);
+		assert!(resolved.remove_emphasis);
+		assert!(resolved.minify_html);
 	}
 
 	#[test]

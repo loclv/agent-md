@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- Format Options in Config Files: Fixed an issue where format configuration options such as `remove_bold` in `agent-md.json` or `.agent-md.json` were ignored by the formatter because `ResolvedConfig` did not parse them and `get_format_options` defaulted to CLI flags.
+- Bold Preservation when Emphasis Removal is Active: Fixed an issue where `remove_emphasis_markers` stripped asterisks from `**bold**` and `__bold__` markers when `remove_bold` was set to false, turning bold text into italic text.
+
+### Added
+
+- Formatter Configuration Support: Added support for `remove_bold` / `remove-bold`, `compact_blank_lines`, `collapse_spaces`, `remove_horizontal_rules`, `remove_emphasis`, and `minify_html` in `agent-md.json`, `.agent-md.json`, and `.markdownlint.json`, with support for kebab-case, snake_case, and nested `format` objects.
+- CLI Option Overrides: Formatter CLI arguments now use optional values with equals syntax (`--remove-bold=false`), allowing configuration files to provide default values while CLI arguments can explicitly override them.
+
 ## [0.2.13] - 2026-09-17
 
 ### Added

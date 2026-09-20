@@ -1991,4 +1991,83 @@ This web site is using `markedjs/marked`.
 
 		let _ = fs::remove_dir_all(&temp_dir);
 	}
+
+	#[test]
+	fn test_get_format_options_reads_from_config() {
+		use crate::cli::get_format_options;
+		use std::fs;
+
+		let temp_dir = std::env::temp_dir().join("agent_md_test_fmt_opts_cfg");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let cfg_path = temp_dir.join("agent-md.json");
+		fs::write(
+			&cfg_path,
+			r#"{
+			"remove_bold": false,
+			"compact_blank_lines": false,
+			"collapse_spaces": false,
+			"remove_horizontal_rules": false,
+			"remove_emphasis": false,
+			"minify_html": false
+		}"#,
+		)
+		.unwrap();
+
+		let opts = get_format_options(
+			None,
+			None,
+			None,
+			None,
+			None,
+			None,
+			Some(cfg_path.to_str().unwrap()),
+		);
+
+		assert!(!opts.remove_bold);
+		assert!(!opts.compact_blank_lines);
+		assert!(!opts.collapse_spaces);
+		assert!(!opts.remove_horizontal_rules);
+		assert!(!opts.remove_emphasis);
+		assert!(!opts.minify_html);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_get_format_options_cli_overrides_config() {
+		use crate::cli::get_format_options;
+		use std::fs;
+
+		let temp_dir = std::env::temp_dir().join("agent_md_test_fmt_opts_override");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let cfg_path = temp_dir.join("agent-md.json");
+		fs::write(
+			&cfg_path,
+			r#"{
+			"remove_bold": false,
+			"compact_blank_lines": false
+		}"#,
+		)
+		.unwrap();
+
+		// CLI specifies remove_bold=Some(true) which should override config false
+		let opts = get_format_options(
+			Some(true),
+			None,
+			None,
+			None,
+			None,
+			None,
+			Some(cfg_path.to_str().unwrap()),
+		);
+
+		assert!(opts.remove_bold);
+		assert!(!opts.compact_blank_lines);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
 }
