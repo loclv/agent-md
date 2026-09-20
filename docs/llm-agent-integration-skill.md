@@ -38,6 +38,7 @@ agent-md search <path> "<query>"
 agent-md headings <path>
 agent-md stats <path>
 agent-md list <directory>
+agent-md ignore [directory]
 ```
 
 ### Content Modification

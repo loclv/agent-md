@@ -1895,4 +1895,100 @@ This web site is using `markedjs/marked`.
 		let cli = Cli::parse_from(["agent-md", "--config", "custom.json", "lint", "file.md"]);
 		assert_eq!(cli.config, Some("custom.json".to_string()));
 	}
+
+	#[test]
+	fn test_cli_parse_ignore_command() {
+		let cli = Cli::parse_from(["agent-md", "ignore"]);
+		match cli.command {
+			Some(Commands::Ignore { path }) => {
+				assert_eq!(path, ".");
+			}
+			_ => panic!("Expected Commands::Ignore"),
+		}
+
+		let cli_path = Cli::parse_from(["agent-md", "ignore", "my-dir"]);
+		match cli_path.command {
+			Some(Commands::Ignore { path }) => {
+				assert_eq!(path, "my-dir");
+			}
+			_ => panic!("Expected Commands::Ignore"),
+		}
+	}
+
+	#[test]
+	fn test_ignore_current_folder_merge_and_deduplicate() {
+		use std::fs::{self, File};
+		use std::io::Write;
+
+		let temp_dir = std::env::temp_dir().join("agent_md_test_merge_dedup");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let md_ignore = temp_dir.join(".markdownlintignore");
+		let mut f1 = File::create(&md_ignore).unwrap();
+		writeln!(f1, "dist/").unwrap();
+		writeln!(f1, "logs/").unwrap();
+		writeln!(f1, "target/").unwrap();
+
+		let git_ignore = temp_dir.join(".gitignore");
+		let mut f2 = File::create(&git_ignore).unwrap();
+		writeln!(f2, "/target").unwrap();
+		writeln!(f2, "temp/").unwrap();
+		writeln!(f2, "*.log").unwrap();
+		writeln!(f2, "*.tgz").unwrap();
+		writeln!(f2, "logs/").unwrap();
+		writeln!(f2, ".antigravitycli").unwrap();
+
+		let merged = crate::ignore::get_ignore_list_in_dir(&temp_dir);
+		assert_eq!(
+			merged,
+			vec![
+				"dist/".to_string(),
+				"logs/".to_string(),
+				"target/".to_string(),
+				"/target".to_string(),
+				"temp/".to_string(),
+				"*.log".to_string(),
+				"*.tgz".to_string(),
+				".antigravitycli".to_string(),
+			]
+		);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_collect_markdown_files_skips_ignored_folders() {
+		use std::fs::{self, File};
+		use std::io::Write;
+
+		let temp_dir = std::env::temp_dir().join("agent_md_test_collect_ignored");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(temp_dir.join("dist")).unwrap();
+		fs::create_dir_all(temp_dir.join("logs")).unwrap();
+		fs::create_dir_all(temp_dir.join("docs")).unwrap();
+
+		let md_ignore = temp_dir.join(".markdownlintignore");
+		let mut f = File::create(&md_ignore).unwrap();
+		writeln!(f, "dist/").unwrap();
+		writeln!(f, "logs/").unwrap();
+
+		fs::write(temp_dir.join("dist/ignored.md"), "# Ignored").unwrap();
+		fs::write(temp_dir.join("logs/ignored.md"), "# Ignored").unwrap();
+		fs::write(temp_dir.join("docs/included.md"), "# Included").unwrap();
+		fs::write(temp_dir.join("root.md"), "# Root").unwrap();
+
+		let mut files = Vec::new();
+		crate::format::io::collect_markdown_files(&temp_dir, &mut files).unwrap();
+		files.sort();
+
+		let file_names: Vec<String> = files
+			.iter()
+			.map(|p| p.file_name().unwrap().to_string_lossy().to_string())
+			.collect();
+
+		assert_eq!(file_names, vec!["included.md", "root.md"]);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
 }

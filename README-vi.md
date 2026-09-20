@@ -224,6 +224,8 @@ agent-md list <directory>
 # Trả về: [file paths...]
 ```
 
+Liệt kê các tệp markdown trong thư mục được chỉ định (mặc định là `.`). Tự động bỏ qua các tệp và thư mục khớp với `.markdownlintignore` và `.gitignore`.
+
 ### Tìm kiếm trong tệp
 
 ```bash
@@ -313,9 +315,27 @@ agent-md --config samples/.agent-md.json fmt document.md
 # Sử dụng tệp cấu hình cụ thể qua cờ toàn cục --config
 ```
 
+### Kiểm tra quy tắc bỏ qua (ignore rules)
+
+Đọc tệp `.markdownlintignore` nếu tồn tại trong thư mục, hợp nhất với danh sách Git ignore (`.gitignore`) và loại bỏ các mục trùng lặp:
+
+```bash
+agent-md ignore
+# Trả về: ["dist/", "logs/", "target/", "/target", "temp/", "*.log", "*.tgz", ".antigravitycli"]
+
+agent-md ignore path/to/dir
+# Trả về các mẫu bị bỏ qua cho thư mục được chỉ định
+
+agent-md --human ignore
+# Mảng JSON định dạng đẹp
+```
+
+Các lệnh như `list` và `fmt` trên thư mục sẽ tự động tuân theo các quy tắc này để bỏ qua các thư mục và tệp không cần thiết.
+
 ### Định dạng markdown
 
 - Định dạng tệp markdown tại chỗ, loại bỏ các khoảng trắng thừa trong ô bảng.
+- Tự động tuân theo `.markdownlintignore` và `.gitignore` khi định dạng thư mục, bỏ qua các thư mục như `target/`, `dist/`, `logs/`.
 - Định dạng cấu trúc thư mục trong các khối mã `text`, `txt`, hoặc không gắn nhãn bằng cách thu gọn thành các tiền tố một gạch ngang (`├─` và `└─`), loại bỏ các dòng đệm dọc (`│`), và căn chỉnh các bình luận `#`.
 - Loại bỏ dấu hai chấm ở cuối tiêu đề (ví dụ: `## header:` thành `## header`).
 - Tự động thêm thẻ ngôn ngữ `text` cho các khối mã chưa khai báo ngôn ngữ (ví dụ: ` ``` ` thành ` ```text `).

@@ -57,6 +57,13 @@ agent-md config --check
 # check if configuration file exists
 ```
 
+### Inspect Ignore Rules
+
+```bash
+agent-md ignore
+# get merged deduplicated ignore rules from .markdownlintignore and .gitignore
+```
+
 ## Integration Pattern
 
 ```bash

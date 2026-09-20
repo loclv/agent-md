@@ -20,6 +20,7 @@ pub mod config;
 pub mod format;
 #[cfg(test)]
 mod html_tests;
+pub mod ignore;
 pub mod linter;
 pub mod parser;
 pub mod rules;
@@ -30,6 +31,10 @@ pub mod types;
 pub use cli::{Cli, Commands};
 pub use commands::parse_markdown;
 pub use format::{format_markdown, format_markdown_with_options, FormatOptions};
+pub use ignore::{
+	get_git_ignore, get_ignore_list, get_ignore_list_in_dir, get_markdownlint_ignore, is_ignored,
+	merge_ignore_lists, read_ignore_file,
+};
 pub use linter::{
 	validate_markdown, validate_markdown_with_config, validate_markdown_with_custom_config,
 };

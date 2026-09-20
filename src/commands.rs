@@ -791,11 +791,16 @@ pub fn cmd_list(path: &str, human: bool) {
 	let path = PathBuf::from(path);
 	match fs::read_dir(&path) {
 		Ok(entries) => {
+			let ignore_list = crate::ignore::get_ignore_list_in_dir(&path);
 			let mut files: Vec<String> = Vec::new();
 			for entry in entries.flatten() {
-				if let Some(ext) = entry.path().extension() {
+				let entry_path = entry.path();
+				if crate::ignore::is_ignored(&entry_path, &path, &ignore_list) {
+					continue;
+				}
+				if let Some(ext) = entry_path.extension() {
 					if ext == "md" || ext == "markdown" {
-						files.push(entry.path().to_string_lossy().to_string());
+						files.push(entry_path.to_string_lossy().to_string());
 					}
 				}
 			}
@@ -816,6 +821,12 @@ pub fn cmd_list(path: &str, human: bool) {
 			);
 		}
 	}
+}
+
+pub fn cmd_ignore(path: &str, human: bool) {
+	let path_buf = PathBuf::from(path);
+	let list = crate::ignore::get_ignore_list_in_dir(&path_buf);
+	println!("{}", json_output(&list, human));
 }
 
 pub fn cmd_search(path: &str, query: &str, human: bool) {

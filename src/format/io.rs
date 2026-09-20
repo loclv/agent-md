@@ -7,11 +7,24 @@ use crate::commands::parse_markdown;
 use crate::types::{json_output, Document, EditResult};
 
 pub fn collect_markdown_files(dir: &Path, files: &mut Vec<PathBuf>) -> io::Result<()> {
-	for entry in fs::read_dir(dir)? {
+	let ignore_list = crate::ignore::get_ignore_list_in_dir(dir);
+	collect_markdown_files_with_ignore(dir, dir, &ignore_list, files)
+}
+
+pub fn collect_markdown_files_with_ignore(
+	current_dir: &Path,
+	root_dir: &Path,
+	ignore_list: &[String],
+	files: &mut Vec<PathBuf>,
+) -> io::Result<()> {
+	for entry in fs::read_dir(current_dir)? {
 		let entry = entry?;
 		let path = entry.path();
+		if crate::ignore::is_ignored(&path, root_dir, ignore_list) {
+			continue;
+		}
 		if path.is_dir() {
-			collect_markdown_files(&path, files)?;
+			collect_markdown_files_with_ignore(&path, root_dir, ignore_list, files)?;
 		} else if let Some(ext) = path.extension() {
 			if ext == "md" || ext == "markdown" {
 				files.push(path);

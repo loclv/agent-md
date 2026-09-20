@@ -186,6 +186,12 @@ pub enum Commands {
 		#[arg(help = "Markdown file path to lint")]
 		path: String,
 	},
+	/// List ignored patterns merged from .markdownlintignore and .gitignore
+	Ignore {
+		/// Optional directory path (defaults to current directory)
+		#[arg(help = "Optional directory path", default_value = ".")]
+		path: String,
+	},
 	/// Format markdown file or standard input
 	Fmt {
 		/// Markdown file path to format

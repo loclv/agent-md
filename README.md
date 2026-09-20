@@ -239,6 +239,8 @@ agent-md list <directory>
 # Returns: [file paths...]
 ```
 
+Lists Markdown files in the specified directory (defaults to `.`). Automatically excludes files and directories matching `.markdownlintignore` and `.gitignore`.
+
 ### Search in file
 
 ```bash
@@ -328,6 +330,23 @@ agent-md --config samples/.agent-md.json fmt document.md
 # Use specific configuration file via global --config flag
 ```
 
+### Inspect ignore rules
+
+Reads `.markdownlintignore` if present in the target directory, merges it with the current Git ignore list (`.gitignore`), and outputs deduplicated ignore patterns:
+
+```bash
+agent-md ignore
+# Returns: ["dist/", "logs/", "target/", "/target", "temp/", "*.log", "*.tgz", ".antigravitycli"]
+
+agent-md ignore path/to/dir
+# Returns ignore patterns for specified directory
+
+agent-md --human ignore
+# Pretty-printed JSON array
+```
+
+Commands like `list` and directory-level `fmt` automatically respect these ignore rules to skip ignored paths and avoid processing build artifacts or temporary files.
+
 ### Format markdown
 
 - Formats the markdown file in-place, trimming leading and trailing spaces from table cells.
@@ -340,6 +359,7 @@ agent-md --config samples/.agent-md.json fmt document.md
 - Collapses multiple spaces before `#` comments in shell code blocks (`bash`, `sh`, `shell`, `zsh`).
 - Formats folder structures in `text`, `txt`, or unlabelled code blocks by removing redundant `─` dashes (e.g., `├──` to `├─`, `└──` to `└─`), stripping spacer lines (`│`), removing spaces before file names, and collapsing spaces before comments.
 - Automatically converts 4 leading spaces of list item indentation to 2 spaces, and 2 leading tabs to 1 tab for sub-items, reducing token usage in nested lists.
+- Respects `.markdownlintignore` and `.gitignore` when formatting directories, skipping ignored paths (like `target/`, `dist/`, `logs/`) and temporary files.
 
 ```bash
 agent-md fmt <path>

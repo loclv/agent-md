@@ -12,28 +12,29 @@ Development setup and guidelines for contributing to agent-md.
 
 ```text
 agent-md/
-├─src/
-│ ├─main.rs # CLI Entrypoint & Clap Parsers
-│ ├─types.rs # Common types, structures and utilities
-│ ├─config.rs # Configuration file resolution and reading
-│ ├─linter.rs # Lint rules orchestration
-│ ├─commands.rs # CLI Subcommand handlers and parsing logic
-│ ├─parser.rs # Structured Markdown parser (block-based)
-│ ├─format/ # Formatting modules
-│ │ ├─mod.rs # Structured formatter orchestration
-│ │ ├─tables.rs # Table formatting (separator compaction, row formatting)
-│ │ ├─bold_tables.rs # Bold stripping from table cells
-│ │ ├─blockquotes.rs
-│ │ ├─code_blocks.rs
-│ │ ├─frontmatter.rs
-│ │ └─html.rs # HTML minification and autolink preservation
-│ ├─rules/ # Validation rule modules
-│ ├─tests.rs # Core unit tests
-│ └─html_tests.rs # HTML rendering tests
-├─docs/ # Documentation
-├─samples/ # Sample configuration files
-├─test-md/ # Test markdown files
-└─Makefile # Convenience commands
+  src/
+    main.rs - CLI entrypoint and clap parsers
+    types.rs - Common types, structures and utilities
+    config.rs - Configuration file resolution and reading
+    ignore.rs - Ignore file (.markdownlintignore, .gitignore) resolution and matching
+    linter.rs - Lint rules orchestration
+    commands.rs - CLI subcommand handlers and parsing logic
+    parser.rs - Structured Markdown parser (block-based)
+    format/ - Formatting modules
+      mod.rs - Structured formatter orchestration
+      tables.rs - Table formatting (separator compaction, row formatting)
+      bold_tables.rs - Bold stripping from table cells
+      blockquotes.rs
+      code_blocks.rs
+      frontmatter.rs
+      html.rs - HTML minification and autolink preservation
+    rules/ - Validation rule modules
+    tests.rs - Core unit tests
+    html_tests.rs - HTML rendering tests
+  docs/ - Documentation
+  samples/ - Sample configuration files
+  test-md/ - Test markdown files
+  Makefile - Convenience commands
 ```
 
 ## Architecture: Structured Parsing and Formatting
@@ -45,6 +46,16 @@ agent-md follows a Parse-then-Format architecture:
 3. Inline Line Processing: The `src/format/lines.rs` module processes individual markdown lines, handling tasks such as collapsing redundant spaces while preserving spaces and content inside inline code spans (`find_code_span_end`), stripping bold and emphasis markers outside code, and standardizing list item indentations. The `src/format/html.rs` module minifies HTML tags and blocks while strictly preserving Markdown autolinks (`<https://...>`, `<user@example.com>`). Inline code blocks throughout paragraphs, lists, and table cells (`src/format/bold_tables.rs`) are preserved unchanged.
 
 This approach is more robust than simple line-based processing, especially for complex structures like nested lists or tables.
+
+## Architecture: Ignore Rules Resolution and Matching
+
+`agent-md` supports ignoring files and directories using `.markdownlintignore` and `.gitignore`:
+
+1. Ignore Pattern Discovery: The `src/ignore.rs` module checks the current directory (or target path) for `.markdownlintignore` and `.gitignore`. If a `.gitignore` is not present in the target directory, it traverses up parent directories to locate the root `.gitignore`.
+2. List Merging and Deduplication: `merge_ignore_lists` merges patterns from both ignore files into a single collection, removing duplicate entries while preserving order.
+3. Path Matching: `is_ignored` matches paths against ignore rules with support for directory-only patterns ending with `/` (`dist/`), root-anchored patterns starting with `/` (`/target`), glob wildcards with `*` and `?` (`*.log`), and negation rules starting with `!` (`!important.md`).
+4. Directory Traversal Integration: Both `agent-md list` and `collect_markdown_files` (`agent-md fmt <dir>`) use `is_ignored` during directory walking to immediately prune ignored directories before reading entries, saving disk I/O and execution time.
+5. CLI Command: `agent-md ignore [path]` exposes the merged and deduplicated list as JSON (or human-formatted JSON with `--human`).
 
 ## Building
 

@@ -1130,4 +1130,23 @@ agent-md lint-file README.md
 agent-md write document.md "# Title\nValid content without bold"
 ```
 
+## Ignore Files (.markdownlintignore and .gitignore)
+
+When working on repositories with generated files, third-party libraries, or build artifacts (such as `target/`, `dist/`, or `logs/`), configure ignore patterns to prevent unwanted processing.
+
+`agent-md` automatically loads `.markdownlintignore` from the current directory and merges its patterns with `.gitignore`, deduplicating repeated items.
+
+```text
+dist/
+logs/
+target/
+```
+
+Commands such as `agent-md list` and `agent-md fmt <dir>` automatically filter out ignored files and directories. To inspect the resolved deduplicated ignore list, run:
+
+```bash
+agent-md ignore
+# Returns: ["dist/", "logs/", "target/", "/target", "temp/", "*.log", "*.tgz", ".antigravitycli"]
+```
+
 By following these rules, you ensure your markdown content is optimized for AI agent consumption and processing.

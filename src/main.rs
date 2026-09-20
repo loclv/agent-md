@@ -58,6 +58,9 @@ fn main() {
 		Some(Commands::LintFile { path }) => {
 			commands::cmd_lint_file(&path, cli.human, cli.config.as_deref())
 		}
+		Some(Commands::Ignore { path }) => {
+			commands::cmd_ignore(&path, cli.human);
+		}
 		Some(Commands::Fmt {
 			path,
 			stdin,

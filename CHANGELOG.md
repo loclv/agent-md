@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Ignore File Support: Added support for `.markdownlintignore` at the current folder, merging ignore patterns with the current Git ignore list (`.gitignore`) and deduplicating identical entries.
+- Ignore CLI Command: Added `agent-md ignore [path]` subcommand to inspect merged and deduplicated ignore patterns as JSON (or pretty-printed with `--human`).
+- Ignore Module: Added `src/ignore.rs` with `read_ignore_file`, `get_markdownlint_ignore`, `get_git_ignore`, `get_ignore_list`, `merge_ignore_lists`, and `is_ignored` pattern matching supporting directories, rooted paths, and wildcards.
+- List and Format Filtering: Integrated ignore matching into `agent-md list` and `collect_markdown_files` (`agent-md fmt <dir>`) to skip ignored files and folders automatically.
 - HTML Minification in Formatter: Added `minify_html` formatter logic to strip useless spaces, tabs, and newlines inside HTML tags and elements while strictly preserving original HTML tag names, attribute names, and quoted attribute values.
 - HTML Block Parsing: Added `MarkdownBlock::Html` variant to the structured parser to detect and group multiline HTML blocks and comments.
 - HTML Tag Minification: Created `src/format/html.rs` with `minify_html_tag`, `minify_html_tags_in_text`, `format_html_block`, and helper functions to normalize multiline tags and merge standalone closing tags into preceding element lines.
@@ -24,6 +28,7 @@ All notable changes to this project will be documented in this file.
 
 ### Tests
 
+- Ignore Support Tests: Added unit and integration tests verifying `.markdownlintignore` reading, `.gitignore` parsing, list merging, deduplication, directory matching, rooted pattern matching, wildcards, negation patterns, and directory-level file collection skipping.
 - HTML Minification Tests: Added unit test suite in `src/format/tests.rs` covering single tags, multiline tags, nested HTML tags, attribute values with spaces, multiple children, comments, code block preservation, and option toggles.
 - Autolink Preservation Tests: Added unit tests verifying that URI and email autolinks within paragraphs, inline code, and text blocks remain unchanged during formatting.
 - URL and Link Destination Tests: Added unit tests in `src/format/tests.rs`, `src/rules/no_bold.rs`, and `src/rules/simple_tables.rs` verifying that URLs with underscores, reference links, and HTML attributes are preserved without lint errors or formatting corruption.
