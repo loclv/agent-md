@@ -57,6 +57,15 @@ This approach is more robust than simple line-based processing, especially for c
 4. Directory Traversal Integration: Both `agent-md list` and `collect_markdown_files` (`agent-md fmt <dir>`) use `is_ignored` during directory walking to immediately prune ignored directories before reading entries, saving disk I/O and execution time.
 5. CLI Command: `agent-md ignore [path]` exposes the merged and deduplicated list as JSON (or human-formatted JSON with `--human`).
 
+## Architecture: Configuration Resolution and Hierarchy
+
+`agent-md` resolves configuration files using an ancestor-walking hierarchy:
+
+1. Candidate Priority: In any directory, configuration files are resolved in order: `.agent-md.json`, `agent-md.json`, `.markdownlint.json`.
+2. Target File Ancestor Search: When executing commands against a target Markdown file (such as `agent-md fmt path/to/doc.md` or `agent-md lint path/to/doc.md`), `find_config_for_target` starts in the target file's parent directory and searches upwards through parent directories.
+3. Fallback: If no configuration file is located in the target directory tree, the resolver falls back to the current working directory.
+4. Explicit Override: When `--config <PATH>` is supplied on the CLI, it bypasses ancestor discovery and uses the specified configuration file or directory directly.
+
 ## Building
 
 ```bash

@@ -3,7 +3,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 
-use crate::linter::{validate_markdown, validate_markdown_with_custom_config};
+use crate::linter::{validate_markdown, validate_markdown_for_target};
 use crate::rules::extract_heading_level;
 use crate::types::{
 	json_output, unescape_content, Document, EditResult, Heading, JsonlEntry, LintError,
@@ -980,7 +980,8 @@ pub fn cmd_lint(path: &str, is_content: bool, human: bool, custom_config: Option
 		}
 	};
 
-	let result = validate_markdown_with_custom_config(&content, custom_config);
+	let target = if is_content { None } else { Some(path) };
+	let result = validate_markdown_for_target(&content, target, custom_config);
 	println!("{}", json_output(&result, human));
 	if !result.valid {
 		std::process::exit(1);
@@ -990,7 +991,7 @@ pub fn cmd_lint(path: &str, is_content: bool, human: bool, custom_config: Option
 pub fn cmd_lint_file(path: &str, human: bool, custom_config: Option<&str>) {
 	match fs::read_to_string(path) {
 		Ok(content) => {
-			let result = validate_markdown_with_custom_config(&content, custom_config);
+			let result = validate_markdown_for_target(&content, Some(path), custom_config);
 			println!("{}", json_output(&result, human));
 
 			// Print file path

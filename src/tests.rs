@@ -2070,4 +2070,36 @@ This web site is using `markedjs/marked`.
 
 		let _ = fs::remove_dir_all(&temp_dir);
 	}
+
+	#[test]
+	fn test_get_format_options_for_target_discovers_config_in_parent() {
+		use crate::cli::get_format_options_for_target;
+		use std::fs;
+
+		let temp_dir = std::env::temp_dir().join("agent_md_test_fmt_target_discover");
+		let _ = fs::remove_dir_all(&temp_dir);
+		let sub_dir = temp_dir.join("sub");
+		fs::create_dir_all(&sub_dir).unwrap();
+
+		let cfg_path = temp_dir.join("agent-md.json");
+		fs::write(&cfg_path, r#"{"remove_bold": false}"#).unwrap();
+
+		let file_path = sub_dir.join("doc.md");
+		fs::write(&file_path, "# Doc").unwrap();
+
+		let opts = get_format_options_for_target(
+			None,
+			None,
+			None,
+			None,
+			None,
+			None,
+			None,
+			Some(file_path.to_str().unwrap()),
+		);
+
+		assert!(!opts.remove_bold);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
 }

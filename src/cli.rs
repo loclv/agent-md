@@ -267,7 +267,33 @@ pub fn get_format_options(
 	minify_html: Option<bool>,
 	custom_config: Option<&str>,
 ) -> crate::format::FormatOptions {
-	let cfg = crate::config::resolve_config(crate::config::get_config(custom_config).as_ref());
+	get_format_options_for_target(
+		remove_bold,
+		compact_blank_lines,
+		collapse_spaces,
+		remove_horizontal_rules,
+		remove_emphasis,
+		minify_html,
+		custom_config,
+		None,
+	)
+}
+
+/// Construct [`crate::format::FormatOptions`] based on CLI flags and configuration,
+/// searching for configuration in the target path's directory and its ancestors.
+pub fn get_format_options_for_target(
+	remove_bold: Option<bool>,
+	compact_blank_lines: Option<bool>,
+	collapse_spaces: Option<bool>,
+	remove_horizontal_rules: Option<bool>,
+	remove_emphasis: Option<bool>,
+	minify_html: Option<bool>,
+	custom_config: Option<&str>,
+	target_path: Option<&str>,
+) -> crate::format::FormatOptions {
+	let cfg = crate::config::resolve_config(
+		crate::config::get_config_for_target(target_path, custom_config).as_ref(),
+	);
 
 	crate::format::FormatOptions {
 		remove_bold: remove_bold.unwrap_or(cfg.remove_bold),

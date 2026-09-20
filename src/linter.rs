@@ -246,6 +246,17 @@ pub fn validate_markdown_with_custom_config(
 	validate_markdown_with_config(content, &config)
 }
 
+/// Validate markdown content using configuration resolved for a specific target path.
+pub fn validate_markdown_for_target(
+	content: &str,
+	target_path: Option<&str>,
+	custom_path: Option<&str>,
+) -> LintResult {
+	let config =
+		resolve_config(crate::config::get_config_for_target(target_path, custom_path).as_ref());
+	validate_markdown_with_config(content, &config)
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;

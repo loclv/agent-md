@@ -36,6 +36,7 @@ pub use ignore::{
 	merge_ignore_lists, read_ignore_file,
 };
 pub use linter::{
-	validate_markdown, validate_markdown_with_config, validate_markdown_with_custom_config,
+	validate_markdown, validate_markdown_for_target, validate_markdown_with_config,
+	validate_markdown_with_custom_config,
 };
 pub use types::{Document, EditResult, LintError, LintResult};

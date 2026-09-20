@@ -223,10 +223,87 @@ fn find_config_in_dir(dir: &Path) -> Option<String> {
 	None
 }
 
+/// Search for candidate configuration files in `dir` and walking up parent directories.
+pub fn find_config_in_ancestors(dir: &Path) -> Option<String> {
+	if let Some(cfg) = find_config_in_dir(dir) {
+		return Some(cfg);
+	}
+
+	let Ok(current) = (if dir == Path::new(".") || dir.as_os_str().is_empty() {
+		std::env::current_dir()
+	} else if dir.is_relative() {
+		std::env::current_dir().map(|cwd| cwd.join(dir))
+	} else {
+		Ok(dir.to_path_buf())
+	}) else {
+		return None;
+	};
+
+	let mut curr = current;
+	while let Some(parent) = curr.parent() {
+		if let Some(cfg) = find_config_in_dir(parent) {
+			return Some(cfg);
+		}
+		curr = parent.to_path_buf();
+	}
+
+	None
+}
+
+/// Find configuration file for a given target path (file or directory).
+///
+/// Priority:
+/// 1. `custom_config` if provided (explicit file or directory lookup).
+/// 2. If `target_path` is provided, candidate configuration files (`.agent-md.json`,
+///    `agent-md.json`, `.markdownlint.json`) starting in the target's parent directory
+///    and walking up parent directories.
+/// 3. Current working directory default configuration.
+pub fn find_config_for_target(
+	target_path: Option<&str>,
+	custom_config: Option<&str>,
+) -> Option<String> {
+	if let Some(custom) = custom_config {
+		return find_config_file(Some(custom));
+	}
+
+	if let Some(target) = target_path {
+		let path = Path::new(target);
+		let start_dir = if path.is_dir() {
+			Some(path)
+		} else {
+			path.parent()
+		};
+
+		if let Some(dir) = start_dir {
+			let dir_to_check = if dir.as_os_str().is_empty() {
+				Path::new(".")
+			} else {
+				dir
+			};
+			if let Some(cfg) = find_config_in_ancestors(dir_to_check) {
+				return Some(cfg);
+			}
+		}
+	}
+
+	find_config_file(None)
+}
+
 /// Read and parse configuration file.
 /// Returns (resolved_path, parsed_json) if found and valid JSON.
 pub fn read_config(custom_path: Option<&str>) -> Option<(String, serde_json::Value)> {
 	let path_str = find_config_file(custom_path)?;
+	let content = fs::read_to_string(&path_str).ok()?;
+	let json_val = serde_json::from_str(&content).ok()?;
+	Some((path_str, json_val))
+}
+
+/// Read and parse configuration file for a specific target path.
+pub fn read_config_for_target(
+	target_path: Option<&str>,
+	custom_config: Option<&str>,
+) -> Option<(String, serde_json::Value)> {
+	let path_str = find_config_for_target(target_path, custom_config)?;
 	let content = fs::read_to_string(&path_str).ok()?;
 	let json_val = serde_json::from_str(&content).ok()?;
 	Some((path_str, json_val))
@@ -237,19 +314,49 @@ pub fn get_config(custom_path: Option<&str>) -> Option<serde_json::Value> {
 	read_config(custom_path).map(|(_, val)| val)
 }
 
+/// Get configuration JSON value for a specific target path.
+pub fn get_config_for_target(
+	target_path: Option<&str>,
+	custom_config: Option<&str>,
+) -> Option<serde_json::Value> {
+	read_config_for_target(target_path, custom_config).map(|(_, val)| val)
+}
+
 /// Get configuration status including existence, path, and optional content.
 pub fn get_config_status(custom_path: Option<&str>, include_content: bool) -> ConfigStatus {
-	if let Some((path, val)) = read_config(custom_path) {
-		ConfigStatus {
-			exists: true,
-			path: Some(path),
-			config: if include_content { Some(val) } else { None },
+	let path_opt = if let Some(custom) = custom_path {
+		let path = Path::new(custom);
+		if path.is_file() {
+			let is_cfg_name = CONFIG_FILES.iter().any(|&name| path.ends_with(name));
+			if is_cfg_name {
+				find_config_file(Some(custom))
+			} else {
+				find_config_for_target(Some(custom), None)
+			}
+		} else {
+			find_config_file(Some(custom))
 		}
-	} else if let Some(path) = find_config_file(custom_path) {
-		// File exists on disk but failed to parse as valid JSON
+	} else {
+		find_config_file(None)
+	};
+
+	if let Some(path_str) = path_opt {
+		if let Ok(content) = fs::read_to_string(&path_str) {
+			if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&content) {
+				return ConfigStatus {
+					exists: true,
+					path: Some(path_str),
+					config: if include_content {
+						Some(json_val)
+					} else {
+						None
+					},
+				};
+			}
+		}
 		ConfigStatus {
 			exists: true,
-			path: Some(path),
+			path: Some(path_str),
 			config: None,
 		}
 	} else {
@@ -819,6 +926,68 @@ mod tests {
 			find_config_file(temp_dir.to_str()),
 			Some(dot.to_str().unwrap().to_string())
 		);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_find_config_in_ancestors_walks_up() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_ancestors_walk");
+		let _ = fs::remove_dir_all(&temp_dir);
+		let nested = temp_dir.join("sub").join("nested");
+		fs::create_dir_all(&nested).unwrap();
+
+		let parent_cfg = temp_dir.join("agent-md.json");
+		fs::write(&parent_cfg, "{}").unwrap();
+
+		let found = find_config_in_ancestors(&nested);
+		assert_eq!(found, Some(parent_cfg.to_str().unwrap().to_string()));
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_find_config_for_target_closest_ancestor() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_target_closest");
+		let _ = fs::remove_dir_all(&temp_dir);
+		let sub_dir = temp_dir.join("sub");
+		fs::create_dir_all(&sub_dir).unwrap();
+
+		let root_cfg = temp_dir.join("agent-md.json");
+		fs::write(&root_cfg, r#"{"remove_bold": true}"#).unwrap();
+
+		let sub_cfg = sub_dir.join("agent-md.json");
+		fs::write(&sub_cfg, r#"{"remove_bold": false}"#).unwrap();
+
+		let target_file = sub_dir.join("test.md");
+		fs::write(&target_file, "# Test").unwrap();
+
+		let found = find_config_for_target(Some(target_file.to_str().unwrap()), None);
+		assert_eq!(found, Some(sub_cfg.to_str().unwrap().to_string()));
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_find_config_for_target_explicit_override() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_target_explicit");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let sub_cfg = temp_dir.join("agent-md.json");
+		fs::write(&sub_cfg, "{}").unwrap();
+
+		let explicit_cfg = temp_dir.join("custom-config.json");
+		fs::write(&explicit_cfg, "{}").unwrap();
+
+		let target_file = temp_dir.join("test.md");
+		fs::write(&target_file, "# Test").unwrap();
+
+		let found = find_config_for_target(
+			Some(target_file.to_str().unwrap()),
+			Some(explicit_cfg.to_str().unwrap()),
+		);
+		assert_eq!(found, Some(explicit_cfg.to_str().unwrap().to_string()));
 
 		let _ = fs::remove_dir_all(&temp_dir);
 	}

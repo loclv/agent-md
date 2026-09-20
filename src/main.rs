@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use agent_md::cli::{get_format_options, Cli, Commands};
+use agent_md::cli::{get_format_options_for_target, Cli, Commands};
 use agent_md::{commands, format};
 
 fn main() {
@@ -71,7 +71,7 @@ fn main() {
 			remove_emphasis,
 			minify_html,
 		}) => {
-			let options = get_format_options(
+			let options = get_format_options_for_target(
 				remove_bold,
 				compact_blank_lines,
 				collapse_spaces,
@@ -79,6 +79,7 @@ fn main() {
 				remove_emphasis,
 				minify_html,
 				cli.config.as_deref(),
+				path.as_deref(),
 			);
 			if stdin {
 				format::cmd_fmt_stdin(options)
@@ -92,8 +93,16 @@ fn main() {
 		None => {
 			// If path provided without command, treat as fmt
 			if let Some(path) = cli.path {
-				let options =
-					get_format_options(None, None, None, None, None, None, cli.config.as_deref());
+				let options = get_format_options_for_target(
+					None,
+					None,
+					None,
+					None,
+					None,
+					None,
+					cli.config.as_deref(),
+					Some(&path),
+				);
 				format::cmd_fmt(&path, cli.human, options)
 			} else {
 				// If no command and not version, show help
