@@ -31,7 +31,7 @@ Add to `Cargo.toml`:
 
 ```toml
 [dependencies]
-agent-md = "0.2.13"
+agent-md = "0.2.14"
 ```
 
 In Rust code:

@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.2.14] - 2026-09-21
 
 ### Fixed
 
@@ -13,6 +13,13 @@ All notable changes to this project will be documented in this file.
 
 - Formatter Configuration Support: Added support for `remove_bold` / `remove-bold`, `compact_blank_lines`, `collapse_spaces`, `remove_horizontal_rules`, `remove_emphasis`, and `minify_html` in `agent-md.json`, `.agent-md.json`, and `.markdownlint.json`, with support for kebab-case, snake_case, and nested `format` objects.
 - CLI Option Overrides: Formatter CLI arguments now use optional values with equals syntax (`--remove-bold=false`), allowing configuration files to provide default values while CLI arguments can explicitly override them.
+- Ancestor Directory Configuration Discovery: Added automatic configuration discovery for `fmt`, `lint`, and `config` commands that searches starting in the target Markdown file's directory and walks up parent directories to locate `.agent-md.json`, `agent-md.json`, or `.markdownlint.json`, falling back to the current working directory unless `--config` is explicitly specified.
+
+### Tests
+
+- Format Configuration Tests: Added unit tests verifying format option parsing, aliases (kebab-case, snake_case, nested `format` objects), template validation, and CLI option overrides.
+- Ancestor Discovery Tests: Added unit tests verifying ancestor directory traversal, closest configuration discovery, and explicit configuration overrides.
+- Bold Preservation Tests: Added unit tests ensuring bold markers (`**` and `__`) are preserved when bold removal is disabled even if emphasis removal is enabled.
 
 ## [0.2.13] - 2026-09-17
 

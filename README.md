@@ -70,7 +70,7 @@ Add `agent-md` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-agent-md = "0.2.13"
+agent-md = "0.2.14"
 ```
 
 Use the programmatic APIs in your application:
@@ -311,6 +311,8 @@ Checks configuration file resolution and status. Configuration files are resolve
 2. `agent-md.json`
 3. `.markdownlint.json` (fallback)
 
+When processing a target Markdown file, `agent-md` automatically searches the file's parent directory and walks up parent directories to discover configuration, falling back to the current working directory unless overridden with `--config`.
+
 A sample configuration file is provided in `samples/.agent-md.json`.
 
 ```bash
@@ -322,6 +324,9 @@ agent-md config --check
 
 agent-md config samples
 # Inspect configuration in directory
+
+agent-md config path/to/document.md
+# Inspect configuration resolved for specific file
 
 agent-md config custom.json
 # Inspect specific configuration path
