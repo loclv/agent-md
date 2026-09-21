@@ -40,6 +40,10 @@ lint: clippy check-format
 format:
     cargo fmt
 
+# Alias for format
+fmt:
+    cargo fmt
+
 # Check if code is formatted
 check-format:
     cargo fmt --check
