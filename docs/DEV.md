@@ -68,6 +68,8 @@ This approach is more robust than simple line-based processing, especially for c
 
 ## Building
 
+use [just](https://github.com/casey/just) for purpose-built command runner.
+
 ```bash
 # Development build
 cargo build
@@ -75,8 +77,8 @@ cargo build
 # Release build (optimized)
 cargo build --release
 
-# Using Makefile
-make build
+# Using just
+just build
 ```
 
 ## Testing
@@ -98,8 +100,8 @@ cargo test test_validate_space_indentation
 # Run tests with output
 cargo test -- --nocapture
 
-# Using Makefile
-make test
+# Using just
+just test
 ```
 
 ## Code Quality
@@ -108,15 +110,15 @@ The project enforces strict code quality standards:
 
 ```bash
 # Run all linting checks
-make lint
+just lint
 # Or: cargo clippy && cargo fmt --check
 
 # Format code
-make format
+just format
 # Or: cargo fmt
 
 # Run full CI pipeline
-make ci
+just ci
 ```
 
 ### Quality Standards
@@ -192,7 +194,7 @@ git checkout -b feature/new-validation-rule
 # - Update documentation
 
 # 3. Verify quality
-make ci # Runs lint, format, and test
+just ci # Runs lint, format, and test
 
 # 4. Test manually
 ./target/release/agent-md lint test-file.md
@@ -230,7 +232,7 @@ cargo test test_validate_space_indentation -- --nocapture
 # 1. Update version in Cargo.toml
 # 2. Update CHANGELOG.md
 # 3. Run full test suite
-make ci
+just ci
 
 # 4. Build release
 cargo build --release

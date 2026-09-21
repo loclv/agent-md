@@ -497,7 +497,7 @@ The `write` command validates content before writing to ensure AI-friendly markd
 ```bash
 cargo test
 # or
-make test
+just test
 ```
 
 ## Rule for LLMs/Agents: Use agent-md CLI
@@ -623,16 +623,16 @@ See `docs/DEV.md` for complete development setup and guidelines.
 ### Development Commands
 
 ```bash
-make setup # Setup development environment
-make build # Build release version
-make test # Run tests
-make lint # Run all linting checks
-make format # Format code
-make clippy # Run clippy lints
-make audit # Security audit
-make watch # Watch for changes and rebuild
-make ci # Full CI pipeline
-make docs # Build and open documentation
+just setup # Setup development environment
+just build # Build release version
+just test # Run tests
+just lint # Run all linting checks
+just format # Format code
+just clippy # Run clippy lints
+just audit # Security audit
+just watch # Watch for changes and rebuild
+just ci # Full CI pipeline
+just docs # Build and open documentation
 ```
 
 ## VS Code Extension

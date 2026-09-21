@@ -28,16 +28,16 @@ This project includes a comprehensive linting setup to maintain code quality and
 
 ### 3. Make Commands
 
-The project includes a Makefile for convenient commands:
+The project includes a `justfile` for convenient commands:
 
 ```bash
-make help # Show all available commands
-make lint # Run all linting checks (clippy + format check)
-make format # Format code with rustfmt
-make check-format # Check if code is formatted
-make clippy # Run clippy lints
-make test # Run tests
-make ci # Full CI pipeline (test + lint + audit)
+just help # Show all available commands
+just lint # Run all linting checks (clippy + format check)
+just format # Format code with rustfmt
+just check-format # Check if code is formatted
+just clippy # Run clippy lints
+just test # Run tests
+just ci # Full CI pipeline (test + lint + audit)
 ```
 
 ### 4. VS Code Integration
@@ -60,7 +60,7 @@ pre-commit install
 - `rust-toolchain.toml`: Specifies Rust version and components
 - `rustfmt.toml`: Rustfmt configuration for code formatting
 - `clippy.toml`: Clippy configuration for linting rules
-- `Makefile`: Convenient commands for development
+- `justfile`: Convenient commands for development
 - `.vscode/settings.json`: VS Code configuration
 - `.vscode/tasks.json`: VS Code tasks
 - `.github/workflows/ci.yml`: GitHub Actions CI/CD pipeline
@@ -68,10 +68,10 @@ pre-commit install
 ## Development Workflow
 
 1. Write code: Make your changes
-2. Format: `make format` or `cargo fmt`
-3. Lint: `make clippy` or `cargo clippy`
-4. Test: `make test` or `cargo test`
-5. Full check: `make lint` (runs both formatting check and clippy)
+2. Format: `just format` or `cargo fmt`
+3. Lint: `just clippy` or `cargo clippy`
+4. Test: `just test` or `cargo test`
+5. Full check: `just lint` (runs both formatting check and clippy)
 
 ## CI/CD Pipeline
 
@@ -171,4 +171,4 @@ When adding new dependencies:
 
 - `cargo fmt --help`: Rustfmt help
 - `cargo clippy --help`: Clippy help
-- `make help`: Available make commands
+- `just help`: Available just commands
