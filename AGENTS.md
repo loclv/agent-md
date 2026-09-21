@@ -16,9 +16,9 @@ For any development task:
    - Write unit tests for your changes
    - Update "./CHANGELOG.md" file with summary of your changes.
 2. Validate completion:
-   - Run linting: `just lint`
-   - Run formatter: `just format`
-   - Run tests: `just test`
+   - Run linting: `cargo clippy --all-targets --all-features -- -D warnings`
+   - Run formatter: `cargo fmt`
+   - Run tests: `cargo test`
 
 After creating or updating any markdown file, always run `agent-md lint path/to/file.md` to validate the content before considering the task complete.
 
@@ -64,18 +64,12 @@ Additional rules enforced by agent-md linter:
 ## Available Commands
 
 ```bash
-just help # Show all commands
-just build # Build release version
-just test # Run tests
-just lint # Run all linting checks
-just format # Format code
-just clippy # Run clippy lints
-just ci # Full CI pipeline
-
-cargo build --release
-cargo test
-cargo fmt
-cargo clippy
+cargo build --release # Build release version
+cargo test # Run tests
+cargo fmt # Format code
+cargo fmt --check # Check code formatting
+cargo clippy --all-targets --all-features -- -D warnings # Run clippy lints
+cargo audit # Security audit
 ```
 
 ## Code Quality Standards
@@ -98,7 +92,7 @@ cargo clippy
 ## Troubleshooting
 
 - Build fails: Check Rust version in `rust-toolchain.toml` (requires 1.94.0)
-- Formatting errors: Run `just format`
+- Formatting errors: Run `cargo fmt`
 - Clippy warnings: Address linting issues in code
 - Test failures: Check test output for specific errors
 

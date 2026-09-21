@@ -26,18 +26,17 @@ This project includes a comprehensive linting setup to maintain code quality and
   cargo clippy --all-targets --all-features -- -D warnings # Strict mode
   ```
 
-### 3. Make Commands
+### 3. Cargo Commands
 
-The project includes a `justfile` for convenient commands:
+Common Cargo commands for development and quality checks:
 
 ```bash
-just help # Show all available commands
-just lint # Run all linting checks (clippy + format check)
-just format # Format code with rustfmt
-just check-format # Check if code is formatted
-just clippy # Run clippy lints
-just test # Run tests
-just ci # Full CI pipeline (test + lint + audit)
+cargo check # Fast compilation check
+cargo test # Run tests
+cargo fmt # Format code with rustfmt
+cargo fmt --check # Check if code is formatted
+cargo clippy --all-targets --all-features -- -D warnings # Run clippy lints
+cargo audit # Run security audit
 ```
 
 ### 4. VS Code Integration
@@ -60,7 +59,7 @@ pre-commit install
 - `rust-toolchain.toml`: Specifies Rust version and components
 - `rustfmt.toml`: Rustfmt configuration for code formatting
 - `clippy.toml`: Clippy configuration for linting rules
-- `justfile`: Convenient commands for development
+- `Cargo.toml`: Package dependencies and workspace configuration
 - `.vscode/settings.json`: VS Code configuration
 - `.vscode/tasks.json`: VS Code tasks
 - `.github/workflows/ci.yml`: GitHub Actions CI/CD pipeline
@@ -68,10 +67,10 @@ pre-commit install
 ## Development Workflow
 
 1. Write code: Make your changes
-2. Format: `just format` or `cargo fmt`
-3. Lint: `just clippy` or `cargo clippy`
-4. Test: `just test` or `cargo test`
-5. Full check: `just lint` (runs both formatting check and clippy)
+2. Format: `cargo fmt`
+3. Lint: `cargo clippy --all-targets --all-features -- -D warnings`
+4. Test: `cargo test`
+5. Full check: `cargo fmt --check && cargo clippy --all-targets --all-features -- -D warnings && cargo test`
 
 ## CI/CD Pipeline
 
@@ -171,4 +170,4 @@ When adding new dependencies:
 
 - `cargo fmt --help`: Rustfmt help
 - `cargo clippy --help`: Clippy help
-- `just help`: Available just commands
+- `cargo test --help`: Cargo test help

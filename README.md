@@ -1,8 +1,7 @@
 # `agent-md` - A CLI that helps you write LLM-friendly markdown
 
 <div align="center">
-  <img src="logo.svg" alt="agent-md logo" width="128" height="128">
-</div>
+<img src="logo.svg" alt="agent-md logo" width="128" height="128"></div>
 
 ```bash
 cd project-folder-name
@@ -434,6 +433,7 @@ agent-md fmt --remove-bold=false document.md
 ##### HTML Minification
 
 HTML blocks and tags are minified to eliminate token waste:
+
 - Removes useless spaces, tabs, and newlines inside HTML tags
 - Strips redundant indentation inside HTML blocks
 - Merges standalone closing tag lines with preceding elements
@@ -486,7 +486,7 @@ The linter enforces AI-friendly markdown standards.
 - "no-duplicate-headings": No duplicate headings: Headings with same content are warned
 - "no-multiple-blanks": No multiple blank lines: Multiple consecutive blank lines are warned
 
-Detail at <docs/markdown-writing-rules.md>
+Detail at [docs/markdown-writing-rules.md](docs/markdown-writing-rules.md)
 
 ### Automatic validation
 
@@ -496,8 +496,6 @@ The `write` command validates content before writing to ensure AI-friendly markd
 
 ```bash
 cargo test
-# or
-just test
 ```
 
 ## Rule for LLMs/Agents: Use agent-md CLI
@@ -623,16 +621,14 @@ See `docs/DEV.md` for complete development setup and guidelines.
 ### Development Commands
 
 ```bash
-just setup # Setup development environment
-just build # Build release version
-just test # Run tests
-just lint # Run all linting checks
-just format # Format code
-just clippy # Run clippy lints
-just audit # Security audit
-just watch # Watch for changes and rebuild
-just ci # Full CI pipeline
-just docs # Build and open documentation
+cargo build --release # Build release version
+cargo test # Run tests
+cargo fmt # Format code
+cargo fmt --check # Check if code is formatted
+cargo clippy --all-targets --all-features -- -D warnings # Run clippy lints
+cargo audit # Security audit
+cargo watch -x run # Watch for changes and rebuild
+cargo doc --open # Build and open documentation
 ```
 
 ## VS Code Extension
@@ -650,7 +646,7 @@ The extension is available on the VS Code Marketplace. Search for "Agent-MD Form
 
 ```bash
 cd vscode-extension
-bun install
+bun i
 bun compile
 ```
 

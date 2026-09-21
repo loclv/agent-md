@@ -20,8 +20,8 @@
    - Added standard crates.io metadata: `description`, `license = "MIT"`, `repository`, `homepage`, `documentation`, `keywords`, and `categories`.
    - Added `exclude` rules to keep the published crate archive compact (reduced from ~4.8 MiB to ~105 KiB).
 
-4. License & Packaging Targets ([`LICENSE`](./LICENSE), [`justfile`](./justfile)):
-   - Added `just package` and `just bundle` commands to build and verify distribution archives (`cargo package --allow-dirty`).
+4. Packaging & Distribution:
+   - Build and verify distribution archives with `cargo package --allow-dirty`.
 
 ## How Others Can Use It
 
@@ -57,4 +57,4 @@ fn main() {
 cargo install agent-md
 ```
 
-Or packaged via `just bundle` for local distribution.
+Or packaged via `cargo package --allow-dirty` for local distribution.

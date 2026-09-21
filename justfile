@@ -77,7 +77,3 @@ quick-check:
 # Build and open documentation
 docs:
     cargo doc --open
-
-# Check for outdated dependencies
-outdated:
-    cargo outdated
