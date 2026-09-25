@@ -32,6 +32,10 @@ Một ví dụ cho comment trong code block trước và sau khi format:
 +bun run something-else # Run something else
 ```
 
+-> LLM đọc ít token hơn và nhanh hơn.
+-> Tiết kiệm token.
+-> Tiết kiệm tiền.
+
 Kiểm tra các quy tắc trong file markdown:
 
 ```bash

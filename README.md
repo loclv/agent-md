@@ -32,6 +32,10 @@ An example of comments in code block before and after:
 +bun run something-else # Run something else
 ```
 
+-> LLM reads less and faster.
+-> Save more tokens.
+-> Save more money.
+
 Lint markdown file for LLM and Agents:
 
 ```bash
