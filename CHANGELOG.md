@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.15] - 2026-09-25
+
+### Fixed
+
+- Pure URL and Schemeless Autolink Preservation: Fixed an issue where pure URLs and schemeless autolinks in angle brackets such as `<example.dev/getting-started/installation/>` were misclassified as HTML tags during formatting and corrupted into fake HTML attributes like `<example.dev getting-started installation />`. Added `is_pure_url_autolink` helper and hardened tag parsing to reject non-HTML structures and unquoted slashes.
+
+### Tests
+
+- Pure URL Autolink Preservation Tests: Added unit tests ensuring pure URLs with domains, paths, and trailing slashes are preserved unchanged during formatting.
+
 ## [0.2.14] - 2026-09-21
 
 ### Fixed

@@ -97,7 +97,109 @@ pub fn is_email_autolink(inner: &str) -> bool {
 	true
 }
 
-/// Check if a tag-like string `<...>` is a Markdown autolink (URI or email) rather than an HTML tag.
+/// Check if the inner content between `<` and `>` matches a pure URL (schemeless domain/URL autolink).
+pub fn is_pure_url_autolink(inner: &str) -> bool {
+	if inner.is_empty()
+		|| inner.contains(char::is_whitespace)
+		|| inner.contains('<')
+		|| inner.contains('>')
+	{
+		return false;
+	}
+
+	// Must not start with punctuation like /, ., -, ?, #
+	if inner.starts_with('/')
+		|| inner.starts_with('.')
+		|| inner.starts_with('-')
+		|| inner.starts_with('?')
+		|| inner.starts_with('#')
+	{
+		return false;
+	}
+
+	// Split into host (with optional port) and rest (path, query, fragment)
+	let (host_port, rest) = match inner.find(['/', '?', '#']) {
+		Some(idx) => (&inner[..idx], &inner[idx..]),
+		None => (inner, ""),
+	};
+
+	// Rest must not contain ASCII control characters
+	if rest.chars().any(|c| c.is_ascii_control()) {
+		return false;
+	}
+
+	// Extract optional port
+	let (host, has_valid_port) = match host_port.rfind(':') {
+		Some(idx) => {
+			let port = &host_port[idx + 1..];
+			if !port.is_empty() && port.chars().all(|c| c.is_ascii_digit()) {
+				(&host_port[..idx], true)
+			} else {
+				(host_port, false)
+			}
+		}
+		None => (host_port, false),
+	};
+
+	if host.is_empty() {
+		return false;
+	}
+
+	// Check for localhost (requires a port or a path to be considered a pure URL)
+	if host.eq_ignore_ascii_case("localhost") {
+		return has_valid_port || !rest.is_empty();
+	}
+
+	// A domain or IP host must contain at least one dot
+	if !host.contains('.') {
+		return false;
+	}
+
+	let labels: Vec<&str> = host.split('.').collect();
+	if labels.len() < 2 {
+		return false;
+	}
+
+	// Validate each label in the host
+	for label in &labels {
+		if label.is_empty() || label.len() > 63 {
+			return false;
+		}
+		if label.starts_with('-') || label.ends_with('-') {
+			return false;
+		}
+		for c in label.chars() {
+			if !c.is_ascii_alphanumeric() && c != '-' {
+				return false;
+			}
+		}
+	}
+
+	// Check IPv4 address
+	if labels.len() == 4 && labels.iter().all(|l| l.parse::<u8>().is_ok()) {
+		return true;
+	}
+
+	// Check domain TLD
+	let tld = match labels.last() {
+		Some(tld) => *tld,
+		None => return false,
+	};
+
+	if tld.starts_with("xn--") && tld.len() > 4 {
+		// Internationalized domain name (punycode)
+		return true;
+	}
+
+	// Standard TLD: must be all ASCII alphabetic and at least 2 characters long
+	if tld.len() >= 2 && tld.chars().all(|c| c.is_ascii_alphabetic()) {
+		return true;
+	}
+
+	false
+}
+
+/// Check if a tag-like string `<...>` is a Markdown autolink (URI, email, or pure URL) rather than an HTML tag.
 pub fn is_autolink(tag: &str) -> bool {
 	let trimmed = tag.trim();
 	if !trimmed.starts_with('<') || !trimmed.ends_with('>') || trimmed.len() < 3 {
@@ -108,7 +210,7 @@ pub fn is_autolink(tag: &str) -> bool {
 		return false;
 	}
 
-	is_uri_autolink(inner) || is_email_autolink(inner)
+	is_uri_autolink(inner) || is_email_autolink(inner) || is_pure_url_autolink(inner)
 }
 
 /// Find matching `>` for a tag starting at `start` where `chars[start] == '<'`.
@@ -171,7 +273,16 @@ fn minify_open_or_self_closing_tag(tag: &str) -> String {
 		i += 1;
 	}
 
-	if tag_name.is_empty() {
+	if tag_name.is_empty()
+		|| tag_name.contains('.')
+		|| !tag_name
+			.chars()
+			.next()
+			.is_some_and(|c| c.is_ascii_alphabetic())
+		|| !tag_name
+			.chars()
+			.all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == ':')
+	{
 		return tag.to_string();
 	}
 
@@ -179,7 +290,9 @@ fn minify_open_or_self_closing_tag(tag: &str) -> String {
 	let mut is_self_closing = false;
 
 	while i < chars.len() {
+		let mut has_whitespace = false;
 		while i < chars.len() && chars[i].is_whitespace() {
+			has_whitespace = true;
 			i += 1;
 		}
 		if i >= chars.len() {
@@ -197,8 +310,11 @@ fn minify_open_or_self_closing_tag(tag: &str) -> String {
 				is_self_closing = true;
 				break;
 			}
-			i += 1;
-			continue;
+			return tag.to_string();
+		}
+
+		if !has_whitespace {
+			return tag.to_string();
 		}
 
 		// Read attribute name
@@ -254,11 +370,16 @@ fn minify_open_or_self_closing_tag(tag: &str) -> String {
 					i += 1;
 				}
 			} else {
-				while i < chars.len()
-					&& !chars[i].is_whitespace()
-					&& chars[i] != '>'
-					&& chars[i] != '/'
-				{
+				while i < chars.len() && !chars[i].is_whitespace() && chars[i] != '>' {
+					if chars[i] == '/' {
+						let mut check_slash = i + 1;
+						while check_slash < chars.len() && chars[check_slash].is_whitespace() {
+							check_slash += 1;
+						}
+						if check_slash < chars.len() && chars[check_slash] == '>' {
+							break;
+						}
+					}
 					attr_val.push(chars[i]);
 					i += 1;
 				}
@@ -671,5 +792,54 @@ mod tests {
 		let expected = "<span class=\"highlight\">Link: <https://example.com></span>";
 		let result = minify_html_tags_in_text(input);
 		assert_eq!(result, expected);
+	}
+
+	#[test]
+	fn test_is_pure_url_autolink() {
+		assert!(is_pure_url_autolink(
+			"example.dev/getting-started/installation/"
+		));
+		assert!(is_pure_url_autolink(
+			"example.dev/getting-started/installation"
+		));
+		assert!(is_pure_url_autolink("example.dev"));
+		assert!(is_pure_url_autolink("www.example.com"));
+		assert!(is_pure_url_autolink("github.com/rust-lang/rust"));
+		assert!(is_pure_url_autolink("crates.io/crates/agent-md"));
+		assert!(is_pure_url_autolink("docs.rs/serde/latest/serde/"));
+		assert!(is_pure_url_autolink("example.com:8080/test"));
+		assert!(is_pure_url_autolink("localhost:3000/api"));
+		assert!(is_pure_url_autolink("192.168.1.1:8080/index.html"));
+		assert!(!is_pure_url_autolink("div"));
+		assert!(!is_pure_url_autolink("span class=\"foo\""));
+		assert!(!is_pure_url_autolink("/p"));
+		assert!(!is_pure_url_autolink("a/b"));
+		assert!(!is_pure_url_autolink("a.b"));
+		assert!(!is_pure_url_autolink(""));
+	}
+
+	#[test]
+	fn test_is_autolink_pure_urls() {
+		assert!(is_autolink("<example.dev/getting-started/installation/>"));
+		assert!(is_autolink("<example.dev/getting-started/installation>"));
+		assert!(is_autolink("<example.dev>"));
+		assert!(is_autolink("<www.example.com>"));
+		assert!(!is_autolink("<div>"));
+		assert!(!is_autolink("</p>"));
+		assert!(!is_autolink("<br />"));
+	}
+
+	#[test]
+	fn test_minify_html_tags_preserves_pure_url_autolink() {
+		let input = "<example.dev/getting-started/installation/>";
+		let result = minify_html_tags_in_text(input);
+		assert_eq!(result, input);
+	}
+
+	#[test]
+	fn test_minify_open_or_self_closing_tag_rejects_slashed_paths() {
+		let input = "<example.dev/getting-started/installation/>";
+		let result = minify_html_tag(input);
+		assert_eq!(result, input);
 	}
 }

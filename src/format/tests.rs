@@ -2101,6 +2101,20 @@ fn test_format_markdown_preserves_email_autolink() {
 }
 
 #[test]
+fn test_format_markdown_preserves_pure_url_autolink() {
+	let content = "<example.dev/getting-started/installation/>\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_markdown_preserves_pure_url_in_document() {
+	let content = "# Pure URLs\n\ninput:\n\n<example.dev/getting-started/installation/>\n\nExpected not changed:\n\n<example.dev/getting-started/installation/>\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
 fn test_format_markdown_preserves_url_underscores_in_link_destination() {
 	let content = "[Package](https://github.com/org/repo/blob/main/__init__.py)\n";
 	let result = format_markdown(content);
