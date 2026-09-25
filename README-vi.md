@@ -1,8 +1,42 @@
 # `agent-md` - Một công cụ CLI giúp bạn viết markdown thân thiện với LLM
 
+<div align="center">
+<img src="logo.svg" alt="agent-md logo" width="128" height="128"></div>
+
+Format markdown file cho LLM và Agents:
+
+```bash
+agent-md README.md
+```
+
+Một ví dụ cho bảng trước và sau khi format:
+
+```diff
+ | Function | Arguments | Return Type | Description                   |
+-|----------|-----------|-------------|-------------------------------|
+-| `add()`  | a, b      | i32         | Adds two numbers              |
+-| `sub()`  | a, b      | i32         | Subtracts numbers             |
++|---|---|---|---|
++| `add()` | a, b | i32 | Adds two numbers |
++| `sub()` | a, b | i32 | Subtracts numbers |
+```
+
+Một ví dụ cho comment trong code block trước và sau khi format:
+
+```diff
+-bun i                      # Install dependencies
+-bun run dev                # Run the development server
+-bun run something-else     # Run something else
++bun i # Install dependencies
++bun run dev # Run the development server
++bun run something-else # Run something else
+```
+
+Kiểm tra các quy tắc trong file markdown:
+
 ```bash
 agent-md lint README.md
-# {"valid":false,"errors":[{"line":7,"column":1,"message":"Use at most 2 spaces for indentation in regular text. Code blocks are exempt from this rule.","rule":"space-indentation"},{"line":28,"column":1,"message":"Use at most 2 spaces for indentation in regular text. Code blocks are exempt from this rule.","rule":"space-indentation"},{"line":34,"column":1,"message":"Human-readable ASCII graph detected. Use LLM-readable formats instead: Structured CSV, JSON, Mermaid Diagram, Numbered List with Conditions, ZON format, or simple progress indicators","rule":"no-ascii-graph"},{"line":36,"column":1,"message":"Human-readable ASCII graph detected. Use LLM-readable formats instead: Structured CSV, JSON, Mermaid Diagram, Numbered List with Conditions, ZON format, or simple progress indicators","rule":"no-ascii-graph"}],"warnings":[]}
+# {"valid":false,"errors":[{"line":7,"column":1,"message":...
 ```
 
 ## Tại sao công cụ này tồn tại
@@ -22,6 +56,7 @@ Thực tế, LLM/agents không cần đọc toàn bộ file. Chúng chỉ cần 
 ### Giải pháp
 
 agent-md đưa ra một cách viết markdown tối giản, thân thiện với AI, giúp:
+
 - Giảm token không cần thiết
 - Giữ nội dung rõ ràng, dễ truy cập theo từng phần
 - Vẫn đảm bảo con người có thể đọc được khi cần
@@ -31,6 +66,7 @@ Mục tiêu là: viết một lần, tối ưu cho cả người và AI, nhưng 
 ## Cài đặt
 
 Xây dựng từ mã nguồn:
+
 - Cài đặt Rust trước nếu chưa được cài đặt
 - Sau đó xây dựng phiên bản release:
 
@@ -40,6 +76,7 @@ cargo build --release
 ```
 
 - Thêm vào PATH (tùy chọn):
+
 ```bash
 # agent-md command
 export PATH="/Users/username/w/agent-md/target/release:$PATH"
@@ -79,6 +116,7 @@ assert!(result.valid);
 ### Đầu vào: Markdown thông thường
 
 Đây là một file markdown tiêu chuẩn mà nhiều LLM tạo ra:
+
 ```markdown
 # Dự án Của Tôi
 
@@ -99,12 +137,12 @@ assert!(result.valid);
 3. Chạy server: `bun dev`
 
 >Lưu ý: Đảm bảo bạn có Node.js phiên bản 22+ được cài đặt!
-
 ```
 
 ### Đầu ra: Markdown thân thiện với AI qua agent-md
 
 Sau khi xử lý với agent-md, nội dung trở nên gọn gàng hơn:
+
 ```markdown
 # Dự án Của Tôi
 
@@ -131,9 +169,9 @@ Lưu ý: Đảm bảo bạn có Node.js phiên bản 22+ được cài đặt.
 # Kiểm tra file markdown thông thường
 agent-md lint regular-markdown.md
 # {"valid":false,"errors":[
-#   {"line":3,"message":"No bold text allowed","rule":"no-bold"},
-#   {"line":6,"message":"Complex table detected","rule":"simple-table"},
-#   {"line":15,"message":"No bold text allowed","rule":"no-bold"}
+# {"line":3,"message":"No bold text allowed","rule":"no-bold"},
+# {"line":6,"message":"Complex table detected","rule":"simple-table"},
+# {"line":15,"message":"No bold text allowed","rule":"no-bold"}
 # ]}
 
 # Kiểm tra file agent-md
@@ -142,6 +180,7 @@ agent-md lint agent-md-markdown.md
 ```
 
 Lợi ích:
+
 - Giảm ~20% số token không cần thiết
 - LLM đọc và xử lý nhanh hơn
 - Vẫn giữ được thông tin đầy đủ
@@ -372,6 +411,7 @@ agent-md fmt document.md
 ##### Thu nhỏ HTML
 
 Các khối và thẻ HTML được thu nhỏ để giảm lãng phí token:
+
 - Loại bỏ khoảng trắng, tab và dòng mới không cần thiết bên trong thẻ HTML
 - Loại bỏ thụt đầu dòng thừa bên trong các khối HTML
 - Gộp các dòng chỉ chứa thẻ đóng với phần tử đứng trước
@@ -395,10 +435,11 @@ Các khối và thẻ HTML được thu nhỏ để giảm lãng phí token:
 ## Cách thức hoạt động: Phân tích cấu trúc (Structured Parsing)
 
 Khác với các trình định dạng theo dòng đơn giản, `agent-md` sử dụng bộ phân tích cấu trúc để:
-1.  **Trích xuất YAML Frontmatter**: Giữ nguyên metadata ở đầu tài liệu.
-2.  **Xác định các khối tài liệu**: Nhận diện tiêu đề, khối mã, bảng, danh sách và đoạn văn.
-3.  **Áp dụng định dạng theo ngữ cảnh**: Định dạng từng khối dựa trên loại của nó và các tùy chọn cấu hình.
-4.  **Tối ưu hóa cho LLM**: Đảm bảo đầu ra sạch sẽ, nhất quán và tiết kiệm token trong khi vẫn dễ đọc cho con người.
+
+1. Trích xuất YAML Frontmatter: Giữ nguyên metadata ở đầu tài liệu.
+2. Xác định các khối tài liệu: Nhận diện tiêu đề, khối mã, bảng, danh sách và đoạn văn.
+3. Áp dụng định dạng theo ngữ cảnh: Định dạng từng khối dựa trên loại của nó và các tùy chọn cấu hình.
+4. Tối ưu hóa cho LLM: Đảm bảo đầu ra sạch sẽ, nhất quán và tiết kiệm token trong khi vẫn dễ đọc cho con người.
 
 ## Quy tắc xác thực
 
@@ -488,6 +529,7 @@ agent-md write README.md "# Tiêu đề Mới\nNội dung hợp lệ"
 ## Đọc tệp và trích xuất trường
 
 Sử dụng tùy chọn --field (được khuyến nghị):
+
 ```bash
 agent-md read README.md --field path # Lấy đường dẫn tệp
 agent-md read README.md --field content # Lấy nội dung
@@ -496,6 +538,7 @@ agent-md read README.md -f word_count # Form ngắn cho số từ
 ```
 
 Đọc phần "Development" - không cần LLM đọc toàn bộ tệp:
+
 ```bash
 agent-md read README.md -c="Development"
 # Các phần lồng nhau: agent-md read README.md -c="Development > Build"

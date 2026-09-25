@@ -3,13 +3,44 @@
 <div align="center">
 <img src="logo.svg" alt="agent-md logo" width="128" height="128"></div>
 
+Format markdown file for LLM and Agents:
+
+```bash
+agent-md README.md
+```
+
+An example of table before and after:
+
+```diff
+ | Function | Arguments | Return Type | Description                   |
+-|----------|-----------|-------------|-------------------------------|
+-| `add()`  | a, b      | i32         | Adds two numbers              |
+-| `sub()`  | a, b      | i32         | Subtracts numbers             |
++|---|---|---|---|
++| `add()` | a, b | i32 | Adds two numbers |
++| `sub()` | a, b | i32 | Subtracts numbers |
+```
+
+An example of comments in code block before and after:
+
+```diff
+-bun i                      # Install dependencies
+-bun run dev                # Run the development server
+-bun run something-else     # Run something else
++bun i # Install dependencies
++bun run dev # Run the development server
++bun run something-else # Run something else
+```
+
+Lint markdown file for LLM and Agents:
+
 ```bash
 cd project-folder-name
 # format recursively current directory
 agent-md .
 
 agent-md lint README.md
-# {"valid":false,"errors":[{"line":7,"column":1,"message":"Use at most 2 spaces for indentation in regular text. Code blocks are exempt from this rule.","rule":"space-indentation"},{"line":28,"column":1,"message":"Use at most 2 spaces for indentation in regular text. Code blocks are exempt from this rule.","rule":"space-indentation"},{"line":34,"column":1,"message":"Human-readable ASCII graph detected. Use LLM-readable formats instead: Structured CSV, JSON, Mermaid Diagram, Numbered List with Conditions, ZON format, or simple progress indicators","rule":"no-ascii-graph"},{"line":36,"column":1,"message":"Human-readable ASCII graph detected. Use LLM-readable formats instead: Structured CSV, JSON, Mermaid Diagram, Numbered List with Conditions, ZON format, or simple progress indicators","rule":"no-ascii-graph"}],"warnings":[]}
+# {"valid":false,"errors":[{"line":7,"column":1,"message":...
 ```
 
 ## Why This Tool Exists
