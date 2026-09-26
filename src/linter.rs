@@ -1,20 +1,42 @@
 use crate::rules;
 use crate::types::{LintError, LintResult, LintWarning};
 
-use crate::config::{get_config, resolve_config, ResolvedConfig};
+use crate::config::{
+	get_config_for_target_with_options, get_config_with_options, resolve_config, ResolvedConfig,
+};
 
 /// Resolve the full configuration from the default config file location.
 pub fn get_resolved_config() -> ResolvedConfig {
-	resolve_config(get_config(None).as_ref())
+	get_resolved_config_with_options(false)
+}
+
+/// Resolve the full configuration, optionally ignoring `markdownlintrc.*` files.
+pub fn get_resolved_config_with_options(ignore_markdownlintrc: bool) -> ResolvedConfig {
+	resolve_config(get_config_with_options(None, ignore_markdownlintrc).as_ref())
 }
 
 /// Resolve the full configuration from an optional custom config path or directory.
 pub fn get_resolved_config_custom(custom_path: Option<&str>) -> ResolvedConfig {
-	resolve_config(get_config(custom_path).as_ref())
+	get_resolved_config_custom_with_options(custom_path, false)
+}
+
+/// Resolve custom configuration, optionally ignoring `markdownlintrc.*` files.
+pub fn get_resolved_config_custom_with_options(
+	custom_path: Option<&str>,
+	ignore_markdownlintrc: bool,
+) -> ResolvedConfig {
+	resolve_config(get_config_with_options(custom_path, ignore_markdownlintrc).as_ref())
 }
 
 pub fn get_markdownlint_config() -> Option<serde_json::Value> {
-	get_config(None)
+	get_markdownlint_config_with_options(false)
+}
+
+/// Get markdownlint configuration, optionally ignoring `markdownlintrc.*` files.
+pub fn get_markdownlint_config_with_options(
+	ignore_markdownlintrc: bool,
+) -> Option<serde_json::Value> {
+	get_config_with_options(None, ignore_markdownlintrc)
 }
 
 /// Validate markdown content using the given resolved configuration.
@@ -242,7 +264,16 @@ pub fn validate_markdown_with_custom_config(
 	content: &str,
 	custom_path: Option<&str>,
 ) -> LintResult {
-	let config = get_resolved_config_custom(custom_path);
+	validate_markdown_with_custom_config_with_options(content, custom_path, false)
+}
+
+/// Validate with custom config, optionally ignoring `markdownlintrc.*` files.
+pub fn validate_markdown_with_custom_config_with_options(
+	content: &str,
+	custom_path: Option<&str>,
+	ignore_markdownlintrc: bool,
+) -> LintResult {
+	let config = get_resolved_config_custom_with_options(custom_path, ignore_markdownlintrc);
 	validate_markdown_with_config(content, &config)
 }
 
@@ -252,8 +283,20 @@ pub fn validate_markdown_for_target(
 	target_path: Option<&str>,
 	custom_path: Option<&str>,
 ) -> LintResult {
-	let config =
-		resolve_config(crate::config::get_config_for_target(target_path, custom_path).as_ref());
+	validate_markdown_for_target_with_options(content, target_path, custom_path, false)
+}
+
+/// Validate markdown for a target, optionally ignoring `markdownlintrc.*` files.
+pub fn validate_markdown_for_target_with_options(
+	content: &str,
+	target_path: Option<&str>,
+	custom_path: Option<&str>,
+	ignore_markdownlintrc: bool,
+) -> LintResult {
+	let config = resolve_config(
+		get_config_for_target_with_options(target_path, custom_path, ignore_markdownlintrc)
+			.as_ref(),
+	);
 	validate_markdown_with_config(content, &config)
 }
 

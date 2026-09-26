@@ -3,7 +3,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 
-use crate::linter::{validate_markdown, validate_markdown_for_target};
+use crate::linter::validate_markdown;
 use crate::rules::extract_heading_level;
 use crate::types::{
 	json_output, unescape_content, Document, EditResult, Heading, JsonlEntry, LintError,
@@ -953,6 +953,16 @@ pub fn cmd_to_jsonl(path: &str, human: bool) {
 }
 
 pub fn cmd_lint(path: &str, is_content: bool, human: bool, custom_config: Option<&str>) {
+	cmd_lint_with_options(path, is_content, human, custom_config, false)
+}
+
+pub fn cmd_lint_with_options(
+	path: &str,
+	is_content: bool,
+	human: bool,
+	custom_config: Option<&str>,
+	ignore_markdownlintrc: bool,
+) {
 	let content = if is_content {
 		unescape_content(path)
 	} else {
@@ -981,7 +991,12 @@ pub fn cmd_lint(path: &str, is_content: bool, human: bool, custom_config: Option
 	};
 
 	let target = if is_content { None } else { Some(path) };
-	let result = validate_markdown_for_target(&content, target, custom_config);
+	let result = crate::linter::validate_markdown_for_target_with_options(
+		&content,
+		target,
+		custom_config,
+		ignore_markdownlintrc,
+	);
 	println!("{}", json_output(&result, human));
 	if !result.valid {
 		std::process::exit(1);
@@ -989,9 +1004,23 @@ pub fn cmd_lint(path: &str, is_content: bool, human: bool, custom_config: Option
 }
 
 pub fn cmd_lint_file(path: &str, human: bool, custom_config: Option<&str>) {
+	cmd_lint_file_with_options(path, human, custom_config, false)
+}
+
+pub fn cmd_lint_file_with_options(
+	path: &str,
+	human: bool,
+	custom_config: Option<&str>,
+	ignore_markdownlintrc: bool,
+) {
 	match fs::read_to_string(path) {
 		Ok(content) => {
-			let result = validate_markdown_for_target(&content, Some(path), custom_config);
+			let result = crate::linter::validate_markdown_for_target_with_options(
+				&content,
+				Some(path),
+				custom_config,
+				ignore_markdownlintrc,
+			);
 			println!("{}", json_output(&result, human));
 
 			// Print file path
@@ -1072,11 +1101,23 @@ pub fn cmd_init(custom_path: Option<&str>, force: bool, human: bool) {
 }
 
 pub fn cmd_config(custom_path: Option<&str>, check: bool, init: bool, force: bool, human: bool) {
+	cmd_config_with_options(custom_path, check, init, force, human, false)
+}
+
+pub fn cmd_config_with_options(
+	custom_path: Option<&str>,
+	check: bool,
+	init: bool,
+	force: bool,
+	human: bool,
+	ignore_markdownlintrc: bool,
+) {
 	if init {
 		cmd_init(custom_path, force, human);
 		return;
 	}
 
-	let status = crate::config::get_config_status(custom_path, !check);
+	let status =
+		crate::config::get_config_status_with_options(custom_path, !check, ignore_markdownlintrc);
 	println!("{}", json_output(&status, human));
 }

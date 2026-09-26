@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Ignore Markdownlint Config Option: Added global `--ignore-markdownlintrc` flag (default `false`) to skip `markdownlintrc.*` configuration files during discovery for `lint`, `lint-file`, `fmt`, and `config` commands.
+- Markdownlintrc Variants Support: Extended configuration discovery to `markdownlintrc.*` fallbacks (`.markdownlint.json`, `.markdownlint.jsonc`, `.markdownlint.yaml`, `.markdownlint.yml`, `.markdownlintrc`, `.markdownlintrc.json`) with JSON, JSONC, and YAML parsing.
+- Config API With Options: Added `*_with_options` variants (`find_config_file_with_options`, `find_config_for_target_with_options`, `get_config_with_options`, `get_config_status_with_options`, `validate_markdown_for_target_with_options`, `get_format_options_with_options`) preserving existing defaults (not ignored).
+
+### Tests
+
+- Markdownlintrc Ignore Tests: Added unit tests for candidate filtering, native-file preference, explicit-file override, YAML and JSONC parsing, and strict JSON behavior.
+
 ## [0.2.15] - 2026-09-25
 
 ### Fixed

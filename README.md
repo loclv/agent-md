@@ -343,9 +343,11 @@ Checks configuration file resolution and status. Configuration files are resolve
 
 1. `.agent-md.json`
 2. `agent-md.json`
-3. `.markdownlint.json` (fallback)
+3. `markdownlintrc.*` fallback (`.markdownlint.json`, `.markdownlint.jsonc`, `.markdownlint.yaml`, `.markdownlint.yml`, `.markdownlintrc`, `.markdownlintrc.json`)
 
 When processing a target Markdown file, `agent-md` automatically searches the file's parent directory and walks up parent directories to discover configuration, falling back to the current working directory unless overridden with `--config`.
+
+Use global `--ignore-markdownlintrc` to skip `markdownlintrc.*` files during discovery (default is `false`, so they are used as fallback).
 
 A sample configuration file is provided in `samples/.agent-md.json`.
 
@@ -367,6 +369,9 @@ agent-md config custom.json
 
 agent-md --config samples/.agent-md.json fmt document.md
 # Use specific configuration file via global --config flag
+
+agent-md --ignore-markdownlintrc lint document.md
+# Skip markdownlintrc.* files and use only agent-md configuration
 ```
 
 ### Inspect ignore rules

@@ -2,8 +2,36 @@ use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+/// Agent-md native configuration file names in resolution priority order.
+pub const AGENT_MD_CONFIG_FILES: &[&str] = &[".agent-md.json", "agent-md.json"];
+
+/// Markdownlint configuration file names in resolution priority order.
+///
+/// Covers `markdownlintrc.*` variants supported by the markdownlint ecosystem
+/// (`.markdownlint.json`, `.markdownlint.jsonc`, `.markdownlint.yaml`,
+/// `.markdownlint.yml`, `.markdownlintrc`, `.markdownlintrc.json`).
+pub const MARKDOWNLINT_CONFIG_FILES: &[&str] = &[
+	".markdownlint.json",
+	".markdownlint.jsonc",
+	".markdownlint.yaml",
+	".markdownlint.yml",
+	".markdownlintrc",
+	".markdownlintrc.json",
+];
+
 /// Candidate configuration file names in resolution priority order.
-pub const CONFIG_FILES: &[&str] = &[".agent-md.json", "agent-md.json", ".markdownlint.json"];
+///
+/// Agent-md files take precedence over `markdownlintrc.*` fallbacks.
+pub const CONFIG_FILES: &[&str] = &[
+	".agent-md.json",
+	"agent-md.json",
+	".markdownlint.json",
+	".markdownlint.jsonc",
+	".markdownlint.yaml",
+	".markdownlint.yml",
+	".markdownlintrc",
+	".markdownlintrc.json",
+];
 
 /// Maximum line length default (0 means disabled).
 const DEFAULT_MAX_LINE_LENGTH: u64 = 0;
@@ -187,25 +215,168 @@ pub fn resolve_config(config: Option<&serde_json::Value>) -> ResolvedConfig {
 	ResolvedConfig::from_json(config)
 }
 
+/// Check whether a path is a `markdownlintrc.*` configuration file.
+pub fn is_markdownlint_config(path: &str) -> bool {
+	let file_name = Path::new(path)
+		.file_name()
+		.and_then(|n| n.to_str())
+		.unwrap_or(path);
+	MARKDOWNLINT_CONFIG_FILES.contains(&file_name)
+}
+
+/// Candidate configuration file names for the given `ignore_markdownlintrc` setting.
+///
+/// When `ignore_markdownlintrc` is true, only native agent-md files are returned.
+/// Defaults to false (do not ignore) to preserve existing behavior.
+pub fn candidate_config_files(ignore_markdownlintrc: bool) -> &'static [&'static str] {
+	if ignore_markdownlintrc {
+		AGENT_MD_CONFIG_FILES
+	} else {
+		CONFIG_FILES
+	}
+}
+
+/// Strip `//` line comments and `/* */` block comments outside of strings.
+///
+/// Used for `.jsonc` files and as a fallback for extensionless `.markdownlintrc`.
+fn strip_json_comments(content: &str) -> String {
+	let mut out = String::with_capacity(content.len());
+	let mut chars = content.chars().peekable();
+	let mut in_string = false;
+	let mut escaped = false;
+	while let Some(c) = chars.next() {
+		if in_string {
+			out.push(c);
+			if escaped {
+				escaped = false;
+			} else if c == '\\' {
+				escaped = true;
+			} else if c == '"' {
+				in_string = false;
+			}
+			continue;
+		}
+		if c == '"' {
+			in_string = true;
+			out.push(c);
+			continue;
+		}
+		if c == '/' {
+			match chars.peek() {
+				Some('/') => {
+					for next in chars.by_ref() {
+						if next == '\n' {
+							out.push('\n');
+							break;
+						}
+					}
+					continue;
+				}
+				Some('*') => {
+					let _ = chars.next();
+					let mut prev_star = false;
+					for next in chars.by_ref() {
+						if prev_star && next == '/' {
+							break;
+						}
+						prev_star = next == '*';
+						if next == '\n' {
+							out.push('\n');
+						}
+					}
+					continue;
+				}
+				_ => {
+					out.push(c);
+					continue;
+				}
+			}
+		}
+		out.push(c);
+	}
+	out
+}
+
+/// Parse configuration file content based on file extension.
+///
+/// Supports JSON, JSONC (comments stripped), YAML, and extensionless
+/// `.markdownlintrc` (tried as JSON, then JSONC, then YAML).
+/// `.json` files stay strict JSON to preserve existing invalid-file behavior;
+/// YAML parsing requires a mapping object so stray strings or empty files
+/// do not count as valid configuration.
+pub fn parse_config_str(path_str: &str, content: &str) -> Option<serde_json::Value> {
+	if path_str.ends_with(".yaml") || path_str.ends_with(".yml") {
+		return serde_yaml::from_str::<serde_json::Value>(content)
+			.ok()
+			.filter(|val| val.is_object());
+	}
+	if path_str.ends_with(".jsonc") {
+		let stripped = strip_json_comments(content);
+		return serde_json::from_str(&stripped).ok();
+	}
+	if path_str.ends_with(".json") {
+		if let Ok(val) = serde_json::from_str::<serde_json::Value>(content) {
+			return Some(val);
+		}
+		let stripped = strip_json_comments(content);
+		return serde_json::from_str(&stripped).ok();
+	}
+	if let Ok(val) = serde_json::from_str::<serde_json::Value>(content) {
+		return Some(val);
+	}
+	let stripped = strip_json_comments(content);
+	if let Ok(val) = serde_json::from_str::<serde_json::Value>(&stripped) {
+		return Some(val);
+	}
+	serde_yaml::from_str::<serde_json::Value>(content)
+		.ok()
+		.filter(|val| val.is_object())
+}
+
+/// Parse a configuration file at `path_str`.
+fn parse_config_file(path_str: &str) -> Option<serde_json::Value> {
+	let content = fs::read_to_string(path_str).ok()?;
+	parse_config_str(path_str, &content)
+}
+
 /// Check if a configuration file exists.
 pub fn has_config_file(custom_path: Option<&str>) -> bool {
-	find_config_file(custom_path).is_some()
+	has_config_file_with_options(custom_path, false)
+}
+
+/// Check if a configuration file exists, optionally ignoring `markdownlintrc.*`.
+pub fn has_config_file_with_options(
+	custom_path: Option<&str>,
+	ignore_markdownlintrc: bool,
+) -> bool {
+	find_config_file_with_options(custom_path, ignore_markdownlintrc).is_some()
 }
 
 /// Find configuration file path based on priority or custom path.
 pub fn find_config_file(custom_path: Option<&str>) -> Option<String> {
+	find_config_file_with_options(custom_path, false)
+}
+
+/// Find configuration file path, optionally ignoring `markdownlintrc.*` files.
+///
+/// An explicit file path in `custom_path` is always respected, even when
+/// `ignore_markdownlintrc` is true. The flag only affects automatic discovery.
+pub fn find_config_file_with_options(
+	custom_path: Option<&str>,
+	ignore_markdownlintrc: bool,
+) -> Option<String> {
 	if let Some(custom) = custom_path {
 		let path = Path::new(custom);
 		if path.is_file() {
 			return Some(custom.to_string());
 		}
 		if path.is_dir() {
-			return find_config_in_dir(path);
+			return find_config_in_dir(path, ignore_markdownlintrc);
 		}
 		return None;
 	}
 
-	for &name in CONFIG_FILES {
+	for &name in candidate_config_files(ignore_markdownlintrc) {
 		if Path::new(name).is_file() {
 			return Some(name.to_string());
 		}
@@ -213,8 +384,8 @@ pub fn find_config_file(custom_path: Option<&str>) -> Option<String> {
 	None
 }
 
-fn find_config_in_dir(dir: &Path) -> Option<String> {
-	for &name in CONFIG_FILES {
+fn find_config_in_dir(dir: &Path, ignore_markdownlintrc: bool) -> Option<String> {
+	for &name in candidate_config_files(ignore_markdownlintrc) {
 		let candidate = dir.join(name);
 		if candidate.is_file() {
 			return candidate.to_str().map(|s| s.to_string());
@@ -225,7 +396,15 @@ fn find_config_in_dir(dir: &Path) -> Option<String> {
 
 /// Search for candidate configuration files in `dir` and walking up parent directories.
 pub fn find_config_in_ancestors(dir: &Path) -> Option<String> {
-	if let Some(cfg) = find_config_in_dir(dir) {
+	find_config_in_ancestors_with_options(dir, false)
+}
+
+/// Search ancestors, optionally ignoring `markdownlintrc.*` files.
+pub fn find_config_in_ancestors_with_options(
+	dir: &Path,
+	ignore_markdownlintrc: bool,
+) -> Option<String> {
+	if let Some(cfg) = find_config_in_dir(dir, ignore_markdownlintrc) {
 		return Some(cfg);
 	}
 
@@ -241,7 +420,7 @@ pub fn find_config_in_ancestors(dir: &Path) -> Option<String> {
 
 	let mut curr = current;
 	while let Some(parent) = curr.parent() {
-		if let Some(cfg) = find_config_in_dir(parent) {
+		if let Some(cfg) = find_config_in_dir(parent, ignore_markdownlintrc) {
 			return Some(cfg);
 		}
 		curr = parent.to_path_buf();
@@ -255,15 +434,25 @@ pub fn find_config_in_ancestors(dir: &Path) -> Option<String> {
 /// Priority:
 /// 1. `custom_config` if provided (explicit file or directory lookup).
 /// 2. If `target_path` is provided, candidate configuration files (`.agent-md.json`,
-///    `agent-md.json`, `.markdownlint.json`) starting in the target's parent directory
+///    `agent-md.json`, `.markdownlint.json`, plus other `markdownlintrc.*` variants
+///    unless ignored) starting in the target's parent directory
 ///    and walking up parent directories.
 /// 3. Current working directory default configuration.
 pub fn find_config_for_target(
 	target_path: Option<&str>,
 	custom_config: Option<&str>,
 ) -> Option<String> {
+	find_config_for_target_with_options(target_path, custom_config, false)
+}
+
+/// Find configuration for a target, optionally ignoring `markdownlintrc.*` files.
+pub fn find_config_for_target_with_options(
+	target_path: Option<&str>,
+	custom_config: Option<&str>,
+	ignore_markdownlintrc: bool,
+) -> Option<String> {
 	if let Some(custom) = custom_config {
-		return find_config_file(Some(custom));
+		return find_config_file_with_options(Some(custom), ignore_markdownlintrc);
 	}
 
 	if let Some(target) = target_path {
@@ -280,21 +469,30 @@ pub fn find_config_for_target(
 			} else {
 				dir
 			};
-			if let Some(cfg) = find_config_in_ancestors(dir_to_check) {
+			if let Some(cfg) =
+				find_config_in_ancestors_with_options(dir_to_check, ignore_markdownlintrc)
+			{
 				return Some(cfg);
 			}
 		}
 	}
 
-	find_config_file(None)
+	find_config_file_with_options(None, ignore_markdownlintrc)
 }
 
 /// Read and parse configuration file.
-/// Returns (resolved_path, parsed_json) if found and valid JSON.
+/// Returns (resolved_path, parsed_json) if found and valid.
 pub fn read_config(custom_path: Option<&str>) -> Option<(String, serde_json::Value)> {
-	let path_str = find_config_file(custom_path)?;
-	let content = fs::read_to_string(&path_str).ok()?;
-	let json_val = serde_json::from_str(&content).ok()?;
+	read_config_with_options(custom_path, false)
+}
+
+/// Read and parse configuration file, optionally ignoring `markdownlintrc.*`.
+pub fn read_config_with_options(
+	custom_path: Option<&str>,
+	ignore_markdownlintrc: bool,
+) -> Option<(String, serde_json::Value)> {
+	let path_str = find_config_file_with_options(custom_path, ignore_markdownlintrc)?;
+	let json_val = parse_config_file(&path_str)?;
 	Some((path_str, json_val))
 }
 
@@ -303,15 +501,32 @@ pub fn read_config_for_target(
 	target_path: Option<&str>,
 	custom_config: Option<&str>,
 ) -> Option<(String, serde_json::Value)> {
-	let path_str = find_config_for_target(target_path, custom_config)?;
-	let content = fs::read_to_string(&path_str).ok()?;
-	let json_val = serde_json::from_str(&content).ok()?;
+	read_config_for_target_with_options(target_path, custom_config, false)
+}
+
+/// Read configuration for a target, optionally ignoring `markdownlintrc.*`.
+pub fn read_config_for_target_with_options(
+	target_path: Option<&str>,
+	custom_config: Option<&str>,
+	ignore_markdownlintrc: bool,
+) -> Option<(String, serde_json::Value)> {
+	let path_str =
+		find_config_for_target_with_options(target_path, custom_config, ignore_markdownlintrc)?;
+	let json_val = parse_config_file(&path_str)?;
 	Some((path_str, json_val))
 }
 
 /// Get configuration JSON value if configuration file exists and is valid.
 pub fn get_config(custom_path: Option<&str>) -> Option<serde_json::Value> {
-	read_config(custom_path).map(|(_, val)| val)
+	get_config_with_options(custom_path, false)
+}
+
+/// Get configuration JSON value, optionally ignoring `markdownlintrc.*`.
+pub fn get_config_with_options(
+	custom_path: Option<&str>,
+	ignore_markdownlintrc: bool,
+) -> Option<serde_json::Value> {
+	read_config_with_options(custom_path, ignore_markdownlintrc).map(|(_, val)| val)
 }
 
 /// Get configuration JSON value for a specific target path.
@@ -319,40 +534,57 @@ pub fn get_config_for_target(
 	target_path: Option<&str>,
 	custom_config: Option<&str>,
 ) -> Option<serde_json::Value> {
-	read_config_for_target(target_path, custom_config).map(|(_, val)| val)
+	get_config_for_target_with_options(target_path, custom_config, false)
+}
+
+/// Get configuration for a target, optionally ignoring `markdownlintrc.*`.
+pub fn get_config_for_target_with_options(
+	target_path: Option<&str>,
+	custom_config: Option<&str>,
+	ignore_markdownlintrc: bool,
+) -> Option<serde_json::Value> {
+	read_config_for_target_with_options(target_path, custom_config, ignore_markdownlintrc)
+		.map(|(_, val)| val)
 }
 
 /// Get configuration status including existence, path, and optional content.
 pub fn get_config_status(custom_path: Option<&str>, include_content: bool) -> ConfigStatus {
+	get_config_status_with_options(custom_path, include_content, false)
+}
+
+/// Get configuration status, optionally ignoring `markdownlintrc.*` files.
+pub fn get_config_status_with_options(
+	custom_path: Option<&str>,
+	include_content: bool,
+	ignore_markdownlintrc: bool,
+) -> ConfigStatus {
 	let path_opt = if let Some(custom) = custom_path {
 		let path = Path::new(custom);
 		if path.is_file() {
 			let is_cfg_name = CONFIG_FILES.iter().any(|&name| path.ends_with(name));
 			if is_cfg_name {
-				find_config_file(Some(custom))
+				find_config_file_with_options(Some(custom), ignore_markdownlintrc)
 			} else {
-				find_config_for_target(Some(custom), None)
+				find_config_for_target_with_options(Some(custom), None, ignore_markdownlintrc)
 			}
 		} else {
-			find_config_file(Some(custom))
+			find_config_file_with_options(Some(custom), ignore_markdownlintrc)
 		}
 	} else {
-		find_config_file(None)
+		find_config_file_with_options(None, ignore_markdownlintrc)
 	};
 
 	if let Some(path_str) = path_opt {
-		if let Ok(content) = fs::read_to_string(&path_str) {
-			if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&content) {
-				return ConfigStatus {
-					exists: true,
-					path: Some(path_str),
-					config: if include_content {
-						Some(json_val)
-					} else {
-						None
-					},
-				};
-			}
+		if let Some(json_val) = parse_config_file(&path_str) {
+			return ConfigStatus {
+				exists: true,
+				path: Some(path_str),
+				config: if include_content {
+					Some(json_val)
+				} else {
+					None
+				},
+			};
 		}
 		ConfigStatus {
 			exists: true,
@@ -1357,6 +1589,132 @@ mod tests {
 			fs::read_to_string(&file_path).unwrap(),
 			DEFAULT_CONFIG_TEMPLATE
 		);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_is_markdownlint_config() {
+		assert!(is_markdownlint_config(".markdownlint.json"));
+		assert!(is_markdownlint_config(".markdownlint.yaml"));
+		assert!(is_markdownlint_config(".markdownlintrc"));
+		assert!(is_markdownlint_config("/some/dir/.markdownlintrc.json"));
+		assert!(!is_markdownlint_config(".agent-md.json"));
+		assert!(!is_markdownlint_config("agent-md.json"));
+	}
+
+	#[test]
+	fn test_candidate_config_files_ignore_flag() {
+		let all = candidate_config_files(false);
+		assert!(all.contains(&".agent-md.json"));
+		assert!(all.contains(&".markdownlint.json"));
+		assert!(all.contains(&".markdownlintrc"));
+
+		let native = candidate_config_files(true);
+		assert_eq!(native, AGENT_MD_CONFIG_FILES);
+		assert!(!native.contains(&".markdownlint.json"));
+	}
+
+	#[test]
+	fn test_parse_config_str_yaml() {
+		let val = parse_config_str("cfg/.markdownlint.yaml", "line-length: true\n");
+		assert!(val.is_some());
+		assert_eq!(
+			val.unwrap().get("line-length").unwrap(),
+			&serde_json::Value::Bool(true)
+		);
+	}
+
+	#[test]
+	fn test_parse_config_str_jsonc_strips_comments() {
+		let content = "{\n// comment\n\"line-length\": true\n/* block */\n}";
+		let val = parse_config_str("cfg/.markdownlint.jsonc", content);
+		assert!(val.is_some());
+		assert_eq!(
+			val.unwrap().get("line-length").unwrap(),
+			&serde_json::Value::Bool(true)
+		);
+	}
+
+	#[test]
+	fn test_parse_config_str_extensionless_markdownlintrc() {
+		let val = parse_config_str(".markdownlintrc", "{\"line-length\": true}");
+		assert!(val.is_some());
+	}
+
+	#[test]
+	fn test_parse_config_str_json_stays_strict() {
+		assert!(parse_config_str(".agent-md.json", "not json").is_none());
+		assert!(parse_config_str(".agent-md.json", "").is_none());
+	}
+
+	#[test]
+	fn test_find_config_ignores_markdownlintrc_when_flag_set() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_ignore_mdrc");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let mdrc = temp_dir.join(".markdownlint.json");
+		fs::write(&mdrc, "{\"line-length\": true}").unwrap();
+
+		let found = find_config_file_with_options(temp_dir.to_str(), false);
+		assert_eq!(found, Some(mdrc.to_str().unwrap().to_string()));
+
+		let ignored = find_config_file_with_options(temp_dir.to_str(), true);
+		assert_eq!(ignored, None);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_find_config_prefers_agent_md_over_markdownlintrc() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_prefer_native");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let mdrc = temp_dir.join(".markdownlint.json");
+		fs::write(&mdrc, "{\"line-length\": true}").unwrap();
+		let native = temp_dir.join(".agent-md.json");
+		fs::write(&native, "{\"line-length\": false}").unwrap();
+
+		let found = find_config_file_with_options(temp_dir.to_str(), false);
+		assert_eq!(found, Some(native.to_str().unwrap().to_string()));
+
+		let found_ignored = find_config_file_with_options(temp_dir.to_str(), true);
+		assert_eq!(found_ignored, Some(native.to_str().unwrap().to_string()));
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_explicit_markdownlintrc_file_still_respected_when_ignored() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_explicit_mdrc");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let mdrc = temp_dir.join(".markdownlint.json");
+		fs::write(&mdrc, "{\"line-length\": true}").unwrap();
+
+		let found = find_config_file_with_options(Some(mdrc.to_str().unwrap()), true);
+		assert_eq!(found, Some(mdrc.to_str().unwrap().to_string()));
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_get_config_with_options_ignore_flag() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_get_ignore");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let mdrc = temp_dir.join(".markdownlintrc");
+		fs::write(&mdrc, "{\"line-length\": true}").unwrap();
+
+		let cfg = get_config_with_options(temp_dir.to_str(), false);
+		assert!(cfg.is_some());
+
+		let ignored = get_config_with_options(temp_dir.to_str(), true);
+		assert!(ignored.is_none());
 
 		let _ = fs::remove_dir_all(&temp_dir);
 	}

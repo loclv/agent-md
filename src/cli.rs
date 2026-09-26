@@ -24,6 +24,15 @@ pub struct Cli {
 	)]
 	pub config: Option<String>,
 
+	/// Ignore `markdownlintrc.*` configuration files during discovery
+	#[arg(
+		long = "ignore-markdownlintrc",
+		global = true,
+		default_value = "false",
+		help = "Ignore markdownlintrc.* configuration files during discovery"
+	)]
+	pub ignore_markdownlintrc: bool,
+
 	/// Markdown file path (implies fmt command if no subcommand given)
 	#[arg(value_name = "PATH")]
 	pub path: Option<String>,
@@ -267,7 +276,31 @@ pub fn get_format_options(
 	minify_html: Option<bool>,
 	custom_config: Option<&str>,
 ) -> crate::format::FormatOptions {
-	get_format_options_for_target(
+	get_format_options_with_options(
+		remove_bold,
+		compact_blank_lines,
+		collapse_spaces,
+		remove_horizontal_rules,
+		remove_emphasis,
+		minify_html,
+		custom_config,
+		false,
+	)
+}
+
+/// Construct [`crate::format::FormatOptions`] based on CLI flags and configuration,
+/// with an option to ignore `markdownlintrc.*` files.
+pub fn get_format_options_with_options(
+	remove_bold: Option<bool>,
+	compact_blank_lines: Option<bool>,
+	collapse_spaces: Option<bool>,
+	remove_horizontal_rules: Option<bool>,
+	remove_emphasis: Option<bool>,
+	minify_html: Option<bool>,
+	custom_config: Option<&str>,
+	ignore_markdownlintrc: bool,
+) -> crate::format::FormatOptions {
+	get_format_options_for_target_with_options(
 		remove_bold,
 		compact_blank_lines,
 		collapse_spaces,
@@ -276,6 +309,7 @@ pub fn get_format_options(
 		minify_html,
 		custom_config,
 		None,
+		ignore_markdownlintrc,
 	)
 }
 
@@ -291,8 +325,39 @@ pub fn get_format_options_for_target(
 	custom_config: Option<&str>,
 	target_path: Option<&str>,
 ) -> crate::format::FormatOptions {
+	get_format_options_for_target_with_options(
+		remove_bold,
+		compact_blank_lines,
+		collapse_spaces,
+		remove_horizontal_rules,
+		remove_emphasis,
+		minify_html,
+		custom_config,
+		target_path,
+		false,
+	)
+}
+
+/// Construct [`crate::format::FormatOptions`] for a target, optionally ignoring
+/// `markdownlintrc.*` configuration files.
+pub fn get_format_options_for_target_with_options(
+	remove_bold: Option<bool>,
+	compact_blank_lines: Option<bool>,
+	collapse_spaces: Option<bool>,
+	remove_horizontal_rules: Option<bool>,
+	remove_emphasis: Option<bool>,
+	minify_html: Option<bool>,
+	custom_config: Option<&str>,
+	target_path: Option<&str>,
+	ignore_markdownlintrc: bool,
+) -> crate::format::FormatOptions {
 	let cfg = crate::config::resolve_config(
-		crate::config::get_config_for_target(target_path, custom_config).as_ref(),
+		crate::config::get_config_for_target_with_options(
+			target_path,
+			custom_config,
+			ignore_markdownlintrc,
+		)
+		.as_ref(),
 	);
 
 	crate::format::FormatOptions {

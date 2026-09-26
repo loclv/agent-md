@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use agent_md::cli::{get_format_options_for_target, Cli, Commands};
+use agent_md::cli::{get_format_options_for_target_with_options, Cli, Commands};
 use agent_md::{commands, format};
 
 fn main() {
@@ -23,7 +23,14 @@ fn main() {
 			force,
 		}) => {
 			let custom = path.as_deref().or(cli.config.as_deref());
-			commands::cmd_config(custom, check, init, force, cli.human);
+			commands::cmd_config_with_options(
+				custom,
+				check,
+				init,
+				force,
+				cli.human,
+				cli.ignore_markdownlintrc,
+			);
 		}
 		Some(Commands::Read {
 			path,
@@ -52,12 +59,19 @@ fn main() {
 		Some(Commands::Headings { path }) => commands::cmd_headings(&path, cli.human),
 		Some(Commands::Stats { path }) => commands::cmd_stats(&path, cli.human),
 		Some(Commands::ToJsonl { path }) => commands::cmd_to_jsonl(&path, cli.human),
-		Some(Commands::Lint { path, content }) => {
-			commands::cmd_lint(&path, content, cli.human, cli.config.as_deref())
-		}
-		Some(Commands::LintFile { path }) => {
-			commands::cmd_lint_file(&path, cli.human, cli.config.as_deref())
-		}
+		Some(Commands::Lint { path, content }) => commands::cmd_lint_with_options(
+			&path,
+			content,
+			cli.human,
+			cli.config.as_deref(),
+			cli.ignore_markdownlintrc,
+		),
+		Some(Commands::LintFile { path }) => commands::cmd_lint_file_with_options(
+			&path,
+			cli.human,
+			cli.config.as_deref(),
+			cli.ignore_markdownlintrc,
+		),
 		Some(Commands::Ignore { path }) => {
 			commands::cmd_ignore(&path, cli.human);
 		}
@@ -71,7 +85,7 @@ fn main() {
 			remove_emphasis,
 			minify_html,
 		}) => {
-			let options = get_format_options_for_target(
+			let options = get_format_options_for_target_with_options(
 				remove_bold,
 				compact_blank_lines,
 				collapse_spaces,
@@ -80,6 +94,7 @@ fn main() {
 				minify_html,
 				cli.config.as_deref(),
 				path.as_deref(),
+				cli.ignore_markdownlintrc,
 			);
 			if stdin {
 				format::cmd_fmt_stdin(options)
@@ -93,7 +108,7 @@ fn main() {
 		None => {
 			// If path provided without command, treat as fmt
 			if let Some(path) = cli.path {
-				let options = get_format_options_for_target(
+				let options = get_format_options_for_target_with_options(
 					None,
 					None,
 					None,
@@ -102,6 +117,7 @@ fn main() {
 					None,
 					cli.config.as_deref(),
 					Some(&path),
+					cli.ignore_markdownlintrc,
 				);
 				format::cmd_fmt(&path, cli.human, options)
 			} else {
