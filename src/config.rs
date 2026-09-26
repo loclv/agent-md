@@ -61,6 +61,7 @@ pub struct ResolvedConfig {
 	pub table_column_style: bool,
 	pub no_hard_tabs: bool,
 	pub no_inline_html: bool,
+	pub ignore_markdownlintrc: bool,
 	pub remove_bold: bool,
 	pub compact_blank_lines: bool,
 	pub collapse_spaces: bool,
@@ -85,6 +86,7 @@ impl Default for ResolvedConfig {
 			table_column_style: false,
 			no_hard_tabs: true,
 			no_inline_html: false,
+			ignore_markdownlintrc: false,
 			remove_bold: true,
 			compact_blank_lines: true,
 			collapse_spaces: true,
@@ -152,6 +154,18 @@ impl ResolvedConfig {
 			table_column_style: get_bool("table-column-style", defaults.table_column_style),
 			no_hard_tabs: get_bool("no-hard-tabs", defaults.no_hard_tabs),
 			no_inline_html: get_bool("no-inline-html", defaults.no_inline_html),
+			ignore_markdownlintrc: match (
+				cfg.get("ignore-markdownlintrc"),
+				cfg.get("ignore_markdownlintrc"),
+			) {
+				(Some(v), _) if v.is_boolean() => {
+					v.as_bool().unwrap_or(defaults.ignore_markdownlintrc)
+				}
+				(_, Some(v)) if v.is_boolean() => {
+					v.as_bool().unwrap_or(defaults.ignore_markdownlintrc)
+				}
+				_ => defaults.ignore_markdownlintrc,
+			},
 			remove_bold: get_format_bool("remove-bold", "remove_bold", defaults.remove_bold),
 			compact_blank_lines: get_format_bool(
 				"compact-blank-lines",
@@ -357,14 +371,23 @@ pub fn find_config_file(custom_path: Option<&str>) -> Option<String> {
 	find_config_file_with_options(custom_path, false)
 }
 
-/// Find configuration file path, optionally ignoring `markdownlintrc.*` files.
+/// Check whether a parsed configuration value sets the `ignore-markdownlintrc` key.
 ///
-/// An explicit file path in `custom_path` is always respected, even when
-/// `ignore_markdownlintrc` is true. The flag only affects automatic discovery.
-pub fn find_config_file_with_options(
-	custom_path: Option<&str>,
-	ignore_markdownlintrc: bool,
-) -> Option<String> {
+/// Accepts both `ignore-markdownlintrc` (kebab-case) and
+/// `ignore_markdownlintrc` (snake_case). Only native `agent-md.json`
+/// configuration files are consulted for this key; `markdownlintrc.*`
+/// files never set it.
+pub fn config_value_ignores_markdownlintrc(value: &serde_json::Value) -> bool {
+	matches!(
+		value.get("ignore-markdownlintrc").and_then(|v| v.as_bool()),
+		Some(true)
+	) || matches!(
+		value.get("ignore_markdownlintrc").and_then(|v| v.as_bool()),
+		Some(true)
+	)
+}
+
+fn find_config_file_raw(custom_path: Option<&str>, ignore_markdownlintrc: bool) -> Option<String> {
 	if let Some(custom) = custom_path {
 		let path = Path::new(custom);
 		if path.is_file() {
@@ -382,6 +405,77 @@ pub fn find_config_file_with_options(
 		}
 	}
 	None
+}
+
+fn find_config_for_target_raw(
+	target_path: Option<&str>,
+	custom_config: Option<&str>,
+	ignore_markdownlintrc: bool,
+) -> Option<String> {
+	if let Some(custom) = custom_config {
+		return find_config_file_raw(Some(custom), ignore_markdownlintrc);
+	}
+
+	if let Some(target) = target_path {
+		let path = Path::new(target);
+		let start_dir = if path.is_dir() {
+			Some(path)
+		} else {
+			path.parent()
+		};
+
+		if let Some(dir) = start_dir {
+			let dir_to_check = if dir.as_os_str().is_empty() {
+				Path::new(".")
+			} else {
+				dir
+			};
+			if let Some(cfg) =
+				find_config_in_ancestors_with_options(dir_to_check, ignore_markdownlintrc)
+			{
+				return Some(cfg);
+			}
+		}
+	}
+
+	find_config_file_raw(None, ignore_markdownlintrc)
+}
+
+/// Resolve the effective `ignore-markdownlintrc` setting for a scope.
+///
+/// The CLI flag always wins. Otherwise the native `agent-md.json` file that
+/// would be selected for the same scope (target ancestors or custom path,
+/// current directory when neither is given) is inspected for the
+/// `ignore-markdownlintrc` / `ignore_markdownlintrc` key. Defaults to false
+/// (do not ignore) when no native file sets it.
+pub fn get_effective_ignore_markdownlintrc(
+	target_path: Option<&str>,
+	custom_config: Option<&str>,
+	cli_flag: bool,
+) -> bool {
+	if cli_flag {
+		return true;
+	}
+	let native = find_config_for_target_raw(target_path, custom_config, true);
+	match native {
+		Some(path) if !is_markdownlint_config(&path) => parse_config_file(&path)
+			.is_some_and(|value| config_value_ignores_markdownlintrc(&value)),
+		_ => false,
+	}
+}
+
+/// Find configuration file path, optionally ignoring `markdownlintrc.*` files.
+///
+/// An explicit file path in `custom_path` is always respected, even when
+/// `ignore_markdownlintrc` is true. The flag only affects automatic discovery.
+/// When the flag is false, a native `agent-md.json` file in scope can still
+/// enable ignoring via its own `ignore-markdownlintrc` key.
+pub fn find_config_file_with_options(
+	custom_path: Option<&str>,
+	ignore_markdownlintrc: bool,
+) -> Option<String> {
+	let effective = get_effective_ignore_markdownlintrc(None, custom_path, ignore_markdownlintrc);
+	find_config_file_raw(custom_path, effective)
 }
 
 fn find_config_in_dir(dir: &Path, ignore_markdownlintrc: bool) -> Option<String> {
@@ -446,38 +540,17 @@ pub fn find_config_for_target(
 }
 
 /// Find configuration for a target, optionally ignoring `markdownlintrc.*` files.
+///
+/// When `ignore_markdownlintrc` is false, a native `agent-md.json` file in
+/// scope can still enable ignoring via its own `ignore-markdownlintrc` key.
 pub fn find_config_for_target_with_options(
 	target_path: Option<&str>,
 	custom_config: Option<&str>,
 	ignore_markdownlintrc: bool,
 ) -> Option<String> {
-	if let Some(custom) = custom_config {
-		return find_config_file_with_options(Some(custom), ignore_markdownlintrc);
-	}
-
-	if let Some(target) = target_path {
-		let path = Path::new(target);
-		let start_dir = if path.is_dir() {
-			Some(path)
-		} else {
-			path.parent()
-		};
-
-		if let Some(dir) = start_dir {
-			let dir_to_check = if dir.as_os_str().is_empty() {
-				Path::new(".")
-			} else {
-				dir
-			};
-			if let Some(cfg) =
-				find_config_in_ancestors_with_options(dir_to_check, ignore_markdownlintrc)
-			{
-				return Some(cfg);
-			}
-		}
-	}
-
-	find_config_file_with_options(None, ignore_markdownlintrc)
+	let effective =
+		get_effective_ignore_markdownlintrc(target_path, custom_config, ignore_markdownlintrc);
+	find_config_for_target_raw(target_path, custom_config, effective)
 }
 
 /// Read and parse configuration file.
@@ -522,6 +595,9 @@ pub fn get_config(custom_path: Option<&str>) -> Option<serde_json::Value> {
 }
 
 /// Get configuration JSON value, optionally ignoring `markdownlintrc.*`.
+///
+/// A native `agent-md.json` file in scope can also enable ignoring via its
+/// own `ignore-markdownlintrc` key, even when the flag argument is false.
 pub fn get_config_with_options(
 	custom_path: Option<&str>,
 	ignore_markdownlintrc: bool,
@@ -538,6 +614,9 @@ pub fn get_config_for_target(
 }
 
 /// Get configuration for a target, optionally ignoring `markdownlintrc.*`.
+///
+/// A native `agent-md.json` file in scope can also enable ignoring via its
+/// own `ignore-markdownlintrc` key, even when the flag argument is false.
 pub fn get_config_for_target_with_options(
 	target_path: Option<&str>,
 	custom_config: Option<&str>,
@@ -616,6 +695,7 @@ pub const DEFAULT_CONFIG_TEMPLATE: &str = r#"{
 	"table-column-style": false,
 	"no-hard-tabs": true,
 	"no-inline-html": false,
+	"ignore-markdownlintrc": false,
 	"remove-bold": true,
 	"compact-blank-lines": true,
 	"collapse-spaces": true,
@@ -1498,6 +1578,7 @@ mod tests {
 		assert!(!resolved.line_length);
 		assert_eq!(resolved.max_line_length, 80);
 		assert!(resolved.no_hard_tabs);
+		assert!(!resolved.ignore_markdownlintrc);
 		assert!(resolved.remove_bold);
 		assert!(resolved.compact_blank_lines);
 		assert!(resolved.collapse_spaces);
@@ -1697,6 +1778,105 @@ mod tests {
 
 		let found = find_config_file_with_options(Some(mdrc.to_str().unwrap()), true);
 		assert_eq!(found, Some(mdrc.to_str().unwrap().to_string()));
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_resolve_config_ignore_markdownlintrc_keys() {
+		let kebab = serde_json::json!({ "ignore-markdownlintrc": true });
+		assert!(resolve_config(Some(&kebab)).ignore_markdownlintrc);
+
+		let snake = serde_json::json!({ "ignore_markdownlintrc": true });
+		assert!(resolve_config(Some(&snake)).ignore_markdownlintrc);
+
+		assert!(!resolve_config(None).ignore_markdownlintrc);
+		assert!(!ResolvedConfig::default().ignore_markdownlintrc);
+
+		let invalid = serde_json::json!({ "ignore-markdownlintrc": "yes" });
+		assert!(!resolve_config(Some(&invalid)).ignore_markdownlintrc);
+	}
+
+	#[test]
+	fn test_config_value_ignores_markdownlintrc() {
+		assert!(config_value_ignores_markdownlintrc(
+			&serde_json::json!({ "ignore-markdownlintrc": true })
+		));
+		assert!(config_value_ignores_markdownlintrc(
+			&serde_json::json!({ "ignore_markdownlintrc": true })
+		));
+		assert!(!config_value_ignores_markdownlintrc(
+			&serde_json::json!({ "ignore-markdownlintrc": false })
+		));
+		assert!(!config_value_ignores_markdownlintrc(&serde_json::json!({})));
+	}
+
+	#[test]
+	fn test_native_config_key_ignores_markdownlintrc() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_native_key_ignore");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let native = temp_dir.join(".agent-md.json");
+		fs::write(&native, "{\"ignore-markdownlintrc\": true}").unwrap();
+		let mdrc = temp_dir.join(".markdownlint.json");
+		fs::write(&mdrc, "{\"line-length\": true}").unwrap();
+
+		// No CLI flag, but the native key enables ignoring.
+		assert!(get_effective_ignore_markdownlintrc(
+			None,
+			temp_dir.to_str(),
+			false
+		));
+		let found = find_config_file_with_options(temp_dir.to_str(), false);
+		assert_eq!(found, Some(native.to_str().unwrap().to_string()));
+		assert!(get_config_with_options(temp_dir.to_str(), false).is_some());
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_markdownlintrc_key_never_ignores() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_mdrc_key_noop");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let mdrc = temp_dir.join(".markdownlint.json");
+		fs::write(&mdrc, "{\"ignore-markdownlintrc\": true}").unwrap();
+
+		assert!(!get_effective_ignore_markdownlintrc(
+			None,
+			temp_dir.to_str(),
+			false
+		));
+		let found = find_config_file_with_options(temp_dir.to_str(), false);
+		assert_eq!(found, Some(mdrc.to_str().unwrap().to_string()));
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_target_ancestor_native_key_ignores_subdir_markdownlintrc() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_ancestor_key_ignore");
+		let _ = fs::remove_dir_all(&temp_dir);
+		let sub_dir = temp_dir.join("sub");
+		fs::create_dir_all(&sub_dir).unwrap();
+
+		let native = temp_dir.join("agent-md.json");
+		fs::write(&native, "{\"ignore_markdownlintrc\": true}").unwrap();
+		let mdrc = sub_dir.join(".markdownlint.json");
+		fs::write(&mdrc, "{\"line-length\": true}").unwrap();
+		let target = sub_dir.join("doc.md");
+		fs::write(&target, "# Doc").unwrap();
+
+		assert!(get_effective_ignore_markdownlintrc(
+			Some(target.to_str().unwrap()),
+			None,
+			false
+		));
+		let found =
+			find_config_for_target_with_options(Some(target.to_str().unwrap()), None, false);
+		assert_eq!(found, Some(native.to_str().unwrap().to_string()));
 
 		let _ = fs::remove_dir_all(&temp_dir);
 	}

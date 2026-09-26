@@ -9,10 +9,12 @@ All notable changes to this project will be documented in this file.
 - Ignore Markdownlint Config Option: Added global `--ignore-markdownlintrc` flag (default `false`) to skip `markdownlintrc.*` configuration files during discovery for `lint`, `lint-file`, `fmt`, and `config` commands.
 - Markdownlintrc Variants Support: Extended configuration discovery to `markdownlintrc.*` fallbacks (`.markdownlint.json`, `.markdownlint.jsonc`, `.markdownlint.yaml`, `.markdownlint.yml`, `.markdownlintrc`, `.markdownlintrc.json`) with JSON, JSONC, and YAML parsing.
 - Config API With Options: Added `*_with_options` variants (`find_config_file_with_options`, `find_config_for_target_with_options`, `get_config_with_options`, `get_config_status_with_options`, `validate_markdown_for_target_with_options`, `get_format_options_with_options`) preserving existing defaults (not ignored).
+- Config File Key: Added `ignore-markdownlintrc` (or `ignore_markdownlintrc`) key for `agent-md.json`, parsed into `ResolvedConfig` and honored during discovery via `get_effective_ignore_markdownlintrc` and `config_value_ignores_markdownlintrc`. The CLI flag always wins, and only native `agent-md.json` files are consulted for this key. Also added to the default config template.
 
 ### Tests
 
 - Markdownlintrc Ignore Tests: Added unit tests for candidate filtering, native-file preference, explicit-file override, YAML and JSONC parsing, and strict JSON behavior.
+- Config File Key Tests: Added unit tests for kebab-case and snake_case key parsing, native-key ignoring, `markdownlintrc.*` keys never applying, and ancestor native keys skipping subdirectory `markdownlintrc.*` files.
 
 ## [0.2.15] - 2026-09-25
 

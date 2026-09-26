@@ -347,7 +347,7 @@ Checks configuration file resolution and status. Configuration files are resolve
 
 When processing a target Markdown file, `agent-md` automatically searches the file's parent directory and walks up parent directories to discover configuration, falling back to the current working directory unless overridden with `--config`.
 
-Use global `--ignore-markdownlintrc` to skip `markdownlintrc.*` files during discovery (default is `false`, so they are used as fallback).
+Use global `--ignore-markdownlintrc` to skip `markdownlintrc.*` files during discovery (default is `false`, so they are used as fallback). The same option can be set in `agent-md.json` via the `ignore-markdownlintrc` (or `ignore_markdownlintrc`) key; the CLI flag always wins, and only native `agent-md.json` files are consulted for this key.
 
 A sample configuration file is provided in `samples/.agent-md.json`.
 
@@ -372,6 +372,9 @@ agent-md --config samples/.agent-md.json fmt document.md
 
 agent-md --ignore-markdownlintrc lint document.md
 # Skip markdownlintrc.* files and use only agent-md configuration
+
+# Or set it in agent-md.json:
+# { "ignore-markdownlintrc": true }
 ```
 
 ### Inspect ignore rules

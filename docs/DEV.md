@@ -65,7 +65,7 @@ This approach is more robust than simple line-based processing, especially for c
 2. Target File Ancestor Search: When executing commands against a target Markdown file (such as `agent-md fmt path/to/doc.md` or `agent-md lint path/to/doc.md`), `find_config_for_target` starts in the target file's parent directory and searches upwards through parent directories.
 3. Fallback: If no configuration file is located in the target directory tree, the resolver falls back to the current working directory.
 4. Explicit Override: When `--config <PATH>` is supplied on the CLI, it bypasses ancestor discovery and uses the specified configuration file or directory directly.
-5. Ignore Markdownlint: When global `--ignore-markdownlintrc` is set (default `false`), automatic discovery skips `markdownlintrc.*` files and uses only native agent-md configuration. An explicit `--config` file path is still respected.
+5. Ignore Markdownlint: When global `--ignore-markdownlintrc` is set (default `false`), automatic discovery skips `markdownlintrc.*` files and uses only native agent-md configuration. The same option can be set via the `ignore-markdownlintrc` (or `ignore_markdownlintrc`) key in `agent-md.json`; the CLI flag always wins, and only native files are consulted for this key (`markdownlintrc.*` files never set it). An explicit `--config` file path is still respected.
 
 ## Building
 
