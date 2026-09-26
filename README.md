@@ -446,17 +446,17 @@ The output remains unchanged.
 #### Format Options
 
 The formatter applies compact rules by default to reduce token count. These can be configured in `.agent-md.json` or `agent-md.json` (using kebab-case or snake_case, top-level or under a `format` object) and overridden via CLI flags:
-| Option | Description |
-|---|---|
-| `remove_bold` | Removes `**bold**` and `__bold__` markers (preserves code spans, URLs, and link destinations; configurable via `remove_bold` or `remove-bold`) |
-| `compact_blank_lines` | Collapses multiple consecutive blank lines (preserves single blank lines around headings) |
-| `collapse_spaces` | Collapses multiple spaces between words (preserves spaces inside inline code) |
-| `remove_horizontal_rules` | Removes `---`, `***`, `___` lines |
-| `remove_emphasis` | Removes `*italic*` and `_italic_` markers (preserves code spans, URLs, and link destinations) |
-| `blanks_around_lists` | Ensures lists are surrounded by blank lines (configured in `.agent-md.json` or `.markdownlint.json`) |
-| `blanks_around_fences` | Ensures fenced code blocks are surrounded by blank lines (configured in `.agent-md.json` or `.markdownlint.json`) |
-| `blanks_around_headings` | Ensures headings are surrounded by blank lines (configured in `.agent-md.json` or `.markdownlint.json`) |
-| `minify_html` | Minifies HTML tags and blocks by removing useless whitespace and newlines |
+| Option | Description | Default |
+|---|---|---|
+| `remove_bold` | Removes `**bold**` and `__bold__` markers (preserves code spans, URLs, and link destinations; configurable via `remove_bold` or `remove-bold`) | `true` |
+| `compact_blank_lines` | Collapses multiple consecutive blank lines (preserves single blank lines around headings) | `true` |
+| `collapse_spaces` | Collapses multiple spaces between words (preserves spaces inside inline code) | `true` |
+| `remove_horizontal_rules` | Removes `---`, `***`, `___` lines | `true` |
+| `remove_emphasis` | Removes `*italic*` and `_italic_` markers (preserves code spans, URLs, and link destinations) | `true` |
+| `blanks_around_lists` | Ensures lists are surrounded by blank lines (configured in `.agent-md.json` or `.markdownlint.json`) | `true` |
+| `blanks_around_fences` | Ensures fenced code blocks are surrounded by blank lines (configured in `.agent-md.json` or `.markdownlint.json`) | `true` |
+| `blanks_around_headings` | Ensures headings are surrounded by blank lines (configured in `.agent-md.json` or `.markdownlint.json`) | `true` |
+| `minify_html` | Minifies HTML tags and blocks by removing useless whitespace and newlines | `true` |
 
 Example:
 

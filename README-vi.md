@@ -394,17 +394,17 @@ agent-md fmt <path>
 
 Trình định dạng áp dụng các quy tắc thu gọn theo mặc định để giảm số lượng token:
 
-| Tùy chọn | Mô tả |
-|---|---|
-| `remove_bold` | Xóa các dấu `**bold**` và `__bold__` |
-| `compact_blank_lines` | Thu gọn nhiều dòng trống liên tiếp (giữ lại các dòng trống đơn quanh tiêu đề) |
-| `collapse_spaces` | Thu gọn nhiều khoảng trắng giữa các từ |
-| `remove_horizontal_rules` | Xóa các dòng `---`, `***`, `___` |
-| `remove_emphasis` | Xóa các dấu `*italic*` và `_italic_` |
-| `blanks_around_lists` | Đảm bảo danh sách được bao quanh bởi các dòng trống (cấu hình trong `.agent-md.json` hoặc `.markdownlint.json`) |
-| `blanks_around_fences` | Đảm bảo các khối mã được bao quanh bởi các dòng trống (cấu hình trong `.agent-md.json` hoặc `.markdownlint.json`) |
-| `blanks_around_headings` | Đảm bảo tiêu đề được bao quanh bởi các dòng trống (cấu hình trong `.agent-md.json` hoặc `.markdownlint.json`) |
-| `minify_html` | Thu nhỏ các thẻ và khối HTML bằng cách loại bỏ khoảng trắng và dòng mới không cần thiết |
+| Tùy chọn | Mô tả | Mặc định |
+|---|---|---|
+| `remove_bold` | Xóa các dấu `**bold**` và `__bold__` | `true` |
+| `compact_blank_lines` | Thu gọn nhiều dòng trống liên tiếp (giữ lại các dòng trống đơn quanh tiêu đề) | `true` |
+| `collapse_spaces` | Thu gọn nhiều khoảng trắng giữa các từ | `true` |
+| `remove_horizontal_rules` | Xóa các dòng `---`, `***`, `___` | `true` |
+| `remove_emphasis` | Xóa các dấu `*italic*` và `_italic_` | `true` |
+| `blanks_around_lists` | Đảm bảo danh sách được bao quanh bởi các dòng trống (cấu hình trong `.agent-md.json` hoặc `.markdownlint.json`) | `true` |
+| `blanks_around_fences` | Đảm bảo các khối mã được bao quanh bởi các dòng trống (cấu hình trong `.agent-md.json` hoặc `.markdownlint.json`) | `true` |
+| `blanks_around_headings` | Đảm bảo tiêu đề được bao quanh bởi các dòng trống (cấu hình trong `.agent-md.json` hoặc `.markdownlint.json`) | `true` |
+| `minify_html` | Thu nhỏ các thẻ và khối HTML bằng cách loại bỏ khoảng trắng và dòng mới không cần thiết | `true` |
 
 Ví dụ:
 
