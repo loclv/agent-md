@@ -32,9 +32,25 @@ An example of comments in code block before and after:
 +bun run something-else # Run something else
 ```
 
--> LLM reads less and faster.
--> Save more tokens.
--> Save more money.
+An example of file tree before and after:
+
+```diff
+ example-folder/
+-├── file-1.txt
+-├── file-2.txt
+-└── sub-folder/
+-    ├── file-3.txt
+-    └── file-4.txt
++├─file-1.txt
++├─file-2.txt
++└─sub-folder/
++    ├─file-3.txt
++    └─file-4.txt
+```
+
+- LLM reads less and faster.
+- Save more tokens.
+- Save more money.
 
 Lint markdown file for LLM and Agents:
 

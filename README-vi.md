@@ -32,9 +32,25 @@ Một ví dụ cho comment trong code block trước và sau khi format:
 +bun run something-else # Run something else
 ```
 
--> LLM đọc ít token hơn và nhanh hơn.
--> Tiết kiệm token.
--> Tiết kiệm tiền.
+Một ví dụ về cây thư mục trước và sau khi format:
+
+```diff
+ example-folder/
+-├── file-1.txt
+-├── file-2.txt
+-└── sub-folder/
+-    ├── file-3.txt
+-    └── file-4.txt
++├─file-1.txt
++├─file-2.txt
++└─sub-folder/
++    ├─file-3.txt
++    └─file-4.txt
+```
+
+- LLM đọc ít token hơn và nhanh hơn.
+- Tiết kiệm token.
+- Tiết kiệm tiền.
 
 Kiểm tra các quy tắc trong file markdown:
 
