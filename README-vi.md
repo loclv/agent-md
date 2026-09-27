@@ -1,7 +1,9 @@
 # `agent-md` - Một công cụ CLI giúp bạn viết markdown thân thiện với LLM
 
 <div align="center">
-<img src="logo.svg" alt="agent-md logo" width="128" height="128"></div>
+<img src="logo.svg" alt="agent-md logo" width="128" height="128">
+<br />
+<a href="https://dopana.com" target="_blank">Sponsored by dopana.com</a></div>
 
 Format markdown file cho LLM và Agents:
 
