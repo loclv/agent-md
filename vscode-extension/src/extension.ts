@@ -1,14 +1,7 @@
+import * as path from "node:path";
 import * as vscode from "vscode";
-import { spawn } from "node:child_process";
+import { formatContent, type FormatOptions } from "./formatter";
 import { resolveAgentMdPath } from "./resolver";
-
-interface FormatOptions {
-  removeBold: boolean;
-  compactBlankLines: boolean;
-  collapseSpaces: boolean;
-  removeHorizontalRules: boolean;
-  removeEmphasis: boolean;
-}
 
 function getFormatOptions(): FormatOptions {
   const config = vscode.workspace.getConfiguration("agentMd.format");
@@ -52,65 +45,13 @@ function formatWithAgentMd(
   options: FormatOptions,
   document?: vscode.TextDocument,
 ): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const agentMdPath = getAgentMdPath(document);
+  const agentMdPath = getAgentMdPath(document);
+  const cwd =
+    document?.uri.scheme === "file"
+      ? path.dirname(document.uri.fsPath)
+      : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 
-    // Use --stdin for Prettier-style formatting (avoids file sync conflicts)
-    const args: string[] = ["fmt", "--stdin"];
-
-    if (!options.removeBold) {
-      args.push("--remove-bold=false");
-    }
-    if (!options.compactBlankLines) {
-      args.push("--compact-blank-lines=false");
-    }
-    if (!options.collapseSpaces) {
-      args.push("--collapse-spaces=false");
-    }
-    if (!options.removeHorizontalRules) {
-      args.push("--remove-horizontal-rules=false");
-    }
-    if (!options.removeEmphasis) {
-      args.push("--remove-emphasis=false");
-    }
-
-    const process = spawn(agentMdPath, args);
-
-    let stdout = "";
-    let stderr = "";
-
-    process.stdout.on("data", (data) => {
-      stdout += data.toString();
-    });
-
-    process.stderr.on("data", (data) => {
-      stderr += data.toString();
-    });
-
-    process.on("close", (code) => {
-      if (code === 0) {
-        resolve(stdout);
-      } else {
-        reject(new Error(`agent-md fmt failed with code ${code}: ${stderr}`));
-      }
-    });
-
-    process.on("error", (err) => {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        reject(
-          new Error(
-            `agent-md executable not found at "${agentMdPath}". Please ensure it's installed and in your PATH, or configure the correct path in settings.`,
-          ),
-        );
-      } else {
-        reject(err);
-      }
-    });
-
-    // Write content to stdin
-    process.stdin.write(content);
-    process.stdin.end();
-  });
+  return formatContent(content, agentMdPath, options, cwd);
 }
 
 class AgentMdFormatter implements vscode.DocumentFormattingEditProvider {

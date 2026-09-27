@@ -2,6 +2,13 @@
 
 All notable changes to the "agent-md-formatter" extension will be documented in this file.
 
+## [0.1.4] - 2026-09-27
+
+### Added
+
+- Formatter test suite: Added unit and integration tests covering all format settings (`agentMd.format.removeBold`, `agentMd.format.compactBlankLines`, `agentMd.format.collapseSpaces`, `agentMd.format.removeHorizontalRules`, `agentMd.format.removeEmphasis`).
+- Formatter module: Extracted argument builder and execution helper into modular `formatter.ts` with `cwd` awareness.
+
 ## [0.1.3] - 2026-09-13
 
 ### Added

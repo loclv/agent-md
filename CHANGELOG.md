@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### VS Code Extension
+
+- Formatter test suite: Added unit and integration tests covering all format settings (`agentMd.format.removeBold`, `agentMd.format.compactBlankLines`, `agentMd.format.collapseSpaces`, `agentMd.format.removeHorizontalRules`, `agentMd.format.removeEmphasis`).
+- Formatter module: Extracted argument builder and execution helper into modular `formatter.ts` with `cwd` awareness.
+
 ## [0.2.16] - 2026-09-27
 
 ### Fixed
