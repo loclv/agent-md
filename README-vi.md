@@ -1,9 +1,6 @@
 # `agent-md` - Một công cụ CLI giúp bạn viết markdown thân thiện với LLM
 
-<div align="center">
-<img src="logo.svg" alt="agent-md logo" width="128" height="128">
-<br />
-<a href="https://dopana.com" target="_blank">Sponsored by dopana.com</a></div>
+<div align="center"><img src="logo.svg" alt="agent-md logo" width="128" height="128"><br /><div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 22px;"><div style="margin-top: auto; margin-bottom: auto;"><a href="https://dopana.com" target="_blank">Sponsored by dopana.com</a></div><a href="https://unikorn.vn/p/agent-md?ref=embed-agent-md" target="_blank"><img src="https://unikorn.vn/api/widgets/badge/agent-md?theme=dark" alt="agent-md trên Unikorn.vn" style="width: 256px; height: 64px;" width="256" height="64" /></a></div></div>
 
 Format markdown file cho LLM và Agents:
 
