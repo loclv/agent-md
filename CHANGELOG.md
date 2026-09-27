@@ -22,6 +22,7 @@ All notable changes to this project will be documented in this file.
 - SIMD Comment Stripping: Rewrote `strip_json_comments` in `src/config.rs` around `memchr` SIMD scanning with bulk text copies (added `memchr` dependency), keeping byte-exact behavior including newline preservation and escaped-quote handling.
 - Config Discovery Helpers: Extracted shared `get_bool_alias` key lookup, unified `parse_config_str` branches behind `parse_yaml_object`, and extracted `ancestor_start_dir` for target-based discovery.
 - Test Isolation: Added RAII `TestDir` guard in `src/config.rs` tests, removing manual temp-directory setup and teardown from every test.
+- JSONC Module: Moved `strip_json_comments` from `src/config.rs` into the new `src/jsonc.rs` module with its edge-case tests, leaving a `pub(crate)` import for the config layer.
 
 ## [0.2.15] - 2026-09-25
 

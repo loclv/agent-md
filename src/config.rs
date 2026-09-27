@@ -2,6 +2,8 @@ use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::jsonc::strip_json_comments;
+
 /// Agent-md native configuration file names in resolution priority order.
 pub const AGENT_MD_CONFIG_FILES: &[&str] = &[".agent-md.json", "agent-md.json"];
 
@@ -246,94 +248,6 @@ pub fn candidate_config_files(ignore_markdownlintrc: bool) -> &'static [&'static
 	}
 }
 
-/// Strip `//` line comments and `/* */` block comments outside of strings.
-///
-/// Used for `.jsonc` files and as a fallback for extensionless `.markdownlintrc`.
-///
-/// Scans with SIMD-accelerated `memchr` jumps between significant bytes and
-/// copies the text in between in bulk. This is sound because `"`, `/`, `\`,
-/// `*`, and `\n` are ASCII and can never occur inside multi-byte UTF-8
-/// sequences, so byte offsets always land on character boundaries.
-fn strip_json_comments(content: &str) -> String {
-	let bytes = content.as_bytes();
-	let mut out = String::with_capacity(content.len());
-	let mut i = 0;
-	let mut in_string = false;
-	while i < bytes.len() {
-		if in_string {
-			// Inside strings only `"` and `\` are significant; `/` is ordinary.
-			match memchr::memchr2(b'"', b'\\', &bytes[i..]) {
-				None => {
-					out.push_str(&content[i..]);
-					break;
-				}
-				Some(rel) => {
-					let pos = i + rel;
-					out.push_str(&content[i..=pos]);
-					if bytes[pos] == b'\\' {
-						// Copy the escaped character whole (it may be multi-byte).
-						if let Some(ch) = content[pos + 1..].chars().next() {
-							out.push(ch);
-							i = pos + 1 + ch.len_utf8();
-						} else {
-							i = pos + 1;
-						}
-					} else {
-						in_string = false;
-						i = pos + 1;
-					}
-				}
-			}
-			continue;
-		}
-		match memchr::memchr2(b'"', b'/', &bytes[i..]) {
-			None => {
-				out.push_str(&content[i..]);
-				break;
-			}
-			Some(rel) => {
-				let pos = i + rel;
-				out.push_str(&content[i..pos]);
-				if bytes[pos] == b'"' {
-					out.push('"');
-					in_string = true;
-					i = pos + 1;
-				} else if bytes.get(pos + 1) == Some(&b'/') {
-					// Line comment: skip to (and keep) the newline.
-					match memchr::memchr(b'\n', &bytes[pos + 2..]) {
-						Some(nl) => {
-							out.push('\n');
-							i = pos + 2 + nl + 1;
-						}
-						None => break,
-					}
-				} else if bytes.get(pos + 1) == Some(&b'*') {
-					// Block comment: skip to `*/`, preserving newlines.
-					let mut j = pos + 2;
-					let mut prev_star = false;
-					while j < bytes.len() {
-						let b = bytes[j];
-						if prev_star && b == b'/' {
-							j += 1;
-							break;
-						}
-						prev_star = b == b'*';
-						if b == b'\n' {
-							out.push('\n');
-						}
-						j += 1;
-					}
-					i = j;
-				} else {
-					out.push('/');
-					i = pos + 1;
-				}
-			}
-		}
-	}
-	out
-}
-
 /// Parse YAML content into JSON, accepting only mapping objects.
 ///
 /// Requires an object so stray strings or empty files do not count as
@@ -411,6 +325,7 @@ fn find_config_file_raw(custom_path: Option<&str>, ignore_markdownlintrc: bool) 
 	if let Some(custom) = custom_path {
 		let path = Path::new(custom);
 		if path.is_file() {
+			// Explicit user intent always beats discovery heuristics.
 			return Some(custom.to_string());
 		}
 		if path.is_dir() {
@@ -429,7 +344,8 @@ fn find_config_file_raw(custom_path: Option<&str>, ignore_markdownlintrc: bool) 
 
 /// Resolve the directory that ancestor search starts from for a target path.
 ///
-/// Directories start at themselves; files start at their parent directory.
+/// Config files live in directories, never in the target file itself, so
+/// files resolve via their parent while directories start at themselves.
 /// A bare file name (empty parent) starts at the current directory.
 fn ancestor_start_dir(target: &str) -> Option<&Path> {
 	let path = Path::new(target);
@@ -476,6 +392,8 @@ pub fn get_effective_ignore_markdownlintrc(
 	}
 	let native = find_config_for_target_raw(target_path, custom_config, true);
 	match native {
+		// Foreign markdownlint files must never control discovery: otherwise a
+		// vendored config could silently opt itself out from under the user.
 		Some(path) if !is_markdownlint_config(&path) => parse_config_file(&path)
 			.is_some_and(|value| config_value_ignores_markdownlintrc(&value)),
 		_ => false,
@@ -520,6 +438,8 @@ pub fn find_config_in_ancestors_with_options(
 		return Some(cfg);
 	}
 
+	// Walk real ancestors, not path spellings: joining a relative dir onto
+	// the cwd first ensures `parent()` climbs the actual filesystem tree.
 	let Ok(current) = (if dir == Path::new(".") || dir.as_os_str().is_empty() {
 		std::env::current_dir()
 	} else if dir.is_relative() {
@@ -655,6 +575,8 @@ pub fn get_config_status_with_options(
 	include_content: bool,
 	ignore_markdownlintrc: bool,
 ) -> ConfigStatus {
+	// A markdown file path asks "which config applies to this file", while a
+	// config filename is inspected directly; directories are searched as-is.
 	let path_opt = if let Some(custom) = custom_path {
 		let path = Path::new(custom);
 		if path.is_file() {
@@ -757,6 +679,8 @@ pub fn init_config(custom_path: Option<&str>, force: bool) -> Result<String, Str
 		));
 	}
 
+	// Create missing parents so `init nested/dir/agent-md.json` works without
+	// pre-creating the directory tree by hand.
 	if let Some(parent) = target_path.parent() {
 		if !parent.as_os_str().is_empty() && !parent.exists() {
 			if let Err(e) = fs::create_dir_all(parent) {
@@ -1688,55 +1612,6 @@ mod tests {
 	fn test_parse_config_str_json_stays_strict() {
 		assert!(parse_config_str(".agent-md.json", "not json").is_none());
 		assert!(parse_config_str(".agent-md.json", "").is_none());
-	}
-
-	#[test]
-	fn test_strip_json_comments_preserves_urls_in_strings() {
-		let content = "{\"url\": \"https://example.com//path\", \"other\": 1} // done";
-		let stripped = strip_json_comments(content);
-		assert!(stripped.contains("https://example.com//path"));
-		assert!(!stripped.contains("// done"));
-		let val: serde_json::Value = serde_json::from_str(&stripped).unwrap();
-		assert_eq!(val.get("other").unwrap(), 1);
-	}
-
-	#[test]
-	fn test_strip_json_comments_escaped_quotes_and_backslashes() {
-		// `\"` must not end the string; `\\` must not escape the quote.
-		let content = "{\"a\": \"x\\\"//kept\", \"b\": \"y\\\\\", \"c\": 1} /* gone */";
-		let stripped = strip_json_comments(content);
-		assert!(stripped.contains("//kept"));
-		assert!(!stripped.contains("gone"));
-		let val: serde_json::Value = serde_json::from_str(&stripped).unwrap();
-		assert_eq!(val.get("c").unwrap(), 1);
-	}
-
-	#[test]
-	fn test_strip_json_comments_block_preserves_line_numbers() {
-		let content = "{\n/* one\ntwo */\n\"a\": 1\n}";
-		let stripped = strip_json_comments(content);
-		assert_eq!(stripped.lines().count(), content.lines().count());
-		let val: serde_json::Value = serde_json::from_str(&stripped).unwrap();
-		assert_eq!(val.get("a").unwrap(), 1);
-	}
-
-	#[test]
-	fn test_strip_json_comments_unterminated_comment() {
-		assert_eq!(strip_json_comments("{\"a\": 1} // trailing"), "{\"a\": 1} ");
-		assert_eq!(
-			strip_json_comments("{\"a\": 1} /* never ends"),
-			"{\"a\": 1} "
-		);
-		assert_eq!(strip_json_comments("/"), "/");
-	}
-
-	#[test]
-	fn test_strip_json_comments_multibyte_content() {
-		let content = "{\"greeting\": \"Xin chào // thế giới\", \"a\": 1} // chú thích";
-		let stripped = strip_json_comments(content);
-		assert!(stripped.contains("Xin chào // thế giới"));
-		let val: serde_json::Value = serde_json::from_str(&stripped).unwrap();
-		assert_eq!(val.get("a").unwrap(), 1);
 	}
 
 	#[test]

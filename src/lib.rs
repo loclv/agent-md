@@ -21,6 +21,7 @@ pub mod format;
 #[cfg(test)]
 mod html_tests;
 pub mod ignore;
+pub mod jsonc;
 pub mod linter;
 pub mod parser;
 pub mod rules;

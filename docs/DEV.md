@@ -16,6 +16,7 @@ agent-md/
     main.rs - CLI entrypoint and clap parsers
     types.rs - Common types, structures and utilities
     config.rs - Configuration file resolution and reading
+    jsonc.rs - JSONC comment stripping for configuration files
     ignore.rs - Ignore file (.markdownlintignore, .gitignore) resolution and matching
     linter.rs - Lint rules orchestration
     commands.rs - CLI subcommand handlers and parsing logic
