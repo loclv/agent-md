@@ -15,6 +15,13 @@ All notable changes to this project will be documented in this file.
 
 - Markdownlintrc Ignore Tests: Added unit tests for candidate filtering, native-file preference, explicit-file override, YAML and JSONC parsing, and strict JSON behavior.
 - Config File Key Tests: Added unit tests for kebab-case and snake_case key parsing, native-key ignoring, `markdownlintrc.*` keys never applying, and ancestor native keys skipping subdirectory `markdownlintrc.*` files.
+- Scanner Edge Cases: Added unit tests for URLs in strings, escaped quotes and backslashes, line-number preservation across block comments, unterminated comments, and multibyte content.
+
+### Refactored
+
+- SIMD Comment Stripping: Rewrote `strip_json_comments` in `src/config.rs` around `memchr` SIMD scanning with bulk text copies (added `memchr` dependency), keeping byte-exact behavior including newline preservation and escaped-quote handling.
+- Config Discovery Helpers: Extracted shared `get_bool_alias` key lookup, unified `parse_config_str` branches behind `parse_yaml_object`, and extracted `ancestor_start_dir` for target-based discovery.
+- Test Isolation: Added RAII `TestDir` guard in `src/config.rs` tests, removing manual temp-directory setup and teardown from every test.
 
 ## [0.2.15] - 2026-09-25
 

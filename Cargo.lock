@@ -9,6 +9,7 @@ dependencies = [
  "chrono",
  "clap",
  "dirs",
+ "memchr",
  "pulldown-cmark",
  "serde",
  "serde_json",

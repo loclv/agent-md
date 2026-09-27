@@ -112,6 +112,16 @@ impl ResolvedConfig {
 		let get_u64 =
 			|key: &str, def: u64| -> u64 { cfg.get(key).and_then(|v| v.as_u64()).unwrap_or(def) };
 
+		// Read a boolean accepting kebab-case or snake_case keys.
+		// The kebab-case key wins when both are present; falls back to `def`.
+		let get_bool_alias = |kebab: &str, snake: &str, def: bool| -> bool {
+			match (cfg.get(kebab), cfg.get(snake)) {
+				(Some(v), _) if v.is_boolean() => v.as_bool().unwrap_or(def),
+				(_, Some(v)) if v.is_boolean() => v.as_bool().unwrap_or(def),
+				_ => def,
+			}
+		};
+
 		let get_format_bool = |k1: &str, k2: &str, def: bool| -> bool {
 			let format_val = cfg
 				.get("format")
@@ -121,21 +131,14 @@ impl ResolvedConfig {
 			if let Some(val) = format_val {
 				return val;
 			}
-			match (cfg.get(k1), cfg.get(k2)) {
-				(Some(v), _) if v.is_boolean() => v.as_bool().unwrap_or(def),
-				(_, Some(v)) if v.is_boolean() => v.as_bool().unwrap_or(def),
-				_ => def,
-			}
+			get_bool_alias(k1, k2, def)
 		};
 
-		let no_duplicate = match (
-			cfg.get("no-duplicate-heading"),
-			cfg.get("no-duplicate-headings"),
-		) {
-			(Some(v), _) if v.is_boolean() => v.as_bool().unwrap_or(defaults.no_duplicate_heading),
-			(_, Some(v)) if v.is_boolean() => v.as_bool().unwrap_or(defaults.no_duplicate_headings),
-			_ => defaults.no_duplicate_heading,
-		};
+		let no_duplicate = get_bool_alias(
+			"no-duplicate-heading",
+			"no-duplicate-headings",
+			defaults.no_duplicate_heading,
+		);
 
 		Self {
 			blanks_around_headings: get_bool(
@@ -154,18 +157,11 @@ impl ResolvedConfig {
 			table_column_style: get_bool("table-column-style", defaults.table_column_style),
 			no_hard_tabs: get_bool("no-hard-tabs", defaults.no_hard_tabs),
 			no_inline_html: get_bool("no-inline-html", defaults.no_inline_html),
-			ignore_markdownlintrc: match (
-				cfg.get("ignore-markdownlintrc"),
-				cfg.get("ignore_markdownlintrc"),
-			) {
-				(Some(v), _) if v.is_boolean() => {
-					v.as_bool().unwrap_or(defaults.ignore_markdownlintrc)
-				}
-				(_, Some(v)) if v.is_boolean() => {
-					v.as_bool().unwrap_or(defaults.ignore_markdownlintrc)
-				}
-				_ => defaults.ignore_markdownlintrc,
-			},
+			ignore_markdownlintrc: get_bool_alias(
+				"ignore-markdownlintrc",
+				"ignore_markdownlintrc",
+				defaults.ignore_markdownlintrc,
+			),
 			remove_bold: get_format_bool("remove-bold", "remove_bold", defaults.remove_bold),
 			compact_blank_lines: get_format_bool(
 				"compact-blank-lines",
@@ -253,87 +249,110 @@ pub fn candidate_config_files(ignore_markdownlintrc: bool) -> &'static [&'static
 /// Strip `//` line comments and `/* */` block comments outside of strings.
 ///
 /// Used for `.jsonc` files and as a fallback for extensionless `.markdownlintrc`.
+///
+/// Scans with SIMD-accelerated `memchr` jumps between significant bytes and
+/// copies the text in between in bulk. This is sound because `"`, `/`, `\`,
+/// `*`, and `\n` are ASCII and can never occur inside multi-byte UTF-8
+/// sequences, so byte offsets always land on character boundaries.
 fn strip_json_comments(content: &str) -> String {
+	let bytes = content.as_bytes();
 	let mut out = String::with_capacity(content.len());
-	let mut chars = content.chars().peekable();
+	let mut i = 0;
 	let mut in_string = false;
-	let mut escaped = false;
-	while let Some(c) = chars.next() {
+	while i < bytes.len() {
 		if in_string {
-			out.push(c);
-			if escaped {
-				escaped = false;
-			} else if c == '\\' {
-				escaped = true;
-			} else if c == '"' {
-				in_string = false;
+			// Inside strings only `"` and `\` are significant; `/` is ordinary.
+			match memchr::memchr2(b'"', b'\\', &bytes[i..]) {
+				None => {
+					out.push_str(&content[i..]);
+					break;
+				}
+				Some(rel) => {
+					let pos = i + rel;
+					out.push_str(&content[i..=pos]);
+					if bytes[pos] == b'\\' {
+						// Copy the escaped character whole (it may be multi-byte).
+						if let Some(ch) = content[pos + 1..].chars().next() {
+							out.push(ch);
+							i = pos + 1 + ch.len_utf8();
+						} else {
+							i = pos + 1;
+						}
+					} else {
+						in_string = false;
+						i = pos + 1;
+					}
+				}
 			}
 			continue;
 		}
-		if c == '"' {
-			in_string = true;
-			out.push(c);
-			continue;
-		}
-		if c == '/' {
-			match chars.peek() {
-				Some('/') => {
-					for next in chars.by_ref() {
-						if next == '\n' {
+		match memchr::memchr2(b'"', b'/', &bytes[i..]) {
+			None => {
+				out.push_str(&content[i..]);
+				break;
+			}
+			Some(rel) => {
+				let pos = i + rel;
+				out.push_str(&content[i..pos]);
+				if bytes[pos] == b'"' {
+					out.push('"');
+					in_string = true;
+					i = pos + 1;
+				} else if bytes.get(pos + 1) == Some(&b'/') {
+					// Line comment: skip to (and keep) the newline.
+					match memchr::memchr(b'\n', &bytes[pos + 2..]) {
+						Some(nl) => {
 							out.push('\n');
-							break;
+							i = pos + 2 + nl + 1;
 						}
+						None => break,
 					}
-					continue;
-				}
-				Some('*') => {
-					let _ = chars.next();
+				} else if bytes.get(pos + 1) == Some(&b'*') {
+					// Block comment: skip to `*/`, preserving newlines.
+					let mut j = pos + 2;
 					let mut prev_star = false;
-					for next in chars.by_ref() {
-						if prev_star && next == '/' {
+					while j < bytes.len() {
+						let b = bytes[j];
+						if prev_star && b == b'/' {
+							j += 1;
 							break;
 						}
-						prev_star = next == '*';
-						if next == '\n' {
+						prev_star = b == b'*';
+						if b == b'\n' {
 							out.push('\n');
 						}
+						j += 1;
 					}
-					continue;
-				}
-				_ => {
-					out.push(c);
-					continue;
+					i = j;
+				} else {
+					out.push('/');
+					i = pos + 1;
 				}
 			}
 		}
-		out.push(c);
 	}
 	out
+}
+
+/// Parse YAML content into JSON, accepting only mapping objects.
+///
+/// Requires an object so stray strings or empty files do not count as
+/// valid configuration.
+fn parse_yaml_object(content: &str) -> Option<serde_json::Value> {
+	serde_yaml::from_str::<serde_json::Value>(content)
+		.ok()
+		.filter(|val| val.is_object())
 }
 
 /// Parse configuration file content based on file extension.
 ///
 /// Supports JSON, JSONC (comments stripped), YAML, and extensionless
 /// `.markdownlintrc` (tried as JSON, then JSONC, then YAML).
-/// `.json` files stay strict JSON to preserve existing invalid-file behavior;
-/// YAML parsing requires a mapping object so stray strings or empty files
-/// do not count as valid configuration.
+/// `.json` and `.jsonc` files stay strict JSON to preserve existing
+/// invalid-file behavior; other extensions fall back to YAML.
 pub fn parse_config_str(path_str: &str, content: &str) -> Option<serde_json::Value> {
 	if path_str.ends_with(".yaml") || path_str.ends_with(".yml") {
-		return serde_yaml::from_str::<serde_json::Value>(content)
-			.ok()
-			.filter(|val| val.is_object());
-	}
-	if path_str.ends_with(".jsonc") {
-		let stripped = strip_json_comments(content);
-		return serde_json::from_str(&stripped).ok();
-	}
-	if path_str.ends_with(".json") {
-		if let Ok(val) = serde_json::from_str::<serde_json::Value>(content) {
-			return Some(val);
-		}
-		let stripped = strip_json_comments(content);
-		return serde_json::from_str(&stripped).ok();
+		return parse_yaml_object(content);
 	}
 	if let Ok(val) = serde_json::from_str::<serde_json::Value>(content) {
 		return Some(val);
@@ -342,9 +361,10 @@ pub fn parse_config_str(path_str: &str, content: &str) -> Option<serde_json::Val
 	if let Ok(val) = serde_json::from_str::<serde_json::Value>(&stripped) {
 		return Some(val);
 	}
-	serde_yaml::from_str::<serde_json::Value>(content)
-		.ok()
-		.filter(|val| val.is_object())
+	if path_str.ends_with(".json") || path_str.ends_with(".jsonc") {
+		return None;
+	}
+	parse_yaml_object(content)
 }
 
 /// Parse a configuration file at `path_str`.
@@ -407,6 +427,20 @@ fn find_config_file_raw(custom_path: Option<&str>, ignore_markdownlintrc: bool) 
 	None
 }
 
+/// Resolve the directory that ancestor search starts from for a target path.
+///
+/// Directories start at themselves; files start at their parent directory.
+/// A bare file name (empty parent) starts at the current directory.
+fn ancestor_start_dir(target: &str) -> Option<&Path> {
+	let path = Path::new(target);
+	let dir = if path.is_dir() { path } else { path.parent()? };
+	if dir.as_os_str().is_empty() {
+		Some(Path::new("."))
+	} else {
+		Some(dir)
+	}
+}
+
 fn find_config_for_target_raw(
 	target_path: Option<&str>,
 	custom_config: Option<&str>,
@@ -416,25 +450,9 @@ fn find_config_for_target_raw(
 		return find_config_file_raw(Some(custom), ignore_markdownlintrc);
 	}
 
-	if let Some(target) = target_path {
-		let path = Path::new(target);
-		let start_dir = if path.is_dir() {
-			Some(path)
-		} else {
-			path.parent()
-		};
-
-		if let Some(dir) = start_dir {
-			let dir_to_check = if dir.as_os_str().is_empty() {
-				Path::new(".")
-			} else {
-				dir
-			};
-			if let Some(cfg) =
-				find_config_in_ancestors_with_options(dir_to_check, ignore_markdownlintrc)
-			{
-				return Some(cfg);
-			}
+	if let Some(dir) = target_path.and_then(ancestor_start_dir) {
+		if let Some(cfg) = find_config_in_ancestors_with_options(dir, ignore_markdownlintrc) {
+			return Some(cfg);
 		}
 	}
 
@@ -767,13 +785,39 @@ mod tests {
 	use std::fs::File;
 	use std::io::Write;
 
+	/// Isolated temp directory for tests, removed on drop.
+	///
+	/// Derefs to `PathBuf`, so `join`, `to_str`, and friends keep working.
+	struct TestDir(PathBuf);
+
+	impl TestDir {
+		fn new(name: &str) -> Self {
+			let dir = std::env::temp_dir().join(name);
+			let _ = fs::remove_dir_all(&dir);
+			fs::create_dir_all(&dir).unwrap();
+			Self(dir)
+		}
+	}
+
+	impl std::ops::Deref for TestDir {
+		type Target = PathBuf;
+
+		fn deref(&self) -> &Self::Target {
+			&self.0
+		}
+	}
+
+	impl Drop for TestDir {
+		fn drop(&mut self) {
+			let _ = fs::remove_dir_all(&self.0);
+		}
+	}
+
 	// ---------- existing tests ----------
 
 	#[test]
 	fn test_find_config_file_priority() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_config_priority");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_config_priority");
 
 		let md_lint = temp_dir.join(".markdownlint.json");
 		let mut f = File::create(&md_lint).unwrap();
@@ -802,15 +846,11 @@ mod tests {
 			config_val.unwrap().get("blanks-around-headings").unwrap(),
 			&serde_json::Value::Bool(true)
 		);
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_has_config_file() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_has_config");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_has_config");
 
 		assert!(!has_config_file(temp_dir.to_str()));
 
@@ -820,15 +860,11 @@ mod tests {
 
 		assert!(has_config_file(temp_dir.to_str()));
 		assert!(has_config_file(cfg_path.to_str()));
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_get_config_status() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_status");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_status");
 
 		let status = get_config_status(temp_dir.to_str(), true);
 		assert!(!status.exists);
@@ -848,8 +884,6 @@ mod tests {
 		assert!(status_check_only.exists);
 		assert!(status_check_only.path.is_some());
 		assert_eq!(status_check_only.config, None);
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	// ---------- ResolvedConfig tests ----------
@@ -1167,9 +1201,7 @@ mod tests {
 
 	#[test]
 	fn test_find_config_file_custom_path_to_file() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_custom_file");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_custom_file");
 
 		let custom = temp_dir.join("my-config.json");
 		let mut f = File::create(&custom).unwrap();
@@ -1177,8 +1209,6 @@ mod tests {
 
 		let found = find_config_file(Some(custom.to_str().unwrap()));
 		assert_eq!(found, Some(custom.to_str().unwrap().to_string()));
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
@@ -1189,21 +1219,15 @@ mod tests {
 
 	#[test]
 	fn test_find_config_file_custom_path_to_empty_dir() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_empty_dir");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_empty_dir");
 
 		let found = find_config_file(Some(temp_dir.to_str().unwrap()));
 		assert_eq!(found, None);
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_find_config_file_custom_dir_with_only_agent_md() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_custom_dir_agent");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_custom_dir_agent");
 
 		let agent_md = temp_dir.join("agent-md.json");
 		let mut f = File::create(&agent_md).unwrap();
@@ -1211,15 +1235,11 @@ mod tests {
 
 		let found = find_config_file(Some(temp_dir.to_str().unwrap()));
 		assert_eq!(found, Some(agent_md.to_str().unwrap().to_string()));
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_find_config_file_custom_dir_priority_order() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_custom_dir_priority");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_custom_dir_priority");
 
 		// Only .markdownlint.json
 		let md_lint = temp_dir.join(".markdownlint.json");
@@ -1238,14 +1258,11 @@ mod tests {
 			find_config_file(temp_dir.to_str()),
 			Some(dot.to_str().unwrap().to_string())
 		);
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_find_config_in_ancestors_walks_up() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_ancestors_walk");
-		let _ = fs::remove_dir_all(&temp_dir);
+		let temp_dir = TestDir::new("agent_md_test_ancestors_walk");
 		let nested = temp_dir.join("sub").join("nested");
 		fs::create_dir_all(&nested).unwrap();
 
@@ -1254,14 +1271,11 @@ mod tests {
 
 		let found = find_config_in_ancestors(&nested);
 		assert_eq!(found, Some(parent_cfg.to_str().unwrap().to_string()));
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_find_config_for_target_closest_ancestor() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_target_closest");
-		let _ = fs::remove_dir_all(&temp_dir);
+		let temp_dir = TestDir::new("agent_md_test_target_closest");
 		let sub_dir = temp_dir.join("sub");
 		fs::create_dir_all(&sub_dir).unwrap();
 
@@ -1276,15 +1290,11 @@ mod tests {
 
 		let found = find_config_for_target(Some(target_file.to_str().unwrap()), None);
 		assert_eq!(found, Some(sub_cfg.to_str().unwrap().to_string()));
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_find_config_for_target_explicit_override() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_target_explicit");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_target_explicit");
 
 		let sub_cfg = temp_dir.join("agent-md.json");
 		fs::write(&sub_cfg, "{}").unwrap();
@@ -1300,17 +1310,13 @@ mod tests {
 			Some(explicit_cfg.to_str().unwrap()),
 		);
 		assert_eq!(found, Some(explicit_cfg.to_str().unwrap().to_string()));
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	// ---------- read_config edge cases ----------
 
 	#[test]
 	fn test_read_config_invalid_json() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_invalid_json");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_invalid_json");
 
 		let cfg_path = temp_dir.join(".agent-md.json");
 		let mut f = File::create(&cfg_path).unwrap();
@@ -1318,15 +1324,11 @@ mod tests {
 
 		let result = read_config(temp_dir.to_str());
 		assert!(result.is_none()); // Invalid JSON should return None
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_read_config_empty_file() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_empty_file");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_empty_file");
 
 		let cfg_path = temp_dir.join(".agent-md.json");
 		let mut f = File::create(&cfg_path).unwrap();
@@ -1335,15 +1337,11 @@ mod tests {
 
 		let result = read_config(temp_dir.to_str());
 		assert!(result.is_none()); // Empty file is not valid JSON
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_read_config_valid_complex_json() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_complex_json");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_complex_json");
 
 		let cfg_path = temp_dir.join("agent-md.json");
 		let mut f = File::create(&cfg_path).unwrap();
@@ -1360,17 +1358,13 @@ mod tests {
 		assert_eq!(val.get("blanks-around-headings").unwrap(), true);
 		assert_eq!(val.get("max-line-length").unwrap(), 100);
 		assert!(val.get("nested").is_some());
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	// ---------- get_config_status edge cases ----------
 
 	#[test]
 	fn test_get_config_status_invalid_json_file() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_status_invalid");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_status_invalid");
 
 		let cfg_path = temp_dir.join(".agent-md.json");
 		let mut f = File::create(&cfg_path).unwrap();
@@ -1381,8 +1375,6 @@ mod tests {
 		assert!(status.path.is_some());
 		// Config should be None because JSON is invalid
 		assert_eq!(status.config, None);
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
@@ -1511,38 +1503,28 @@ mod tests {
 
 	#[test]
 	fn test_has_config_file_custom_path_to_existing_config() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_has_existing");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_has_existing");
 
 		let cfg = temp_dir.join("agent-md.json");
 		let mut f = File::create(&cfg).unwrap();
 		writeln!(f, "{{}}").unwrap();
 
 		assert!(has_config_file(temp_dir.to_str()));
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	// ---------- get_config edge cases ----------
 
 	#[test]
 	fn test_get_config_returns_none_when_no_file() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_get_config_none");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_get_config_none");
 
 		let result = get_config(temp_dir.to_str());
 		assert!(result.is_none());
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_get_config_returns_value_when_file_exists() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_get_config_some");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_get_config_some");
 
 		let cfg = temp_dir.join(".agent-md.json");
 		let mut f = File::create(&cfg).unwrap();
@@ -1554,8 +1536,6 @@ mod tests {
 			result.unwrap().get("key").unwrap(),
 			&serde_json::Value::String("value".to_string())
 		);
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	// ---------- init_config tests ----------
@@ -1589,9 +1569,7 @@ mod tests {
 
 	#[test]
 	fn test_init_config_creates_in_directory() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_init_dir");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_init_dir");
 
 		let res = init_config(temp_dir.to_str(), false);
 		assert!(res.is_ok());
@@ -1602,42 +1580,31 @@ mod tests {
 		// Verify content
 		let content = fs::read_to_string(&created_path).unwrap();
 		assert_eq!(content, DEFAULT_CONFIG_TEMPLATE);
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_init_config_creates_custom_file_path() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_init_custom");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_init_custom");
 
 		let custom_file = temp_dir.join("my-config.json");
 		let res = init_config(custom_file.to_str(), false);
 		assert!(res.is_ok());
 		assert!(custom_file.is_file());
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_init_config_creates_nested_directories() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_init_nested");
-		let _ = fs::remove_dir_all(&temp_dir);
+		let temp_dir = TestDir::new("agent_md_test_init_nested");
 
 		let nested_file = temp_dir.join("sub").join("nested").join("agent-md.json");
 		let res = init_config(nested_file.to_str(), false);
 		assert!(res.is_ok());
 		assert!(nested_file.is_file());
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_init_config_already_exists_fails_without_force() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_init_exists");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_init_exists");
 
 		let file_path = temp_dir.join(".agent-md.json");
 		fs::write(&file_path, "existing content").unwrap();
@@ -1649,15 +1616,11 @@ mod tests {
 
 		// Verify existing content was not modified
 		assert_eq!(fs::read_to_string(&file_path).unwrap(), "existing content");
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_init_config_already_exists_overwrites_with_force() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_init_force");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_init_force");
 
 		let file_path = temp_dir.join(".agent-md.json");
 		fs::write(&file_path, "existing content").unwrap();
@@ -1670,8 +1633,6 @@ mod tests {
 			fs::read_to_string(&file_path).unwrap(),
 			DEFAULT_CONFIG_TEMPLATE
 		);
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
@@ -1730,10 +1691,57 @@ mod tests {
 	}
 
 	#[test]
+	fn test_strip_json_comments_preserves_urls_in_strings() {
+		let content = "{\"url\": \"https://example.com//path\", \"other\": 1} // done";
+		let stripped = strip_json_comments(content);
+		assert!(stripped.contains("https://example.com//path"));
+		assert!(!stripped.contains("// done"));
+		let val: serde_json::Value = serde_json::from_str(&stripped).unwrap();
+		assert_eq!(val.get("other").unwrap(), 1);
+	}
+
+	#[test]
+	fn test_strip_json_comments_escaped_quotes_and_backslashes() {
+		// `\"` must not end the string; `\\` must not escape the quote.
+		let content = "{\"a\": \"x\\\"//kept\", \"b\": \"y\\\\\", \"c\": 1} /* gone */";
+		let stripped = strip_json_comments(content);
+		assert!(stripped.contains("//kept"));
+		assert!(!stripped.contains("gone"));
+		let val: serde_json::Value = serde_json::from_str(&stripped).unwrap();
+		assert_eq!(val.get("c").unwrap(), 1);
+	}
+
+	#[test]
+	fn test_strip_json_comments_block_preserves_line_numbers() {
+		let content = "{\n/* one\ntwo */\n\"a\": 1\n}";
+		let stripped = strip_json_comments(content);
+		assert_eq!(stripped.lines().count(), content.lines().count());
+		let val: serde_json::Value = serde_json::from_str(&stripped).unwrap();
+		assert_eq!(val.get("a").unwrap(), 1);
+	}
+
+	#[test]
+	fn test_strip_json_comments_unterminated_comment() {
+		assert_eq!(strip_json_comments("{\"a\": 1} // trailing"), "{\"a\": 1} ");
+		assert_eq!(
+			strip_json_comments("{\"a\": 1} /* never ends"),
+			"{\"a\": 1} "
+		);
+		assert_eq!(strip_json_comments("/"), "/");
+	}
+
+	#[test]
+	fn test_strip_json_comments_multibyte_content() {
+		let content = "{\"greeting\": \"Xin chào // thế giới\", \"a\": 1} // chú thích";
+		let stripped = strip_json_comments(content);
+		assert!(stripped.contains("Xin chào // thế giới"));
+		let val: serde_json::Value = serde_json::from_str(&stripped).unwrap();
+		assert_eq!(val.get("a").unwrap(), 1);
+	}
+
+	#[test]
 	fn test_find_config_ignores_markdownlintrc_when_flag_set() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_ignore_mdrc");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_ignore_mdrc");
 
 		let mdrc = temp_dir.join(".markdownlint.json");
 		fs::write(&mdrc, "{\"line-length\": true}").unwrap();
@@ -1743,15 +1751,11 @@ mod tests {
 
 		let ignored = find_config_file_with_options(temp_dir.to_str(), true);
 		assert_eq!(ignored, None);
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_find_config_prefers_agent_md_over_markdownlintrc() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_prefer_native");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_prefer_native");
 
 		let mdrc = temp_dir.join(".markdownlint.json");
 		fs::write(&mdrc, "{\"line-length\": true}").unwrap();
@@ -1763,23 +1767,17 @@ mod tests {
 
 		let found_ignored = find_config_file_with_options(temp_dir.to_str(), true);
 		assert_eq!(found_ignored, Some(native.to_str().unwrap().to_string()));
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_explicit_markdownlintrc_file_still_respected_when_ignored() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_explicit_mdrc");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_explicit_mdrc");
 
 		let mdrc = temp_dir.join(".markdownlint.json");
 		fs::write(&mdrc, "{\"line-length\": true}").unwrap();
 
 		let found = find_config_file_with_options(Some(mdrc.to_str().unwrap()), true);
 		assert_eq!(found, Some(mdrc.to_str().unwrap().to_string()));
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
@@ -1813,9 +1811,7 @@ mod tests {
 
 	#[test]
 	fn test_native_config_key_ignores_markdownlintrc() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_native_key_ignore");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_native_key_ignore");
 
 		let native = temp_dir.join(".agent-md.json");
 		fs::write(&native, "{\"ignore-markdownlintrc\": true}").unwrap();
@@ -1831,15 +1827,11 @@ mod tests {
 		let found = find_config_file_with_options(temp_dir.to_str(), false);
 		assert_eq!(found, Some(native.to_str().unwrap().to_string()));
 		assert!(get_config_with_options(temp_dir.to_str(), false).is_some());
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_markdownlintrc_key_never_ignores() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_mdrc_key_noop");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_mdrc_key_noop");
 
 		let mdrc = temp_dir.join(".markdownlint.json");
 		fs::write(&mdrc, "{\"ignore-markdownlintrc\": true}").unwrap();
@@ -1851,14 +1843,11 @@ mod tests {
 		));
 		let found = find_config_file_with_options(temp_dir.to_str(), false);
 		assert_eq!(found, Some(mdrc.to_str().unwrap().to_string()));
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_target_ancestor_native_key_ignores_subdir_markdownlintrc() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_ancestor_key_ignore");
-		let _ = fs::remove_dir_all(&temp_dir);
+		let temp_dir = TestDir::new("agent_md_test_ancestor_key_ignore");
 		let sub_dir = temp_dir.join("sub");
 		fs::create_dir_all(&sub_dir).unwrap();
 
@@ -1877,15 +1866,11 @@ mod tests {
 		let found =
 			find_config_for_target_with_options(Some(target.to_str().unwrap()), None, false);
 		assert_eq!(found, Some(native.to_str().unwrap().to_string()));
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 
 	#[test]
 	fn test_get_config_with_options_ignore_flag() {
-		let temp_dir = std::env::temp_dir().join("agent_md_test_get_ignore");
-		let _ = fs::remove_dir_all(&temp_dir);
-		fs::create_dir_all(&temp_dir).unwrap();
+		let temp_dir = TestDir::new("agent_md_test_get_ignore");
 
 		let mdrc = temp_dir.join(".markdownlintrc");
 		fs::write(&mdrc, "{\"line-length\": true}").unwrap();
@@ -1895,7 +1880,5 @@ mod tests {
 
 		let ignored = get_config_with_options(temp_dir.to_str(), true);
 		assert!(ignored.is_none());
-
-		let _ = fs::remove_dir_all(&temp_dir);
 	}
 }
