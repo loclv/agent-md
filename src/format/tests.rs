@@ -1966,8 +1966,7 @@ fn test_format_markdown_html_minification_user_case() {
   <img src="https://img.shields.io/badge/Markdown-000000?style=for-the-badge&logo=markdown&logoColor=white" alt="Markdown" />
 </p>
 "#;
-	let expected = r#"<p align="center">
-<img src="https://img.shields.io/badge/Markdown-000000?style=for-the-badge&logo=markdown&logoColor=white" alt="Markdown" /></p>
+	let expected = r#"<p align="center"><img src="https://img.shields.io/badge/Markdown-000000?style=for-the-badge&logo=markdown&logoColor=white" alt="Markdown" /></p>
 "#;
 	let result = format_markdown(content);
 	assert_eq!(result, expected);
@@ -1984,8 +1983,7 @@ fn test_format_markdown_html_multiline_tag() {
   />
 </p>
 "#;
-	let expected = r#"<p align="center">
-<img src="https://img.shields.io/badge/Markdown-000000" alt="Markdown" /></p>
+	let expected = r#"<p align="center"><img src="https://img.shields.io/badge/Markdown-000000" alt="Markdown" /></p>
 "#;
 	let result = format_markdown(content);
 	assert_eq!(result, expected);
@@ -1997,8 +1995,7 @@ fn test_format_markdown_html_preserves_spaces_in_attribute_values() {
   <img src="badge.png" alt="Badge with   multiple   spaces" />
 </p>
 "#;
-	let expected = r#"<p align="center">
-<img src="badge.png" alt="Badge with   multiple   spaces" /></p>
+	let expected = r#"<p align="center"><img src="badge.png" alt="Badge with   multiple   spaces" /></p>
 "#;
 	let result = format_markdown(content);
 	assert_eq!(result, expected);
@@ -2012,9 +2009,7 @@ fn test_format_markdown_html_nested_elements() {
   </a>
 </div>
 "#;
-	let expected = r#"<div align="center">
-<a href="https://example.com">
-<img src="logo.svg" alt="logo" width="128" height="128" /></a></div>
+	let expected = r#"<div align="center"><a href="https://example.com"><img src="logo.svg" alt="logo" width="128" height="128" /></a></div>
 "#;
 	let result = format_markdown(content);
 	assert_eq!(result, expected);
@@ -2027,9 +2022,7 @@ fn test_format_markdown_html_multiple_children() {
   <img src="badge2.png" alt="2" />
 </p>
 "#;
-	let expected = r#"<p align="center">
-<img src="badge1.png" alt="1" />
-<img src="badge2.png" alt="2" /></p>
+	let expected = r#"<p align="center"><img src="badge1.png" alt="1" /><img src="badge2.png" alt="2" /></p>
 "#;
 	let result = format_markdown(content);
 	assert_eq!(result, expected);
@@ -2073,9 +2066,45 @@ fn test_format_markdown_html_in_code_block_preserved() {
 fn test_format_markdown_html_comments_preserved() {
 	let content = "<!-- Input: -->\n\n<p align=\"center\">\n  <img src=\"badge.png\" alt=\"Badge\" />\n</p>\n";
 	let expected =
-		"<!-- Input: -->\n\n<p align=\"center\">\n<img src=\"badge.png\" alt=\"Badge\" /></p>\n";
+		"<!-- Input: -->\n\n<p align=\"center\"><img src=\"badge.png\" alt=\"Badge\" /></p>\n";
 	let result = format_markdown(content);
 	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_html_div_with_void_and_inline_children_single_line() {
+	let content = "<div align=\"center\">\n<img src=\"logo.svg\" alt=\"agent-md logo\" width=\"128\" height=\"128\">\n<br />\n<a href=\"https://dopana.com\" target=\"_blank\">Sponsored by dopana.com</a></div>\n";
+	let expected = "<div align=\"center\"><img src=\"logo.svg\" alt=\"agent-md logo\" width=\"128\" height=\"128\"><br /><a href=\"https://dopana.com\" target=\"_blank\">Sponsored by dopana.com</a></div>\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_html_text_lines_join_with_space() {
+	let content = "<div>\nHello\nWorld\n</div>\n";
+	let expected = "<div>Hello World</div>\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_html_preformatted_keeps_line_breaks() {
+	let content = "<pre>\nline one\nline two\n</pre>\n";
+	let result = format_markdown(content);
+	assert!(result.contains('\n'));
+	assert!(result.contains("line one"));
+	assert!(result.contains("line two"));
+}
+
+#[test]
+fn test_format_markdown_html_issue_case_disabled_preserves_multiline() {
+	let content = "<div align=\"center\">\n<img src=\"logo.svg\" alt=\"agent-md logo\" width=\"128\" height=\"128\">\n<br />\n<a href=\"https://dopana.com\" target=\"_blank\">Sponsored by dopana.com</a></div>\n";
+	let options = FormatOptions {
+		minify_html: false,
+		..FormatOptions::default()
+	};
+	let result = format_markdown_with_options(content, options);
+	assert_eq!(result, content);
 }
 
 #[test]

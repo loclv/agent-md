@@ -714,8 +714,50 @@ fn collapse_multiline_tags(raw: &str) -> Vec<String> {
 	result
 }
 
+/// Tags whose inner whitespace is significant and must keep line breaks.
+const PREFORMATTED_TAGS: &[&str] = &["pre", "textarea", "script", "style", "code"];
+
+/// Check if raw HTML contains a preformatted tag that preserves whitespace.
+fn contains_preformatted_tag(raw: &str) -> bool {
+	let lower = raw.to_lowercase();
+	for tag in PREFORMATTED_TAGS {
+		if lower.contains(&format!("<{tag}")) || lower.contains(&format!("</{tag}")) {
+			return true;
+		}
+	}
+	false
+}
+
+/// Join cleaned HTML lines into a single minified line.
+///
+/// Tag-to-tag and tag-to-text boundaries join with no separator because the
+/// original newline was insignificant whitespace. Text-to-text boundaries join
+/// with a single space to preserve word separation.
+fn join_html_lines(lines: &[String]) -> String {
+	let mut out = String::new();
+	for line in lines {
+		if out.is_empty() {
+			out.push_str(line);
+			continue;
+		}
+		let out_ends_tag = out.ends_with('>');
+		let line_starts_tag = line.starts_with('<');
+		if out_ends_tag || line_starts_tag {
+			out.push_str(line);
+		} else {
+			out.push(' ');
+			out.push_str(line);
+		}
+	}
+	out
+}
+
 /// Format an HTML block by minifying tags, removing redundant indentation,
-/// removing useless blank lines, and merging closing tags onto previous lines.
+/// removing useless blank lines, and collapsing the block onto a single line.
+///
+/// Blocks containing `pre`, `textarea`, `script`, `style`, or `code` keep
+/// line breaks to preserve significant whitespace; all other blocks join
+/// lines with no separator (tag boundaries) or a single space (text to text).
 pub fn format_html_block(raw: &str) -> String {
 	let collapsed_lines = collapse_multiline_tags(raw);
 	let mut cleaned_lines = Vec::new();
@@ -729,18 +771,26 @@ pub fn format_html_block(raw: &str) -> String {
 		cleaned_lines.push(minified);
 	}
 
-	let mut merged_lines: Vec<String> = Vec::new();
-	for line in cleaned_lines {
-		if is_only_closing_tags(&line) && !merged_lines.is_empty() {
-			if let Some(last) = merged_lines.last_mut() {
-				last.push_str(&line);
-			}
-		} else {
-			merged_lines.push(line);
-		}
+	if cleaned_lines.is_empty() {
+		return String::new();
 	}
 
-	merged_lines.join("\n")
+	if contains_preformatted_tag(raw) {
+		let mut merged_lines: Vec<String> = Vec::new();
+		for line in cleaned_lines {
+			if is_only_closing_tags(&line) && !merged_lines.is_empty() {
+				if let Some(last) = merged_lines.last_mut() {
+					last.push_str(&line);
+				}
+			} else {
+				merged_lines.push(line);
+			}
+		}
+
+		return merged_lines.join("\n");
+	}
+
+	join_html_lines(&cleaned_lines)
 }
 
 #[cfg(test)]

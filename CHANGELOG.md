@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- HTML Block Single-Line Collapse: `format_html_block` now collapses each HTML block onto a single line, joining tag boundaries directly and text lines with a single space, so multiline blocks such as centered `div` headers format to one line. Blocks containing `pre`, `code`, `textarea`, `script`, or `style` keep line breaks to preserve significant whitespace. Setting `minify-html` (or `minify_html`) to `false` in `agent-md.json`, or passing `--minify-html=false`, leaves HTML blocks unchanged.
+
 ### Added
 
 - Ignore Markdownlint Config Option: Added global `--ignore-markdownlintrc` flag (default `false`) to skip `markdownlintrc.*` configuration files during discovery for `lint`, `lint-file`, `fmt`, and `config` commands.

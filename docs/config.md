@@ -79,7 +79,7 @@ Formatter options accept kebab-case or snake_case at the top level, or nested un
 | `collapse-spaces` | bool | `true` | Collapse multiple spaces between words |
 | `remove-horizontal-rules` | bool | `true` | Remove `---`, `***`, and `___` lines |
 | `remove-emphasis` | bool | `true` | Strip `*italic*` and `_italic_` markers |
-| `minify-html` | bool | `true` | Minify HTML tags and remove useless whitespace |
+| `minify-html` | bool | `true` | Collapse each HTML block onto a single line and remove useless whitespace; `pre`, `code`, `textarea`, `script`, and `style` keep line breaks |
 
 ```json
 {

@@ -497,9 +497,11 @@ HTML blocks and tags are minified to eliminate token waste:
 
 - Removes useless spaces, tabs, and newlines inside HTML tags
 - Strips redundant indentation inside HTML blocks
-- Merges standalone closing tag lines with preceding elements
+- Collapses each HTML block onto a single line, joining tag boundaries directly and text lines with a single space
+- Keeps line breaks inside `pre`, `code`, `textarea`, `script`, and `style` blocks where whitespace is significant
 - Preserves original HTML tag names, attributes, and attribute values intact
 - Preserves Markdown autolinks and pure URLs (e.g., `<https://...>`, `<user@example.com>`, `<example.dev/path/>`) untouched
+- Set `minify-html` (or `minify_html`) to `false` in `agent-md.json`, or pass `--minify-html=false`, to leave HTML blocks unchanged
 
 Input:
 
@@ -512,8 +514,7 @@ Input:
 Output:
 
 ```html
-<p align="center">
-<img src="badge.png" alt="Markdown" /></p>
+<p align="center"><img src="badge.png" alt="Markdown" /></p>
 ```
 
 ## How it Works: Structured Parsing

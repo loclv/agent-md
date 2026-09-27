@@ -11,5 +11,4 @@ HTML should be minified. Remove all useless spaces, tabs, or newlines inside HTM
 
 <!-- Correct Output should be: -->
 
-<p align="center">
-<img src="https://img.shields.io/badge/Markdown-000000?style=for-the-badge&logo=markdown&logoColor=white" alt="Markdown" /></p>
+<p align="center"><img src="https://img.shields.io/badge/Markdown-000000?style=for-the-badge&logo=markdown&logoColor=white" alt="Markdown" /></p>
