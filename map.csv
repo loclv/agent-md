@@ -1,0 +1,810 @@
+name,description,path
+agents,Agent-MD Project Rules,AGENTS.md
+changelog,Changelog,CHANGELOG.md
+cargo,,Cargo.lock
+cargo,,Cargo.toml
+linting,Linting and Development Tools,LINTING.md
+readme-vi,`agent-md` - Một công cụ CLI giúp bạn viết markdown thân thiện với LLM,README-vi.md
+readme,`agent-md` - A CLI that helps you write LLM-friendly markdown,README.md
+clippy,,clippy.toml
+codedb,,codedb.snapshot
+,Docs,docs/
+dev,Development,docs/DEV.md
+,Blogs,docs/blogs/
+intro,🚀 Introducing agent-md,docs/blogs/intro.md
+config,Configuration,docs/config.md
+llm-agent-integration-skill,LLM/Agent Integration Skill: agent-md CLI,docs/llm-agent-integration-skill.md
+llm-agent-rule,LLM Agent Rule: Use agent-md CLI,docs/llm-agent-rule.md
+markdown-writing-rules,Markdown Writing Rules for AI Agents,docs/markdown-writing-rules.md
+packages,Packages,docs/packages.md
+implementation-notes,Implementation Notes - agent-md,implementation-notes.md
+justfile,,justfile
+logo,,logo.svg
+,Markdownlint,markdownlint/
+changelog,Changelog,markdownlint/CHANGELOG.md
+contributing,Contributing,markdownlint/CONTRIBUTING.md
+license,,markdownlint/LICENSE
+readme,layout: post,markdownlint/README.md
+,Demo,markdownlint/demo/
+browser-exports,,markdownlint/demo/browser-exports.mjs
+default,,markdownlint/demo/default.css
+default,,markdownlint/demo/default.htm
+default,JavaScript/TypeScript module: default.,markdownlint/demo/default.js
+favicon,,markdownlint/demo/favicon.ico
+favicon,,markdownlint/demo/favicon.svg
+webpack-config,,markdownlint/demo/webpack.config.mjs
+,Doc Build,markdownlint/doc-build/
+build-rules,,markdownlint/doc-build/build-rules.mjs
+footing,<!-- markdownlint-configure-file {,markdownlint/doc-build/footing.md
+heading,Rules,markdownlint/doc-build/heading.md
+md001,"This rule is triggered when you skip heading levels in a Markdown document, for",markdownlint/doc-build/md001.md
+md003,ATX style H3,markdownlint/doc-build/md003.md
+md004,This rule is triggered when the symbols used in the document for unordered,markdownlint/doc-build/md004.md
+md005,"This rule is triggered when list items are parsed as being at the same level,",markdownlint/doc-build/md005.md
+md007,This rule is triggered when list items are not indented by the configured,markdownlint/doc-build/md007.md
+md009,This rule is triggered on any lines that end with unexpected whitespace. To fix,markdownlint/doc-build/md009.md
+md010,This rule is triggered by any lines that contain hard tab characters instead,markdownlint/doc-build/md010.md
+md011,"This rule is triggered when text that appears to be a link is encountered, but",markdownlint/doc-build/md011.md
+md012,This rule is triggered when there are multiple consecutive blank lines in the,markdownlint/doc-build/md012.md
+md013,This rule is triggered when there are lines that are longer than the,markdownlint/doc-build/md013.md
+md014,This rule is triggered when there are code blocks showing shell commands to be,markdownlint/doc-build/md014.md
+md018,This rule is triggered when spaces are missing after the hash characters,markdownlint/doc-build/md018.md
+md019,This rule is triggered when more than one space is used to separate the,markdownlint/doc-build/md019.md
+md020,This rule is triggered when spaces are missing inside the hash characters,markdownlint/doc-build/md020.md
+md021,This rule is triggered when more than one space is used to separate the,markdownlint/doc-build/md021.md
+md022,This rule is triggered when headings (any style) are either not preceded or not,markdownlint/doc-build/md022.md
+md023,This rule is triggered when a heading is indented by one or more spaces:,markdownlint/doc-build/md023.md
+md024,This rule is triggered if there are multiple headings in the document that have,markdownlint/doc-build/md024.md
+md025,This rule is triggered when a top-level heading is in use (the first line of,markdownlint/doc-build/md025.md
+md026,This rule is triggered on any heading that has one of the specified normal or,markdownlint/doc-build/md026.md
+md027,This rule is triggered when blockquotes have more than one space after the,markdownlint/doc-build/md027.md
+md028,This rule is triggered when two blockquote blocks are separated by nothing,markdownlint/doc-build/md028.md
+md029,This rule is triggered for ordered lists that do not either start with '1.' or,markdownlint/doc-build/md029.md
+md030,"This rule checks for the number of spaces between a list marker (e.g. '`-`',",markdownlint/doc-build/md030.md
+md031,This rule is triggered when fenced code blocks are either not preceded or not,markdownlint/doc-build/md031.md
+md032,This rule is triggered when lists (of any kind) are either not preceded or not,markdownlint/doc-build/md032.md
+md033,This rule is triggered whenever raw HTML is used in a Markdown document:,markdownlint/doc-build/md033.md
+md034,This rule is triggered whenever a URL or email address appears without,markdownlint/doc-build/md034.md
+md035,- - -,markdownlint/doc-build/md035.md
+md036,This check looks for instances where emphasized (i.e. bold or italic) text is,markdownlint/doc-build/md036.md
+md037,"This rule is triggered when emphasis markers (bold, italic) are used, but they",markdownlint/doc-build/md037.md
+md038,This rule is triggered for code spans containing content with unnecessary space,markdownlint/doc-build/md038.md
+md039,This rule is triggered on links that have spaces surrounding the link text:,markdownlint/doc-build/md039.md
+md040,"This rule is triggered when fenced code blocks are used, but a language isn't",markdownlint/doc-build/md040.md
+md041,This rule is intended to ensure documents have a title and is triggered when,markdownlint/doc-build/md041.md
+md042,This rule is triggered when an empty link is encountered:,markdownlint/doc-build/md042.md
+md043,This rule is triggered when the headings in a file do not match the array of,markdownlint/doc-build/md043.md
+md044,This rule is triggered when any of the strings in the `names` array do not have,markdownlint/doc-build/md044.md
+md045,This rule reports a violation when an image is missing alternate text (alt text),markdownlint/doc-build/md045.md
+md046,This rule is triggered when unwanted or different code block styles are used in,markdownlint/doc-build/md046.md
+md047,This rule is triggered when there is not a single newline character at the end,markdownlint/doc-build/md047.md
+md048,This rule is triggered when the symbols used in the document for fenced code,markdownlint/doc-build/md048.md
+md049,This rule is triggered when the symbols used in the document for emphasis do not,markdownlint/doc-build/md049.md
+md050,This rule is triggered when the symbols used in the document for strong do not,markdownlint/doc-build/md050.md
+md051,This rule is triggered when a link fragment does not match any of the fragments,markdownlint/doc-build/md051.md
+md052,Links and images in Markdown can provide the link destination or image source,markdownlint/doc-build/md052.md
+md053,Links and images in Markdown can provide the link destination or image source,markdownlint/doc-build/md053.md
+md054,Links and images in Markdown can provide the link destination or image source at,markdownlint/doc-build/md054.md
+md055,This rule is triggered when a [GitHub Flavored Markdown table][gfm-table-055],markdownlint/doc-build/md055.md
+md056,This rule is triggered when a [GitHub Flavored Markdown table][gfm-table-056],markdownlint/doc-build/md056.md
+md058,This rule is triggered when tables are either not preceded or not followed by a,markdownlint/doc-build/md058.md
+md059,This rule is triggered when a link has generic text like `[click here](...)` or,markdownlint/doc-build/md059.md
+md060,Y | Yes,markdownlint/doc-build/md060.md
+,Doc,markdownlint/doc/
+customrules,Custom Rules,markdownlint/doc/CustomRules.md
+prettier,Using `markdownlint` with Prettier,markdownlint/doc/Prettier.md
+releaseprocess,Release Process,markdownlint/doc/ReleaseProcess.md
+rules,ATX style H3,markdownlint/doc/Rules.md
+md001,`MD001` - Heading levels should only increment by one level at a time,markdownlint/doc/md001.md
+md003,ATX style H3,markdownlint/doc/md003.md
+md004,`MD004` - Unordered list style,markdownlint/doc/md004.md
+md005,`MD005` - Inconsistent indentation for list items at the same level,markdownlint/doc/md005.md
+md007,`MD007` - Unordered list indentation,markdownlint/doc/md007.md
+md009,`MD009` - Trailing spaces,markdownlint/doc/md009.md
+md010,`MD010` - Hard tabs,markdownlint/doc/md010.md
+md011,`MD011` - Reversed link syntax,markdownlint/doc/md011.md
+md012,`MD012` - Multiple consecutive blank lines,markdownlint/doc/md012.md
+md013,`MD013` - Line length,markdownlint/doc/md013.md
+md014,`MD014` - Dollar signs used before commands without showing output,markdownlint/doc/md014.md
+md018,`MD018` - No space after hash on atx style heading,markdownlint/doc/md018.md
+md019,`MD019` - Multiple spaces after hash on atx style heading,markdownlint/doc/md019.md
+md020,`MD020` - No space inside hashes on closed atx style heading,markdownlint/doc/md020.md
+md021,`MD021` - Multiple spaces inside hashes on closed atx style heading,markdownlint/doc/md021.md
+md022,`MD022` - Headings should be surrounded by blank lines,markdownlint/doc/md022.md
+md023,`MD023` - Headings must start at the beginning of the line,markdownlint/doc/md023.md
+md024,`MD024` - Multiple headings with the same content,markdownlint/doc/md024.md
+md025,`MD025` - Multiple top-level headings in the same document,markdownlint/doc/md025.md
+md026,`MD026` - Trailing punctuation in heading,markdownlint/doc/md026.md
+md027,`MD027` - Multiple spaces after blockquote symbol,markdownlint/doc/md027.md
+md028,`MD028` - Blank line inside blockquote,markdownlint/doc/md028.md
+md029,`MD029` - Ordered list item prefix,markdownlint/doc/md029.md
+md030,`MD030` - Spaces after list markers,markdownlint/doc/md030.md
+md031,`MD031` - Fenced code blocks should be surrounded by blank lines,markdownlint/doc/md031.md
+md032,`MD032` - Lists should be surrounded by blank lines,markdownlint/doc/md032.md
+md033,`MD033` - Inline HTML,markdownlint/doc/md033.md
+md034,`MD034` - Bare URL used,markdownlint/doc/md034.md
+md035,- - -,markdownlint/doc/md035.md
+md036,`MD036` - Emphasis used instead of a heading,markdownlint/doc/md036.md
+md037,`MD037` - Spaces inside emphasis markers,markdownlint/doc/md037.md
+md038,`MD038` - Spaces inside code span elements,markdownlint/doc/md038.md
+md039,`MD039` - Spaces inside link text,markdownlint/doc/md039.md
+md040,`MD040` - Fenced code blocks should have a language specified,markdownlint/doc/md040.md
+md041,`MD041` - First line in a file should be a top-level heading,markdownlint/doc/md041.md
+md042,`MD042` - No empty links,markdownlint/doc/md042.md
+md043,`MD043` - Required heading structure,markdownlint/doc/md043.md
+md044,`MD044` - Proper names should have the correct capitalization,markdownlint/doc/md044.md
+md045,`MD045` - Images should have alternate text (alt text),markdownlint/doc/md045.md
+md046,`MD046` - Code block style,markdownlint/doc/md046.md
+md047,`MD047` - Files should end with a single newline character,markdownlint/doc/md047.md
+md048,`MD048` - Code fence style,markdownlint/doc/md048.md
+md049,`MD049` - Emphasis style,markdownlint/doc/md049.md
+md050,`MD050` - Strong style,markdownlint/doc/md050.md
+md051,`MD051` - Link fragments should be valid,markdownlint/doc/md051.md
+md052,`MD052` - Reference links and images should use a label that is defined,markdownlint/doc/md052.md
+md053,`MD053` - Link and image reference definitions should be needed,markdownlint/doc/md053.md
+md054,`MD054` - Link and image style,markdownlint/doc/md054.md
+md055,`MD055` - Table pipe style,markdownlint/doc/md055.md
+md056,`MD056` - Table column count,markdownlint/doc/md056.md
+md058,`MD058` - Tables should be surrounded by blank lines,markdownlint/doc/md058.md
+md059,`MD059` - Link text should be descriptive,markdownlint/doc/md059.md
+md060,Y | Yes,markdownlint/doc/md060.md
+eslint-config,,markdownlint/eslint.config.mjs
+,Example,markdownlint/example/
+bad,bad.md,markdownlint/example/bad.md
+good,good.md,markdownlint/example/good.md
+standalone,,markdownlint/example/standalone.mjs
+,Typescript,markdownlint/example/typescript/
+type-check,Attempt to validate important type declarations,markdownlint/example/typescript/type-check.ts
+,Helpers,markdownlint/helpers/
+license,,markdownlint/helpers/LICENSE
+readme,markdownlint-rule-helpers,markdownlint/helpers/README.md
+helpers,,markdownlint/helpers/helpers.cjs
+micromark-helpers,,markdownlint/helpers/micromark-helpers.cjs
+shared,,markdownlint/helpers/shared.cjs
+test,,markdownlint/helpers/test.cjs
+,Lib,markdownlint/lib/
+cache,,markdownlint/lib/cache.mjs
+configuration-strict-d,This file was automatically generated by json-schema-to-typescript.,markdownlint/lib/configuration-strict.d.ts
+configuration-d,Index signature for arbitrary custom rules.,markdownlint/lib/configuration.d.ts
+constants,,markdownlint/lib/constants.mjs
+defer-require,,markdownlint/lib/defer-require.cjs
+exports-async-d,,markdownlint/lib/exports-async.d.mts
+exports-async,,markdownlint/lib/exports-async.mjs
+exports-promise-d,,markdownlint/lib/exports-promise.d.mts
+exports-promise,,markdownlint/lib/exports-promise.mjs
+exports-sync-d,,markdownlint/lib/exports-sync.d.mts
+exports-sync,,markdownlint/lib/exports-sync.mjs
+exports-d,,markdownlint/lib/exports.d.mts
+exports,,markdownlint/lib/exports.mjs
+markdownit,,markdownlint/lib/markdownit.cjs
+markdownlint-d,,markdownlint/lib/markdownlint.d.mts
+markdownlint,,markdownlint/lib/markdownlint.mjs
+md001,,markdownlint/lib/md001.mjs
+md003,,markdownlint/lib/md003.mjs
+md004,,markdownlint/lib/md004.mjs
+md005,,markdownlint/lib/md005.mjs
+md007,,markdownlint/lib/md007.mjs
+md009,,markdownlint/lib/md009.mjs
+md010,,markdownlint/lib/md010.mjs
+md011,,markdownlint/lib/md011.mjs
+md012,,markdownlint/lib/md012.mjs
+md013,,markdownlint/lib/md013.mjs
+md014,,markdownlint/lib/md014.mjs
+md018,,markdownlint/lib/md018.mjs
+md019-md021,,markdownlint/lib/md019-md021.mjs
+md020,,markdownlint/lib/md020.mjs
+md022,,markdownlint/lib/md022.mjs
+md023,,markdownlint/lib/md023.mjs
+md024,,markdownlint/lib/md024.mjs
+md025,,markdownlint/lib/md025.mjs
+md026,,markdownlint/lib/md026.mjs
+md027,,markdownlint/lib/md027.mjs
+md028,,markdownlint/lib/md028.mjs
+md029,,markdownlint/lib/md029.mjs
+md030,,markdownlint/lib/md030.mjs
+md031,,markdownlint/lib/md031.mjs
+md032,,markdownlint/lib/md032.mjs
+md033,,markdownlint/lib/md033.mjs
+md034,,markdownlint/lib/md034.mjs
+md035,,markdownlint/lib/md035.mjs
+md036,,markdownlint/lib/md036.mjs
+md037,,markdownlint/lib/md037.mjs
+md038,,markdownlint/lib/md038.mjs
+md039,,markdownlint/lib/md039.mjs
+md040,,markdownlint/lib/md040.mjs
+md041,,markdownlint/lib/md041.mjs
+md042,,markdownlint/lib/md042.mjs
+md043,,markdownlint/lib/md043.mjs
+md044,,markdownlint/lib/md044.mjs
+md045,,markdownlint/lib/md045.mjs
+md046,,markdownlint/lib/md046.mjs
+md047,,markdownlint/lib/md047.mjs
+md048,,markdownlint/lib/md048.mjs
+md049-md050,,markdownlint/lib/md049-md050.mjs
+md051,,markdownlint/lib/md051.mjs
+md052,,markdownlint/lib/md052.mjs
+md053,,markdownlint/lib/md053.mjs
+md054,,markdownlint/lib/md054.mjs
+md055,,markdownlint/lib/md055.mjs
+md056,,markdownlint/lib/md056.mjs
+md058,,markdownlint/lib/md058.mjs
+md059,,markdownlint/lib/md059.mjs
+md060,,markdownlint/lib/md060.mjs
+micromark-parse,,markdownlint/lib/micromark-parse.mjs
+micromark-types-d,,markdownlint/lib/micromark-types.d.mts
+node-imports-browser,,markdownlint/lib/node-imports-browser.mjs
+node-imports-node,,markdownlint/lib/node-imports-node.mjs
+parse-configuration,,markdownlint/lib/parse-configuration.mjs
+resolve-module,,markdownlint/lib/resolve-module.cjs
+resolve-module-d,,markdownlint/lib/resolve-module.d.cts
+rules,,markdownlint/lib/rules.mjs
+types-d,,markdownlint/lib/types.d.mts
+,Schema,markdownlint/schema/
+validatingconfiguration,Validating Configuration,markdownlint/schema/ValidatingConfiguration.md
+build-config-example,,markdownlint/schema/build-config-example.mjs
+build-config-schema,,markdownlint/schema/build-config-schema.mjs
+,Scripts,markdownlint/scripts/
+index,,markdownlint/scripts/index.mjs
+,Style,markdownlint/style/
+,Test,markdownlint/test/
+4-tabs-md010,text {MD010},markdownlint/test/4-tabs-MD010.md
+md001-md010,One,markdownlint/test/MD001-MD010.md
+md011-md021,Top level heading,markdownlint/test/MD011-MD021.md
+md022-md030,Heading,markdownlint/test/MD022-MD030.md
+md030-warning-message,-,markdownlint/test/MD030-warning-message.md
+md031-md040,***,markdownlint/test/MD031-MD040.md
+md041-md050,Not a heading {MD041},markdownlint/test/MD041-MD050.md
+md051-md060,detailed-results-MD051-MD060,markdownlint/test/MD051-MD060.md
+alternate-top-level-heading,A level 2 top level heading,markdownlint/test/alternate_top_level_heading.md
+atx-heading-spacing-trailing-spaces,atx-heading-spacing-trailing-spaces,markdownlint/test/atx-heading-spacing-trailing-spaces.md
+atx-closed-heading-spacing,Heading 1 {MD020},markdownlint/test/atx_closed_heading_spacing.md
+atx-heading-spacing,Heading 1 {MD018},markdownlint/test/atx_heading_spacing.md
+backslashes-and-backticks,Heading,markdownlint/test/backslashes-and-backticks.md
+bare-list-markers,Bare List Markers,markdownlint/test/bare-list-markers.md
+bare-urls-in-html,Bare URLs in HTML,markdownlint/test/bare-urls-in-html.md
+bare-urls,[is-a-valid]: https://example.com,markdownlint/test/bare-urls.md
+blanks-around-fences-in-lists,Blanks Around Fences In Lists,markdownlint/test/blanks-around-fences-in-lists.md
+blanks-around-headings--1-1,Text,markdownlint/test/blanks-around-headings--1-1.md
+blanks-around-headings-0-2,Elderberry {MD022},markdownlint/test/blanks-around-headings-0-2.md
+blanks-around-headings-1--1,Durian {MD022},markdownlint/test/blanks-around-headings-1--1.md
+blanks-around-headings-3-0,Text,markdownlint/test/blanks-around-headings-3-0.md
+blanks-around-headings-arrays,Grape - Top {MD022},markdownlint/test/blanks-around-headings-arrays.md
+blanks-around-headings,Elderberry {MD022},markdownlint/test/blanks-around-headings.md
+blanks-around-tables,Blanks Around Tables,markdownlint/test/blanks-around-tables.md
+blanks-around,MD022/blanks-around-headings,markdownlint/test/blanks-around.md
+blockquote-headings,Heading,markdownlint/test/blockquote-headings.md
+blockquote-spaces-nested,Nested blockquote,markdownlint/test/blockquote-spaces-nested.md
+blockquote-blank-lines,blockquote_blank_lines,markdownlint/test/blockquote_blank_lines.md
+blockquote-spaces,blockquote_spaces,markdownlint/test/blockquote_spaces.md
+break-all-the-rules,***,markdownlint/test/break-all-the-rules.md
+bulleted-list-2-space-indent,bulleted_list_2_space_indent,markdownlint/test/bulleted_list_2_space_indent.md
+bulleted-list-4-space-indent,bulleted_list_4_space_indent,markdownlint/test/bulleted_list_4_space_indent.md
+bulleted-list-not-at-beginning-of-line,Bulleted List Not at Beginning of Line,markdownlint/test/bulleted_list_not_at_beginning_of_line.md
+byte-order-marker-utf8,﻿# Heading,markdownlint/test/byte-order-marker-utf8.md
+code-block-in-list,Code Block in List,markdownlint/test/code-block-in-list.md
+code-block-trailing-spaces,code-block-trailing-spaces,markdownlint/test/code-block-trailing-spaces.md
+code-block-with-language-allowed,Heading,markdownlint/test/code-block-with-language-allowed.md
+code-block-with-tabs-allowed,Heading,markdownlint/test/code-block-with-tabs-allowed.md
+code-block-with-tabs,Heading,markdownlint/test/code-block-with-tabs.md
+code-blocks-and-spans,Code Blocks and Spans {MD044},markdownlint/test/code-blocks-and-spans.md
+code-blocks-prefixed-by-spaces,md013-code-blocks-spaces,markdownlint/test/code-blocks-prefixed-by-spaces.md
+code-fences-in-blockquotes,Detailed Results Code Fences in Blockquotes,markdownlint/test/code-fences-in-blockquotes.md
+code-with-tabs-allowed,Code With Tabs Allowed,markdownlint/test/code-with-tabs-allowed.md
+code-with-tabs-blocked,Code With Tabs Blocked,markdownlint/test/code-with-tabs-blocked.md
+code-block-consistency,code_block_consistency,markdownlint/test/code_block_consistency.md
+code-block-dollar,Code Block Dollar,markdownlint/test/code_block_dollar.md
+code-block-dollar-fence-empty,Heading,markdownlint/test/code_block_dollar_fence-empty.md
+code-block-dollar-fence,Code Block Dollar Fence,markdownlint/test/code_block_dollar_fence.md
+code-block-fenced,code_block_fenced,markdownlint/test/code_block_fenced.md
+code-block-indented,code_block_indented,markdownlint/test/code_block_indented.md
+code-fence-style-backtick,code_fence_style_backtick,markdownlint/test/code_fence_style_backtick.md
+code-fence-style-tilde,code_fence_style_tilde,markdownlint/test/code_fence_style_tilde.md
+,Config,markdownlint/test/config/
+config-badcontent,@,markdownlint/test/config/config-badcontent.txt
+config-child,,markdownlint/test/config/config-child.yaml
+config-grandparent-hybrid,,markdownlint/test/config/config-grandparent-hybrid.yaml
+config-grandparent,,markdownlint/test/config/config-grandparent.yaml
+config-parent-hybrid,,markdownlint/test/config/config-parent-hybrid.toml
+config-parent,,markdownlint/test/config/config-parent.yaml
+configure-file-off-enable-inline,Configure File Off Enable Inline,markdownlint/test/configure-file-off-enable-inline.md
+configure-file-with-severity-alias,Configure File With Severity Alias,markdownlint/test/configure-file-with-severity-alias.md
+configure-file-with-severity-name,Configure File With Severity Name,markdownlint/test/configure-file-with-severity-name.md
+configure-file-with-severity-tag,Configure File With Severity Tag,markdownlint/test/configure-file-with-severity-tag.md
+consecutive-blank-lines,consecutive_blank_lines,markdownlint/test/consecutive_blank_lines.md
+consistent-bullet-styles-asterisk,consistent_bullet_styles_asterisk,markdownlint/test/consistent_bullet_styles_asterisk.md
+consistent-bullet-styles-dash,consistent_bullet_styles_dash,markdownlint/test/consistent_bullet_styles_dash.md
+consistent-bullet-styles-plus,consistent_bullet_styles_plus,markdownlint/test/consistent_bullet_styles_plus.md
+custom-rules,Heading,markdownlint/test/custom-rules.md
+default-spaces-md010,text {MD010},markdownlint/test/default-spaces-MD010.md
+descriptive-link-text-empty-config,Descriptive Link Text Empty Config,markdownlint/test/descriptive-link-text-empty-config.md
+descriptive-link-text-override,Descriptive Link Text Override,markdownlint/test/descriptive-link-text-override.md
+descriptive-link-text,Descriptive Link Text,markdownlint/test/descriptive-link-text.md
+docfx-tab-syntax,[Tab Display Name](#tab/tab-id),markdownlint/test/docfx-tab-syntax.md
+emoji-headings,Emoji Headings,markdownlint/test/emoji-headings.md
+emphasis-markers,Emphasis Markers,markdownlint/test/emphasis-markers.md
+emphasis-not-heading-in-blockquote,Heading,markdownlint/test/emphasis-not-heading-in-blockquote.md
+emphasis-instead-of-headings,emphasis_instead_of_headings,markdownlint/test/emphasis_instead_of_headings.md
+emphasis-style-asterisk,Emphasis style asterisk,markdownlint/test/emphasis_style_asterisk.md
+emphasis-style-underscore,Emphasis style underscore,markdownlint/test/emphasis_style_underscore.md
+empty-links,Heading,markdownlint/test/empty-links.md
+empty-doc,,markdownlint/test/empty_doc.md
+escaped-emphasis-markers,Heading,markdownlint/test/escaped-emphasis-markers.md
+esm-helpers,,markdownlint/test/esm-helpers.mjs
+every-markdown-syntax,Text *emphasized* **strong** ___emphasized+strong___.,markdownlint/test/every-markdown-syntax.md
+fenced-code-in-list,Heading,markdownlint/test/fenced-code-in-list.md
+fenced-code-unmatched,Heading,markdownlint/test/fenced-code-unmatched.md
+fenced-code-blocks,fenced_code_blocks,markdownlint/test/fenced_code_blocks.md
+fenced-code-blocks-in-lists,test doc,markdownlint/test/fenced_code_blocks_in_lists.md
+fenced-code-with-nesting,heading,markdownlint/test/fenced_code_with_nesting.md
+fenced-code-without-blank-lines,```,markdownlint/test/fenced_code_without_blank_lines.md
+first-line-heading-allow-preamble-false,Text {MD041},markdownlint/test/first-line-heading-allow-preamble-false.md
+first-line-heading-allow-preamble-h1,Text,markdownlint/test/first-line-heading-allow-preamble-h1.md
+first-line-heading-allow-preamble-violation,Text,markdownlint/test/first-line-heading-allow-preamble-violation.md
+first-line-heading-allow-preamble,Text,markdownlint/test/first-line-heading-allow-preamble.md
+first-heading-bad-atx,Heading,markdownlint/test/first_heading_bad_atx.md
+first-heading-bad-setext,<!-- markdownlint-configure-file {,markdownlint/test/first_heading_bad_setext.md
+first-heading-good-atx,Heading,markdownlint/test/first_heading_good_atx.md
+first-heading-good-setext,Heading,markdownlint/test/first_heading_good_setext.md
+first-line-top-level-heading-atx,First line is a top level heading,markdownlint/test/first_line_top_level_heading_atx.md
+first-line-top-level-heading-setext,First line top level heading,markdownlint/test/first_line_top_level_heading_setext.md
+fix-102-extra-nodes-in-link-text,fix_102_extra_nodes_in_link_text,markdownlint/test/fix_102_extra_nodes_in_link_text.md
+fixing-with-front-matter,Fixing with Front Matter {MD022},markdownlint/test/fixing-with-front-matter.md
+front-matter-alt-title-h1,Top level heading {MD025},markdownlint/test/front-matter-alt-title-h1.md
+front-matter-alt-title-json,{,markdownlint/test/front-matter-alt-title-json.md
+front-matter-alt-title-no-h1,Front matter from [Jekyll documentation](https://jekyllrb.com/docs/posts/#a-typical-post).,markdownlint/test/front-matter-alt-title-no-h1.md
+front-matter-alt-title-toml,+++,markdownlint/test/front-matter-alt-title-toml.md
+front-matter-alternate,Text {MD041},markdownlint/test/front-matter-alternate.md
+front-matter-embedded,layout: post {MD022},markdownlint/test/front-matter-embedded.md
+front-matter-empty-title-no-h1,Front matter from [Jekyll documentation](https://jekyllrb.com/docs/posts/#a-typical-post). {MD041},markdownlint/test/front-matter-empty-title-no-h1.md
+front-matter-empty,Heading,markdownlint/test/front-matter-empty.md
+front-matter-no-crlf,,markdownlint/test/front-matter-no-crlf.md
+front-matter-no-title-h1,Top level heading,markdownlint/test/front-matter-no-title-h1.md
+front-matter-no-title-no-h1,Front matter from [Jekyll documentation](https://jekyllrb.com/docs/posts/#a-typical-post). {MD041},markdownlint/test/front-matter-no-title-no-h1.md
+front-matter-title-h1,Top level heading {MD025},markdownlint/test/front-matter-title-h1.md
+front-matter-title-h2,Secondary heading,markdownlint/test/front-matter-title-h2.md
+front-matter-title-json-spaces,{,markdownlint/test/front-matter-title-json-spaces.md
+front-matter-title-json,{,markdownlint/test/front-matter-title-json.md
+front-matter-title-no-h1,Front matter from [Jekyll documentation](https://jekyllrb.com/docs/posts/#a-typical-post).,markdownlint/test/front-matter-title-no-h1.md
+front-matter-title-pandoc-spaces,+++,markdownlint/test/front-matter-title-pandoc-spaces.md
+front-matter-title-pandoc,+++,markdownlint/test/front-matter-title-pandoc.md
+front-matter-title-spaces,Front matter from [Jekyll documentation](https://jekyllrb.com/docs/posts/#a-typical-post).,markdownlint/test/front-matter-title-spaces.md
+front-matter-title-toml-spaces,+++,markdownlint/test/front-matter-title-toml-spaces.md
+front-matter-title-toml,+++,markdownlint/test/front-matter-title-toml.md
+front-matter-with-dashes,Heading,markdownlint/test/front-matter-with-dashes.md
+front-matter-with-disable-next-line,Front Matter with Disable-Next-Line,markdownlint/test/front-matter-with-disable-next-line.md
+front-matter-yaml-in-html-comment,title: Front Matter YAML in HTML Comment,markdownlint/test/front-matter-yaml-in-html-comment.md
+front-matter,Heading 1,markdownlint/test/front-matter.md
+github-footnote-syntax,GitHub Footnote Syntax,markdownlint/test/github-footnote-syntax.md
+h1-as-top-level-heading,<h1>H1 as Top-Level Heading</h1>,markdownlint/test/h1-as-top-level-heading.md
+h1-image-as-top-level-heading,"<h1 align=""center""><img src=""https://placekitten.com/300/150"" alt=""A kitten"" /></h1>",markdownlint/test/h1-image-as-top-level-heading.md
+h2-as-top-level-heading,<H2>H2 as Top-Level Heading</H2>,markdownlint/test/h2-as-top-level-heading.md
+h3-as-top-level-heading,<h3>H3 as Top-Level Heading {MD041}</h3>,markdownlint/test/h3-as-top-level-heading.md
+hard-line-breaks,Hard Line Breaks,markdownlint/test/hard-line-breaks.md
+harness,,markdownlint/test/harness.mjs
+heading-duplicate-content-siblings-only,Heading duplicate content siblings only,markdownlint/test/heading-duplicate-content-siblings-only.md
+heading-multiple-top-level-preceding-blank-and-comment,<!-- Comment -->,markdownlint/test/heading-multiple-top-level-preceding-blank-and-comment.md
+heading-multiple-top-level-preceding-blank,Heading 1,markdownlint/test/heading-multiple-top-level-preceding-blank.md
+heading-multiple-top-level-preceding-comment,<!-- Comment -->,markdownlint/test/heading-multiple-top-level-preceding-comment.md
+heading-duplicate-content,Heading 1,markdownlint/test/heading_duplicate_content.md
+heading-duplicate-content-different-nesting,Change log,markdownlint/test/heading_duplicate_content_different_nesting.md
+heading-duplicate-content-no-different-nesting,Change log,markdownlint/test/heading_duplicate_content_no_different_nesting.md
+heading-increment-alt-title-level3-bad,level 3 {MD001},markdownlint/test/heading_increment-alt_title_level3_bad.md
+heading-increment-title-level2-good,level 2,markdownlint/test/heading_increment-title_level2_good.md
+heading-increment-title-level3-bad,level 3 {MD001},markdownlint/test/heading_increment-title_level3_bad.md
+heading-multiple-toplevel,Heading 1,markdownlint/test/heading_multiple_toplevel.md
+heading-mutliple-h1-no-toplevel,Some introductory text,markdownlint/test/heading_mutliple_h1_no_toplevel.md
+heading-trailing-punctuation,,markdownlint/test/heading_trailing_punctuation.md
+heading-trailing-punctuation-customized,Heading 1 {MD026}.,markdownlint/test/heading_trailing_punctuation_customized.md
+heading-trailing-punctuation-empty,Heading Trailing Punctuation,markdownlint/test/heading_trailing_punctuation_empty.md
+headings-with-emoji,:eyes:,markdownlint/test/headings-with-emoji.md
+headings-with-html-entities,Copyright 2008 {MD026} copy;,markdownlint/test/headings-with-html-entities.md
+headings-with-invalid-spaces,Headings with invalid spaces,markdownlint/test/headings-with-invalid-spaces.md
+headings-without-content,Headings Without Content,markdownlint/test/headings-without-content.md
+headings-bad,Heading,markdownlint/test/headings_bad.md
+headings-good,Heading 1,markdownlint/test/headings_good.md
+headings-good-setext-with-atx,Heading 2 {MD003},markdownlint/test/headings_good_setext_with_atx.md
+headings-good-setext-with-atx-closed,Heading 2 {MD003},markdownlint/test/headings_good_setext_with_atx_closed.md
+headings-good-with-issue-numbers,Heading 1,markdownlint/test/headings_good_with_issue_numbers.md
+headings-surrounding-space-atx,Heading 1,markdownlint/test/headings_surrounding_space_atx.md
+headings-surrounding-space-setext,Some text {MD022} {MD025},markdownlint/test/headings_surrounding_space_setext.md
+headings-with-spaces-at-the-beginning,Some text,markdownlint/test/headings_with_spaces_at_the_beginning.md
+hr-in-blockquote-dash,***,markdownlint/test/hr-in-blockquote-dash.md
+hr-in-blockquote-star,{MD035:5} {MD035:7},markdownlint/test/hr-in-blockquote-star.md
+hr-in-blockquote-under,***,markdownlint/test/hr-in-blockquote-under.md
+hr-in-list-dash,***,markdownlint/test/hr-in-list-dash.md
+hr-in-list-star,{MD035:5} {MD035:7},markdownlint/test/hr-in-list-star.md
+hr-in-list-under,***,markdownlint/test/hr-in-list-under.md
+hr-style-custom,{MD035:5},markdownlint/test/hr-style-custom.md
+hr-style-dashes,- - -,markdownlint/test/hr_style_dashes.md
+hr-style-inconsistent,- - -,markdownlint/test/hr_style_inconsistent.md
+hr-style-long,- - -,markdownlint/test/hr_style_long.md
+hr-style-stars,- - -,markdownlint/test/hr_style_stars.md
+html-comment-in-code-and-table,HTML Comment in Code and Table,markdownlint/test/html-comment-in-code-and-table.md
+html-comment-in-list-item,HTML Comment in List Item,markdownlint/test/html-comment-in-list-item.md
+html-comment-in-markdown-table,HTML Comment in Markdown Table,markdownlint/test/html-comment-in-markdown-table.md
+html-comments,HTML Comments,markdownlint/test/html-comments.md
+html-tags,Detailed HTML Results,markdownlint/test/html-tags.md
+hugo-quickstart-example-blank,+++,markdownlint/test/hugo-quickstart-example-blank.md
+hugo-quickstart-example-clean,+++,markdownlint/test/hugo-quickstart-example-clean.md
+hugo-quickstart-example-json,{,markdownlint/test/hugo-quickstart-example-json.md
+ignore-comments,ignore-comments.md,markdownlint/test/ignore-comments.md
+ignore-html-block,ignore-html-block.md,markdownlint/test/ignore-html-block.md
+inconsistent-bullet-indent-same-level,Inconsistent Bullet Indent Same Level,markdownlint/test/inconsistent_bullet_indent_same_level.md
+inconsistent-bullet-styles-asterisk,inconsistent_bullet_styles_asterisk,markdownlint/test/inconsistent_bullet_styles_asterisk.md
+inconsistent-bullet-styles-dash,inconsistent_bullet_styles_dash,markdownlint/test/inconsistent_bullet_styles_dash.md
+inconsistent-bullet-styles-plus,inconsistent_bullet_styles_plus,markdownlint/test/inconsistent_bullet_styles_plus.md
+incorrect-bullet-style-asterisk,incorrect_bullet_style_asterisk,markdownlint/test/incorrect_bullet_style_asterisk.md
+incorrect-bullet-style-dash,incorrect_bullet_style_dash,markdownlint/test/incorrect_bullet_style_dash.md
+incorrect-bullet-style-plus,incorrect_bullet_style_plus,markdownlint/test/incorrect_bullet_style_plus.md
+incorrect-heading-atx,<!-- markdownlint-configure-file {,markdownlint/test/incorrect_heading_atx.md
+incorrect-heading-atx-closed,<!-- markdownlint-configure-file {,markdownlint/test/incorrect_heading_atx_closed.md
+incorrect-heading-setext,<!-- markdownlint-configure-file {,markdownlint/test/incorrect_heading_setext.md
+inline-capture-restore,Inline Capture/Restore,markdownlint/test/inline-capture-restore.md
+inline-configure-file-invalid,Inline Configure File Invalid,markdownlint/test/inline-configure-file-invalid.md
+inline-configure-file-multiple-instances,Inline Configure File Multiple Instances,markdownlint/test/inline-configure-file-multiple-instances.md
+inline-configure-file-multiple-lines,Inline Configure File Multiple Lines,markdownlint/test/inline-configure-file-multiple-lines.md
+inline-configure-file-single-line,Inline Configure File Single Line,markdownlint/test/inline-configure-file-single-line.md
+inline-configure-file-violations,Inline Configure File Violations,markdownlint/test/inline-configure-file-violations.md
+inline-disable-enable-file,Heading,markdownlint/test/inline-disable-enable-file.md
+inline-disable-enable,Heading,markdownlint/test/inline-disable-enable.md
+inline-html-allowed-elements,inline_html-allowed_elements,markdownlint/test/inline_html-allowed_elements.md
+inline-html-only-table-allowed-elements,inline_html-only_table_allowed_elements.md,markdownlint/test/inline_html-only_table_allowed_elements.md
+inline-html-table-allowed-elements,inline_html-table_allowed_elements.md,markdownlint/test/inline_html-table_allowed_elements.md
+inline-html,Regular heading,markdownlint/test/inline_html.md
+invalid-ul-style-style,Invalid ul-style style,markdownlint/test/invalid-ul-style-style.md
+jekyll-post,heading1 {MD025},markdownlint/test/jekyll_post.md
+jekyll-post-2,header1 {MD025},markdownlint/test/jekyll_post_2.md
+line-breaks-inside-code-spans,Line breaks inside code spans,markdownlint/test/line-breaks-inside-code-spans.md
+link-fragments-default-case,Link Fragments Default Case,markdownlint/test/link-fragments-default-case.md
+link-fragments-ignore-case,Link Fragments Ignore Case,markdownlint/test/link-fragments-ignore-case.md
+link-fragments-ignored-pattern-default,Link Fragments Ignored Pattern Default,markdownlint/test/link-fragments-ignored-pattern-default.md
+link-fragments-ignored-pattern-empty,Link Fragments Ignored Pattern Empty,markdownlint/test/link-fragments-ignored-pattern-empty.md
+link-fragments-ignored-pattern-multiple,Link Fragments Ignored Pattern Multiple,markdownlint/test/link-fragments-ignored-pattern-multiple.md
+link-fragments-ignored-pattern-present,Link Fragments Ignored Pattern Present,markdownlint/test/link-fragments-ignored-pattern-present.md
+link-fragments,Text,markdownlint/test/link-fragments.md
+link-style-autolink-only,Link Style Autolink Only,markdownlint/test/link-style-autolink-only.md
+link-style-autolink-or-inline,Link Style Autolink or Inline,markdownlint/test/link-style-autolink-or-inline.md
+link-style-autolink-or-reference,Link Style Autolink or Reference,markdownlint/test/link-style-autolink-or-reference.md
+link-style-collapsed-only,Link Style Collapsed Only,markdownlint/test/link-style-collapsed-only.md
+link-style-full-only,Link Style Full Only,markdownlint/test/link-style-full-only.md
+link-style-inline-only,Link Style Inline Only,markdownlint/test/link-style-inline-only.md
+link-style-inline-or-reference,Link Style Inline or Reference,markdownlint/test/link-style-inline-or-reference.md
+link-style-no-url-inline-not-possible,Link Style No URL Inline Not Possible,markdownlint/test/link-style-no-url-inline-not-possible.md
+link-style-no-url-inline-possible,Link Style No URL Inline Possible,markdownlint/test/link-style-no-url-inline-possible.md
+link-style-none,Link Style None,markdownlint/test/link-style-none.md
+link-style-reference-only,Link Style Reference Only,markdownlint/test/link-style-reference-only.md
+link-style-shortcut-only,Link Style Shortcut Only,markdownlint/test/link-style-shortcut-only.md
+links-alternate,Detailed Link Results,markdownlint/test/links-alternate.md
+links-with-markup,links-with-markup,markdownlint/test/links-with-markup.md
+links,Link test,markdownlint/test/links.md
+lint-javascript,Lint JavaScript,markdownlint/test/lint-javascript.md
+list-indentation-start-indent-indent,List Indentation start_indent/indent,markdownlint/test/list-indentation-start-indent-indent.md
+list-indentation-start-indent-no-indent,List Indentation start_indent/no indent,markdownlint/test/list-indentation-start-indent-no-indent.md
+list-indentation-start-indented-indent,List Indentation - Start Indented,markdownlint/test/list-indentation-start-indented-indent.md
+list-indentation-start-indented-no-indent,List Indentation - Start Indented/No Indent,markdownlint/test/list-indentation-start-indented-no-indent.md
+list-indentation,List Indentation,markdownlint/test/list-indentation.md
+list-item-prefix-alignment,List Alignment,markdownlint/test/list-item-prefix-alignment.md
+list-syntax-in-paragraph-text,Heading,markdownlint/test/list-syntax-in-paragraph-text.md
+lists-and-headings,<!-- markdownlint-disable MD003 -->,markdownlint/test/lists-and-headings.md
+lists-in-blockquote-normal-indent,Lists in Blockquote Normal Indent,markdownlint/test/lists-in-blockquote-normal-indent.md
+lists-in-blockquote-start-indented-no-list-items,Lists in Blockquote Start Indented,markdownlint/test/lists-in-blockquote-start-indented-no-list-items.md
+lists-in-blockquote-start-indented,Lists in Blockquote Start Indented,markdownlint/test/lists-in-blockquote-start-indented.md
+lists-in-blockquote,Lists in Blockquote,markdownlint/test/lists-in-blockquote.md
+lists-incomplete,Lists Incomplete,markdownlint/test/lists-incomplete.md
+lists-inside-footnote,Lists Inside Footnote,markdownlint/test/lists-inside-footnote.md
+lists-on-a-line,Lists on a Line,markdownlint/test/lists-on-a-line.md
+lists-with-commented-items,Lists with Commented Items,markdownlint/test/lists-with-commented-items.md
+lists-with-fenced-code-tight,"Lists with Fenced Code, Tight",markdownlint/test/lists-with-fenced-code-tight.md
+lists-with-fenced-code,Lists with Fenced Code,markdownlint/test/lists-with-fenced-code.md
+lists-with-nesting,Lists with Nesting,markdownlint/test/lists-with-nesting.md
+lists-without-blank-lines,* list {MD032},markdownlint/test/lists_without_blank_lines.md
+long-heading-exceptions,Heading,markdownlint/test/long-heading-exceptions.md
+long-lines-long-reference-definitions-stern,Long Lines Long Reference Definitions Stern,markdownlint/test/long-lines-long-reference-definitions-stern.md
+long-lines-long-reference-definitions-strict,Long Lines Long Reference Definitions Strict,markdownlint/test/long-lines-long-reference-definitions-strict.md
+long-lines-long-reference-definitions,Long Lines Long Reference Definitions,markdownlint/test/long-lines-long-reference-definitions.md
+long-lines-negative-line-length,Long Lines Negative Line Length,markdownlint/test/long-lines-negative-line-length.md
+long-lines-short-code,"Long Lines, Short Code",markdownlint/test/long-lines-short-code.md
+long-lines-short-headings,Text,markdownlint/test/long-lines-short-headings.md
+long-lines-stern,Long Lines Stern,markdownlint/test/long-lines-stern.md
+long-lines-strict,Long Lines Strict,markdownlint/test/long-lines-strict.md
+long-lines-thresholds,Long Lines Thresholds,markdownlint/test/long-lines-thresholds.md
+long-lines,Long Lines,markdownlint/test/long_lines.md
+long-lines-100,long_lines_100,markdownlint/test/long_lines_100.md
+long-lines-code-default,long_lines_code-default,markdownlint/test/long_lines_code-default.md
+long-lines-code,long_lines_code,markdownlint/test/long_lines_code.md
+markdown-extra-footnote,Heading,markdownlint/test/markdown-extra-footnote.md
+markdown-in-html,Markdown in HTML,markdownlint/test/markdown-in-html.md
+markdownlint-test-config,,markdownlint/test/markdownlint-test-config.mjs
+markdownlint-test-custom-rules,,markdownlint/test/markdownlint-test-custom-rules.mjs
+markdownlint-test-exports,,markdownlint/test/markdownlint-test-exports.mjs
+markdownlint-test-extra-parse,,markdownlint/test/markdownlint-test-extra-parse.mjs
+markdownlint-test-extra-type,,markdownlint/test/markdownlint-test-extra-type.mjs
+markdownlint-test-fixes,,markdownlint/test/markdownlint-test-fixes.mjs
+markdownlint-test-helpers,,markdownlint/test/markdownlint-test-helpers.mjs
+markdownlint-test-micromark,,markdownlint/test/markdownlint-test-micromark.mjs
+markdownlint-test-parallel,,markdownlint/test/markdownlint-test-parallel.mjs
+markdownlint-test-project,,markdownlint/test/markdownlint-test-project.mjs
+markdownlint-test-repos-dotnet-docs,,markdownlint/test/markdownlint-test-repos-dotnet-docs.mjs
+markdownlint-test-repos-mdn-content,,markdownlint/test/markdownlint-test-repos-mdn-content.mjs
+markdownlint-test-repos-small,,markdownlint/test/markdownlint-test-repos-small.mjs
+markdownlint-test-repos,,markdownlint/test/markdownlint-test-repos.mjs
+markdownlint-test-result-object,,markdownlint/test/markdownlint-test-result-object.mjs
+markdownlint-test-scenarios,,markdownlint/test/markdownlint-test-scenarios.mjs
+markdownlint-test-worker,,markdownlint/test/markdownlint-test-worker.mjs
+markdownlint-test,,markdownlint/test/markdownlint-test.mjs
+mathjax-scenarios,Mathjax Scenarios,markdownlint/test/mathjax-scenarios.md
+md003-escaped-trailing-hash,Heading,markdownlint/test/md003-escaped-trailing-hash.md
+md004-list-items-in-blockquote,Heading,markdownlint/test/md004-list-items-in-blockquote.md
+md022-line-number-out-of-range,--,markdownlint/test/md022-line-number-out-of-range.md
+md033-cannot-read-property-of-undefined,<br/>   | {MD033},markdownlint/test/md033-cannot-read-property-of-undefined.md
+md036-emphasis-as-heading,Simplified examples from issue #26,markdownlint/test/md036-emphasis-as-heading.md
+md038-scenarios,MD038 Scenarios,markdownlint/test/md038-scenarios.md
+md040-allowed-languages,md040-allowed_languages.md,markdownlint/test/md040-allowed_languages.md
+md040-language-only,md040-language_only.md,markdownlint/test/md040-language_only.md
+md041-ignore-leading-comments-combined,Heading # <!-- markdownlint-disable no-hard-tabs -->,markdownlint/test/md041-ignore-leading-comments-combined.md
+md041-ignore-leading-comments-violation,<!-- markdownlint-disable no-hard-tabs -->,markdownlint/test/md041-ignore-leading-comments-violation.md
+md041-ignore-leading-comments,<!-- markdownlint-disable no-hard-tabs -->,markdownlint/test/md041-ignore-leading-comments.md
+md041-yaml-title-and-first-line-heading,Second level heading,markdownlint/test/md041-yaml-title-and-first-line-heading.md
+md052-invalid-range-bug,MD052 Invalid Range Bug,markdownlint/test/md052-invalid-range-bug.md
+micromark-regressions,Micromark Regressions,markdownlint/test/micromark-regressions.md
+mixed-emphasis-markers,Mixed Emphasis Markers,markdownlint/test/mixed-emphasis-markers.md
+mixed-heading-types-atx,,markdownlint/test/mixed_heading_types_atx.md
+mixed-heading-types-atx-closed,,markdownlint/test/mixed_heading_types_atx_closed.md
+mixed-heading-types-setext,Heading 1,markdownlint/test/mixed_heading_types_setext.md
+no-alt-text,Images with and without alternate text,markdownlint/test/no-alt-text.md
+no-multiple-blanks-maximum,Heading,markdownlint/test/no-multiple-blanks-maximum.md
+no-multiple-blanks,Heading,markdownlint/test/no-multiple-blanks.md
+no-tabs-edge-case-md010,text {MD010},markdownlint/test/no-tabs-edge-case-MD010.md
+no-first-line-heading,This is a file without a top level heading {MD041},markdownlint/test/no_first_line_heading.md
+no-first-line-top-level-heading,Second level heading {MD041},markdownlint/test/no_first_line_top_level_heading.md
+,Node Modules,markdownlint/test/node_modules/
+,Pseudo Package,markdownlint/test/node_modules/pseudo-package/
+ordered-list-item-prefix-double-digits-ordered,Ordered ist Item Prefix Double Digits Ordered,markdownlint/test/ordered-list-item-prefix-double-digits-ordered.md
+ordered-list-item-prefix-one,Ordered list examples,markdownlint/test/ordered-list-item-prefix-one.md
+ordered-list-item-prefix-one-or-ordered,Ordered list examples,markdownlint/test/ordered-list-item-prefix-one_or_ordered.md
+ordered-list-item-prefix-ordered,Ordered list examples,markdownlint/test/ordered-list-item-prefix-ordered.md
+ordered-list-item-prefix-single-alternate,Ordered list examples,markdownlint/test/ordered-list-item-prefix-single-alternate.md
+ordered-list-item-prefix-sublists-ordered,Ordered List Item Prefix Sublists Ordered,markdownlint/test/ordered-list-item-prefix-sublists-ordered.md
+ordered-list-item-prefix-zero-alternate,Ordered list examples,markdownlint/test/ordered-list-item-prefix-zero-alternate.md
+ordered-list-item-prefix-zero,Ordered list examples,markdownlint/test/ordered-list-item-prefix-zero.md
+ordered-list-item-prefix-paren,ordered_list_item_prefix-paren,markdownlint/test/ordered_list_item_prefix-paren.md
+ordered-list-item-prefix,ordered_list_item_prefix,markdownlint/test/ordered_list_item_prefix.md
+ordered-list-item-prefix-ordered-paren,ordered_list_item_prefix_ordered-paren,markdownlint/test/ordered_list_item_prefix_ordered-paren.md
+ordered-list-item-prefix-ordered,ordered_list_item_prefix_ordered,markdownlint/test/ordered_list_item_prefix_ordered.md
+pandoc-footnotes,Pandoc Footnotes,markdownlint/test/pandoc-footnotes.md
+parse-configuration-test,,markdownlint/test/parse-configuration-test.mjs
+prettier-tab-width-2-default,Prettier `--tab-width=2` (Default),markdownlint/test/prettier-tab-width-2-default.md
+prettier-tab-width-4,Prettier `--tab-width=4`,markdownlint/test/prettier-tab-width-4.md
+profile-fixture,,markdownlint/test/profile-fixture.mjs
+proper-names-alternate,Detailed Results Proper Names,markdownlint/test/proper-names-alternate.md
+proper-names-links,Proper names in links,markdownlint/test/proper-names-links.md
+proper-names-no-code,markdownlint test file,markdownlint/test/proper-names-no-code.md
+proper-names-no-html,Proper Names No HTML,markdownlint/test/proper-names-no-html.md
+proper-names-non-word-boundaries,Proper Names Non-Word Boundaries,markdownlint/test/proper-names-non-word-boundaries.md
+proper-names-projects,Proper Names of Projects (code_blocks:false),markdownlint/test/proper-names-projects.md
+proper-names-substrings,Proper Names as Substrings,markdownlint/test/proper-names-substrings.md
+proper-names-urls,Proper Names in URLs,markdownlint/test/proper-names-urls.md
+proper-names,markdownlint test file,markdownlint/test/proper-names.md
+reference-links-and-images-ignored-labels-empty,Reference Links and Images (Ignored Labels Empty),markdownlint/test/reference-links-and-images-ignored-labels-empty.md
+reference-links-and-images-ignored-labels,Reference Links and Images (Ignored Labels),markdownlint/test/reference-links-and-images-ignored-labels.md
+reference-links-and-images-shortcuts,Reference Links and Images (Shortcuts),markdownlint/test/reference-links-and-images-shortcuts.md
+reference-links-and-images,Reference Links and Images,markdownlint/test/reference-links-and-images.md
+reference-links-ignored-definitions-empty,Reference Links Ignored Definitions (Empty),markdownlint/test/reference-links-ignored-definitions-empty.md
+reference-links-ignored-definitions,Reference Links Ignored Definitions,markdownlint/test/reference-links-ignored-definitions.md
+required-headings-all-optional-at-least-one,One,markdownlint/test/required-headings-all-optional-at-least-one.md
+required-headings-all-optional,One,markdownlint/test/required-headings-all-optional.md
+required-headings-all-present,One,markdownlint/test/required-headings-all-present.md
+required-headings-match-case,Title,markdownlint/test/required-headings-match-case.md
+required-headings-missing-first,text,markdownlint/test/required-headings-missing-first.md
+required-headings-missing-last-zero-or-more,One,markdownlint/test/required-headings-missing-last-zero-or-more.md
+required-headings-missing-last,<!-- markdownlint-configure-file {,markdownlint/test/required-headings-missing-last.md
+required-headings-missing-middle-zero-or-more,One,markdownlint/test/required-headings-missing-middle-zero-or-more.md
+required-headings-missing-middle,One,markdownlint/test/required-headings-missing-middle.md
+required-headings-none-one-or-more,Text,markdownlint/test/required-headings-none-one-or-more.md
+required-headings-none-zero-or-more,Text,markdownlint/test/required-headings-none-zero-or-more.md
+required-headings-none,One {MD043},markdownlint/test/required-headings-none.md
+required-headings-one-or-more,One,markdownlint/test/required-headings-one-or-more.md
+required-headings-optional-first,One,markdownlint/test/required-headings-optional-first.md
+required-headings-optional-last,One,markdownlint/test/required-headings-optional-last.md
+required-headings-optional-middle,One,markdownlint/test/required-headings-optional-middle.md
+required-headings-optional-redundant,One,markdownlint/test/required-headings-optional-redundant.md
+required-headings-question-extra,Project Name,markdownlint/test/required-headings-question-extra.md
+required-headings-question-first,Project Name,markdownlint/test/required-headings-question-first.md
+required-headings-question-last,Project Name,markdownlint/test/required-headings-question-last.md
+required-headings-question-middle,Project Name,markdownlint/test/required-headings-question-middle.md
+required-headings-question-missing,Project Name,markdownlint/test/required-headings-question-missing.md
+required-headings-wrong-match-case,Title,markdownlint/test/required-headings-wrong-match-case.md
+required-headings-zero-or-more-last,One,markdownlint/test/required-headings-zero-or-more-last.md
+required-headings-zero-or-more,One,markdownlint/test/required-headings-zero-or-more.md
+resolve-module-test,,markdownlint/test/resolve-module-test.mjs
+reversed-link-issue-with-markdownlint-12,reversed-link-issue-with-markdownlint-12,markdownlint/test/reversed-link-issue-with-markdownlint-12.md
+reversed-link,reversed_link,markdownlint/test/reversed_link.md
+,Rules,markdownlint/test/rules/
+any-blockquote,,markdownlint/test/rules/any-blockquote.cjs
+every-n-lines,,markdownlint/test/rules/every-n-lines.cjs
+first-line,,markdownlint/test/rules/first-line.cjs
+letters-e-x,,markdownlint/test/rules/letters-E-X.cjs
+lint-javascript,,markdownlint/test/rules/lint-javascript.cjs
+,Node Modules,markdownlint/test/rules/node_modules/
+,Markdownlint Rule Sample Commonjs,markdownlint/test/rules/node_modules/markdownlint-rule-sample-commonjs/
+sample-rule,,markdownlint/test/rules/node_modules/markdownlint-rule-sample-commonjs/sample-rule.cjs
+,Markdownlint Rule Sample Module,markdownlint/test/rules/node_modules/markdownlint-rule-sample-module/
+sample-rule,,markdownlint/test/rules/node_modules/markdownlint-rule-sample-module/sample-rule.mjs
+,Npm,markdownlint/test/rules/npm/
+sample-rule,"@type {import(""../../../lib/markdownlint.mjs"").Rule}",markdownlint/test/rules/npm/sample-rule.js
+rules,,markdownlint/test/rules/rules.cjs
+validate-json,,markdownlint/test/rules/validate-json.cjs
+short-headings,Short Headings,markdownlint/test/short-headings.md
+simple-table,Heading,markdownlint/test/simple-table.md
+,Snapshots,markdownlint/test/snapshots/
+markdownlint-test-custom-rules-mjs,Snapshot report for `test/markdownlint-test-custom-rules.mjs`,markdownlint/test/snapshots/markdownlint-test-custom-rules.mjs.md
+markdownlint-test-custom-rules-mjs,,markdownlint/test/snapshots/markdownlint-test-custom-rules.mjs.snap
+markdownlint-test-exports-mjs,Snapshot report for `test/markdownlint-test-exports.mjs`,markdownlint/test/snapshots/markdownlint-test-exports.mjs.md
+markdownlint-test-exports-mjs,,markdownlint/test/snapshots/markdownlint-test-exports.mjs.snap
+markdownlint-test-micromark-mjs,Snapshot report for `test/markdownlint-test-micromark.mjs`,markdownlint/test/snapshots/markdownlint-test-micromark.mjs.md
+markdownlint-test-micromark-mjs,,markdownlint/test/snapshots/markdownlint-test-micromark.mjs.snap
+markdownlint-test-repos-dotnet-docs-mjs,Snapshot report for `test/markdownlint-test-repos-dotnet-docs.mjs`,markdownlint/test/snapshots/markdownlint-test-repos-dotnet-docs.mjs.md
+markdownlint-test-repos-dotnet-docs-mjs,,markdownlint/test/snapshots/markdownlint-test-repos-dotnet-docs.mjs.snap
+markdownlint-test-repos-mdn-content-mjs,Snapshot report for `test/markdownlint-test-repos-mdn-content.mjs`,markdownlint/test/snapshots/markdownlint-test-repos-mdn-content.mjs.md
+markdownlint-test-repos-mdn-content-mjs,,markdownlint/test/snapshots/markdownlint-test-repos-mdn-content.mjs.snap
+markdownlint-test-repos-small-mjs,Snapshot report for `test/markdownlint-test-repos-small.mjs`,markdownlint/test/snapshots/markdownlint-test-repos-small.mjs.md
+markdownlint-test-repos-small-mjs,,markdownlint/test/snapshots/markdownlint-test-repos-small.mjs.snap
+markdownlint-test-scenarios-mjs,Snapshot report for `test/markdownlint-test-scenarios.mjs`,markdownlint/test/snapshots/markdownlint-test-scenarios.mjs.md
+markdownlint-test-scenarios-mjs,,markdownlint/test/snapshots/markdownlint-test-scenarios.mjs.snap
+spaces-inside-emphasis-markers-multiple-lines,"Space Inside Emphasis Markers, Multiple Lines",markdownlint/test/spaces-inside-emphasis-markers-multiple-lines.md
+spaces-inside-link-text,Spaces Inside Link Text,markdownlint/test/spaces-inside-link-text.md
+spaces-after-list-marker,spaces_after_list_marker,markdownlint/test/spaces_after_list_marker.md
+spaces-inside-codespan-elements,spaces_inside_codespan_elements,markdownlint/test/spaces_inside_codespan_elements.md
+spaces-inside-emphasis-markers,Heading,markdownlint/test/spaces_inside_emphasis_markers.md
+spaces-inside-link-text,Spaces Inside Link Text,markdownlint/test/spaces_inside_link_text.md
+strong-style-asterisk,Strong style asterisk,markdownlint/test/strong_style_asterisk.md
+strong-style-underscore,Strong style underscore,markdownlint/test/strong_style_underscore.md
+sublist-bullet-style,sublist-bullet-style,markdownlint/test/sublist-bullet-style.md
+table-column-count,Cell  | Cell,markdownlint/test/table-column-count.md
+table-column-style-aligned-delimiter,Text    | Text text | Text,markdownlint/test/table-column-style-aligned-delimiter.md
+table-column-style-aligned,Text    | Text text | Text,markdownlint/test/table-column-style-aligned.md
+table-column-style-compact,Text    | Text text | Text,markdownlint/test/table-column-style-compact.md
+table-column-style-default,Text    | Text text | Text,markdownlint/test/table-column-style-default.md
+table-column-style-emoji,Table Column Style - Emoji,markdownlint/test/table-column-style-emoji.md
+table-column-style-empty-cells,Text    | Text text | Text,markdownlint/test/table-column-style-empty-cells.md
+table-column-style-irregular-trailing-pipe,Text    | Text text | Text,markdownlint/test/table-column-style-irregular-trailing-pipe.md
+table-column-style-tight,Text    | Text text | Text,markdownlint/test/table-column-style-tight.md
+table-column-style-trailing-spaces,Table Column Style - Trailing Spaces,markdownlint/test/table-column-style-trailing-spaces.md
+table-column-style-wide-characters,Table Column Style - Wide Characters,markdownlint/test/table-column-style-wide-characters.md
+table-content-with-issues,Table Content With Issues,markdownlint/test/table-content-with-issues.md
+table-issue-with-markdown-it-12,table-issue-with-markdown-it-12,markdownlint/test/table-issue-with-markdown-it-12.md
+table-pipe-style-explicit-both,Cell  | Cell,markdownlint/test/table-pipe-style-explicit-both.md
+table-pipe-style-explicit-leading,Cell  | Cell,markdownlint/test/table-pipe-style-explicit-leading.md
+table-pipe-style-explicit-none,Cell  | Cell,markdownlint/test/table-pipe-style-explicit-none.md
+table-pipe-style-explicit-trailing,Cell  | Cell,markdownlint/test/table-pipe-style-explicit-trailing.md
+table-pipe-style-implicit-both,Cell  | Cell,markdownlint/test/table-pipe-style-implicit-both.md
+table-pipe-style-implicit-leading,Cell  | Cell,markdownlint/test/table-pipe-style-implicit-leading.md
+table-pipe-style-implicit-none,Cell  | Cell,markdownlint/test/table-pipe-style-implicit-none.md
+table-pipe-style-implicit-trailing,Cell  | Cell    |,markdownlint/test/table-pipe-style-implicit-trailing.md
+table-pipe-style,{MD055} | Cell,markdownlint/test/table-pipe-style.md
+texmath-content-in-lists,texmath-content-in-lists,markdownlint/test/texmath-content-in-lists.md
+texmath-content,texmath-content,markdownlint/test/texmath-content.md
+token-map-spans,```lang,markdownlint/test/token-map-spans.md
+trailing-spaces-in-code-default,Trailing Spaces in Code - Default,markdownlint/test/trailing-spaces-in-code-default.md
+trailing-spaces-in-code-false,Trailing Spaces in Code - False,markdownlint/test/trailing-spaces-in-code-false.md
+trailing-spaces-in-code-true,Trailing Spaces in Code - True,markdownlint/test/trailing-spaces-in-code-true.md
+trailing-spaces-in-lists-allowed-strict,Heading,markdownlint/test/trailing-spaces-in-lists-allowed-strict.md
+trailing-spaces-in-lists-allowed,Heading,markdownlint/test/trailing-spaces-in-lists-allowed.md
+trailing-spaces-in-lists-default,Heading,markdownlint/test/trailing-spaces-in-lists-default.md
+trailing-spaces-br,trailing_spaces_br,markdownlint/test/trailing_spaces_br.md
+unclosed-html-comment-in-code-span,Heading,markdownlint/test/unclosed-html-comment-in-code-span.md
+unclosed-html-comment,Heading,markdownlint/test/unclosed-html-comment.md
+unterminated-html-comment,Issue 252,markdownlint/test/unterminated-html-comment.md
+validate-json,Validate JSON,markdownlint/test/validate-json.md
+whitespace-issues,whitespace_issues,markdownlint/test/whitespace_issues.md
+wrong-types-in-config-file,Wrong Types in Config File,markdownlint/test/wrong-types-in-config-file.md
+rust-toolchain,,rust-toolchain.toml
+rustfmt,,rustfmt.toml
+,Samples,samples/
+,Src,src/
+cli,Command-line interface definitions and arguments for `agent-md`.,src/cli.rs
+commands,Rust module: commands.,src/commands.rs
+config,Rust module: config.,src/config.rs
+,Format,src/format/
+blockquotes,Normalize blockquote lines by removing extra spaces after > markers.,src/format/blockquotes.rs
+bold-tables,"Remove ** and __ bold markers from a single table cell, preserving inline code.",src/format/bold_tables.rs
+code-blocks,Collapse multiple spaces before # comments in bash/sh code.,src/format/code_blocks.rs
+frontmatter,Check if the content starts with a YAML frontmatter block.,src/format/frontmatter.rs
+html,HTML minification and formatting for agent-md.,src/format/html.rs
+io,Rust module: io.,src/format/io.rs
+lines,Rust module: lines.,src/format/lines.rs
+mod,Rust module: mod.,src/format/mod.rs
+options,Rust module: options.,src/format/options.rs
+tables,`| **text** | center | right |` becomes `| text | center | right |`,src/format/tables.rs
+tests,Rust module: tests.,src/format/tests.rs
+html-tests,Rust module: html-tests.,src/html_tests.rs
+ignore,"Ignore pattern parsing, resolution, and matching for `agent-md`.",src/ignore.rs
+jsonc,JSONC comment stripping for configuration files.,src/jsonc.rs
+lib,"`agent-md`: A fast Markdown editor, linter, and formatter designed for AI agents.",src/lib.rs
+linter,Rust module: linter.,src/linter.rs
+main,Rust module: main.,src/main.rs
+parser,Rust module: parser.,src/parser.rs
+,Rules,src/rules/
+code-blocks,Rust module: code-blocks.,src/rules/code_blocks.rs
+heading-structure,Rust module: heading-structure.,src/rules/heading_structure.rs
+list-formatting,Rust module: list-formatting.,src/rules/list_formatting.rs
+mod,Rust module: mod.,src/rules/mod.rs
+no-ascii-graph,Rust module: no-ascii-graph.,src/rules/no_ascii_graph.rs
+no-bold,Rust module: no-bold.,src/rules/no_bold.rs
+simple-tables,Rust module: simple-tables.,src/rules/simple_tables.rs
+space-indentation,Rust module: space-indentation.,src/rules/space_indentation.rs
+useless-links,Rust module: useless-links.,src/rules/useless_links.rs
+whitespace,Rust module: whitespace.,src/rules/whitespace.rs
+tests,Rust module: tests.,src/tests.rs
+types,Rust module: types.,src/types.rs
+,Test Md,test-md/
+readme,This is a test directory for markdown files,test-md/README.md
+basic,Markdown syntax guide,test-md/basic.md
+debug-comprehensive,Document Title,test-md/debug-comprehensive.md
+debug-edge-cases,Title,test-md/debug-edge-cases.md
+debug-test,Title,test-md/debug-test.md
+,Format,test-md/format/
+all,This is a horizontal rule using dashes.,test-md/format/all.md
+blockquote-list,> | Blockquote | Table |,test-md/format/blockquote-list.md
+bold-blockquotes,> A*cat*meow,test-md/format/bold-blockquotes.md
+bold,Test Bold Removal,test-md/format/bold.md
+code-block-comment,```bash,test-md/format/code-block-comment.md
+code-block-syntax-errors,Tests how the formatter handles malformed code blocks.,test-md/format/code-block-syntax-errors.md
+code-block,```bash,test-md/format/code-block.md
+,Code Block,test-md/format/code-block/
+comments,Code block with comments,test-md/format/code-block/comments.md
+file-tree,File tree,test-md/format/code-block/file-tree.md
+codeblock,Test Code Block Preservation,test-md/format/codeblock.md
+,Config,test-md/format/config/
+,Minify Html,test-md/format/config/minify-html/
+html,Format HTML,test-md/format/config/minify-html/html.md
+,Remove Bold,test-md/format/config/remove-bold/
+not-remove-bold,Test Bold Removal,test-md/format/config/remove-bold/not-remove-bold.md
+empty-code-block,Empty code block,test-md/format/empty-code-block.md
+,Html,test-md/format/html/
+block,HTML block,test-md/format/html/block.md
+html,Format HTML,test-md/format/html/html.md
+inline-code,Test Inline Code Block Preservation,test-md/format/inline-code.md
+,Links,test-md/format/links/
+pure-url,Pure URLs,test-md/format/links/pure-url.md
+options-sample-code-block,This is a horizontal rule using dashes.,test-md/format/options-sample-code-block.md
+table-edge,| Single | Column | Table |,test-md/format/table-edge.md
+table-header-body,| H1 | H2 |,test-md/format/table-header-body.md
+table,Test Table Formatting,test-md/format/table.md
+text-block-folder-structure,Example,test-md/format/text-block-folder-structure.md
+test-bold,Perfect Document,test-md/test-bold.md
+test-clean,Clean Document,test-md/test-clean.md
+test-graph-folder,Test Document,test-md/test-graph-folder.md
+test-graph,Test Document,test-md/test-graph.md
+test-lint,Test Document,test-md/test-lint.md
+test-perfect,Perfect Document,test-md/test-perfect.md
+test-simple,Simple Document,test-md/test-simple.md
+test-space-indentation,Test Space Indentation Rule,test-md/test-space-indentation.md
+test-table-rows-spaces,Test,test-md/test-table-rows-spaces.md
+test-table-rows,Perfect Document,test-md/test-table-rows.md
+test-table,Perfect Document,test-md/test-table.md
+test-bug,🥦 Linked-Mind,test-md/test_bug.md
+test-bold-in-code-blocks,Test document,test_bold_in_code_blocks.md
+,Vscode Extension,vscode-extension/
+changelog,Change Log,vscode-extension/CHANGELOG.md
+dev,Development,vscode-extension/DEV.md
+license,,vscode-extension/LICENSE
+readme,Agent-MD Formatter for VS Code,vscode-extension/README.md
+agent-md-formatter-0-1-1,,vscode-extension/agent-md-formatter-0.1.1.vsix
+agent-md-formatter-0-1-2,,vscode-extension/agent-md-formatter-0.1.2.vsix
+bun,,vscode-extension/bun.lock
+bunfig,,vscode-extension/bunfig.toml
+logo,,vscode-extension/logo.png
+logo,,vscode-extension/logo.svg
+,Node Modules,vscode-extension/node_modules/
+,Secretlint,vscode-extension/node_modules/@secretlint/
+,Types,vscode-extension/node_modules/@types/
+,Vscode,vscode-extension/node_modules/@vscode/
+,Out,vscode-extension/out/
+extension,JavaScript/TypeScript module: extension.,vscode-extension/out/extension.js
+extension-js,,vscode-extension/out/extension.js.map
+resolver,Expands leading `~` or `~/` or `~\` to the user's home directory.,vscode-extension/out/resolver.js
+,Src,vscode-extension/src/
+extension,JavaScript/TypeScript module: extension.,vscode-extension/src/extension.ts
+resolver-test,JavaScript/TypeScript module: resolver-test.,vscode-extension/src/resolver.test.ts
+resolver,Expands leading `~` or `~/` or `~\` to the user's home directory.,vscode-extension/src/resolver.ts
