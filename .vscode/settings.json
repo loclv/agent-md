@@ -19,7 +19,9 @@
     "**/Cargo.lock": true
   },
   "editor.formatOnSave": true,
-  "editor.rulers": [100],
+  "editor.rulers": [
+    100
+  ],
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,
   "files.trimFinalNewlines": true,
@@ -40,5 +42,12 @@
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "vscode.json-language-features"
   },
-  "cSpell.words": ["clippy"]
+  "[jsonc]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "biome.enabled": false,
+  "cSpell.words": [
+    "clippy"
+  ]
 }
