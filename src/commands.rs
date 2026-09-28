@@ -724,7 +724,7 @@ pub fn cmd_to_jsonl(path: &str, human: bool) {
 }
 
 pub fn cmd_lint(path: &str, is_content: bool, human: bool, custom_config: Option<&str>) {
-	cmd_lint_with_options(path, is_content, human, custom_config, false)
+	cmd_lint_with_options(path, is_content, human, custom_config, false, None)
 }
 
 pub fn cmd_lint_with_options(
@@ -733,6 +733,7 @@ pub fn cmd_lint_with_options(
 	human: bool,
 	custom_config: Option<&str>,
 	ignore_markdownlintrc: bool,
+	cwd: Option<&str>,
 ) {
 	let content = if is_content {
 		unescape_content(path)
@@ -761,7 +762,7 @@ pub fn cmd_lint_with_options(
 		}
 	};
 
-	let target = if is_content { None } else { Some(path) };
+	let target = cwd.or(if is_content { None } else { Some(path) });
 	let result = crate::linter::validate_markdown_for_target_with_options(
 		&content,
 		target,
@@ -775,7 +776,7 @@ pub fn cmd_lint_with_options(
 }
 
 pub fn cmd_lint_file(path: &str, human: bool, custom_config: Option<&str>) {
-	cmd_lint_file_with_options(path, human, custom_config, false)
+	cmd_lint_file_with_options(path, human, custom_config, false, None)
 }
 
 pub fn cmd_lint_file_with_options(
@@ -783,12 +784,14 @@ pub fn cmd_lint_file_with_options(
 	human: bool,
 	custom_config: Option<&str>,
 	ignore_markdownlintrc: bool,
+	cwd: Option<&str>,
 ) {
 	match fs::read_to_string(path) {
 		Ok(content) => {
+			let target = cwd.or(Some(path));
 			let result = crate::linter::validate_markdown_for_target_with_options(
 				&content,
-				Some(path),
+				target,
 				custom_config,
 				ignore_markdownlintrc,
 			);
@@ -872,7 +875,7 @@ pub fn cmd_init(custom_path: Option<&str>, force: bool, human: bool) {
 }
 
 pub fn cmd_config(custom_path: Option<&str>, check: bool, init: bool, force: bool, human: bool) {
-	cmd_config_with_options(custom_path, check, init, force, human, false)
+	cmd_config_with_options(custom_path, check, init, force, human, false, None)
 }
 
 pub fn cmd_config_with_options(
@@ -882,13 +885,16 @@ pub fn cmd_config_with_options(
 	force: bool,
 	human: bool,
 	ignore_markdownlintrc: bool,
+	cwd: Option<&str>,
 ) {
 	if init {
-		cmd_init(custom_path, force, human);
+		cmd_init(custom_path.or(cwd), force, human);
 		return;
 	}
 
+	// Use custom_path if provided, otherwise fall back to cwd
+	let base_dir = custom_path.or(cwd);
 	let status =
-		crate::config::get_config_status_with_options(custom_path, !check, ignore_markdownlintrc);
+		crate::config::get_config_status_with_options(base_dir, !check, ignore_markdownlintrc);
 	println!("{}", json_output(&status, human));
 }

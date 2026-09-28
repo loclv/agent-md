@@ -320,6 +320,21 @@ agent-md to-jsonl <path>
 # Returns: JSONL lines with {type, content, level, language}
 ```
 
+### Working directory for configuration
+
+Use the global `--cwd` option to specify a working directory for configuration discovery. This allows you to read configuration files from a different directory than the current working directory.
+
+```bash
+agent-md --cwd <path> <command> <args>
+# Reads configuration files from the specified directory
+
+agent-md --cwd /path/to/project lint document.md
+# Lints document.md using configuration from /path/to/project
+
+agent-md --cwd /path/to/project fmt document.md
+# Formats document.md using configuration from /path/to/project
+```
+
 ### Lint/Validate markdown
 
 ```bash
@@ -362,7 +377,9 @@ Checks configuration file resolution and status. Configuration files are resolve
 2. `agent-md.json`
 3. `markdownlintrc.*` fallback (`.markdownlint.json`, `.markdownlint.jsonc`, `.markdownlint.yaml`, `.markdownlint.yml`, `.markdownlintrc`, `.markdownlintrc.json`)
 
-When processing a target Markdown file, `agent-md` automatically searches the file's parent directory and walks up parent directories to discover configuration, falling back to the current working directory unless overridden with `--config`.
+When processing a target Markdown file, `agent-md` automatically searches the file's parent directory and walks up parent directories to discover configuration, falling back to the current working directory unless overridden with `--config` or `--cwd`.
+
+Use global `--cwd <path>` to specify a working directory for configuration discovery. This is useful when you want to read configuration files from a different directory than the current working directory.
 
 Use global `--ignore-markdownlintrc` to skip `markdownlintrc.*` files during discovery (default is `false`, so they are used as fallback). The same option can be set in `agent-md.json` via the `ignore-markdownlintrc` (or `ignore_markdownlintrc`) key; the CLI flag always wins, and only native `agent-md.json` files are consulted for this key.
 
@@ -392,6 +409,12 @@ agent-md --ignore-markdownlintrc lint document.md
 
 # Or set it in agent-md.json:
 # { "ignore-markdownlintrc": true }
+
+agent-md --cwd /path/to/project lint document.md
+# Read configuration files from /path/to/project directory
+
+agent-md --cwd /path/to/project fmt document.md
+# Format document.md using configuration from /path/to/project
 ```
 
 ### Inspect ignore rules
@@ -592,6 +615,9 @@ agent-md search <path> "<query>"
 
 # Get document structure
 agent-md headings <path>
+
+# Run commands with configuration from specific directory
+agent-md --cwd /path/to/project lint <path>
 ```
 
 ### Integration Rule

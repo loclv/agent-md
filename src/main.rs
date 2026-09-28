@@ -13,7 +13,10 @@ fn main() {
 
 	match cli.command {
 		Some(Commands::Init { path, force }) => {
-			let custom = path.as_deref().or(cli.config.as_deref());
+			let custom = path
+				.as_deref()
+				.or(cli.config.as_deref())
+				.or(cli.cwd.as_deref());
 			commands::cmd_init(custom, force, cli.human);
 		}
 		Some(Commands::Config {
@@ -23,6 +26,7 @@ fn main() {
 			force,
 		}) => {
 			let custom = path.as_deref().or(cli.config.as_deref());
+			let cwd = cli.cwd.as_deref();
 			commands::cmd_config_with_options(
 				custom,
 				check,
@@ -30,6 +34,7 @@ fn main() {
 				force,
 				cli.human,
 				cli.ignore_markdownlintrc,
+				cwd,
 			);
 		}
 		Some(Commands::Read {
@@ -65,12 +70,14 @@ fn main() {
 			cli.human,
 			cli.config.as_deref(),
 			cli.ignore_markdownlintrc,
+			cli.cwd.as_deref(),
 		),
 		Some(Commands::LintFile { path }) => commands::cmd_lint_file_with_options(
 			&path,
 			cli.human,
 			cli.config.as_deref(),
 			cli.ignore_markdownlintrc,
+			cli.cwd.as_deref(),
 		),
 		Some(Commands::Ignore { path }) => {
 			commands::cmd_ignore(&path, cli.human);
@@ -85,6 +92,7 @@ fn main() {
 			remove_emphasis,
 			minify_html,
 		}) => {
+			let target = cli.cwd.as_deref().or(path.as_deref());
 			let options = get_format_options_for_target_with_options(
 				remove_bold,
 				compact_blank_lines,
@@ -93,7 +101,7 @@ fn main() {
 				remove_emphasis,
 				minify_html,
 				cli.config.as_deref(),
-				path.as_deref(),
+				target,
 				cli.ignore_markdownlintrc,
 			);
 			if stdin {
@@ -108,6 +116,9 @@ fn main() {
 		None => {
 			// If path provided without command, treat as fmt
 			if let Some(path) = cli.path {
+				// When --cwd is provided, use it for config discovery
+				// Otherwise use the file path for config discovery
+				let target = cli.cwd.as_deref().or(Some(&path));
 				let options = get_format_options_for_target_with_options(
 					None,
 					None,
@@ -116,7 +127,7 @@ fn main() {
 					None,
 					None,
 					cli.config.as_deref(),
-					Some(&path),
+					target,
 					cli.ignore_markdownlintrc,
 				);
 				format::cmd_fmt(&path, cli.human, options)

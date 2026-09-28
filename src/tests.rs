@@ -14,6 +14,7 @@ mod tests {
 	};
 	use crate::{Cli, Commands};
 	use clap::Parser;
+	use std::fs;
 
 	// Tests for JsonlEntry serialization
 	#[test]
@@ -2099,6 +2100,146 @@ This web site is using `markedjs/marked`.
 		);
 
 		assert!(!opts.remove_bold);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_cli_parse_global_cwd_flag() {
+		use crate::Cli;
+		use clap::Parser;
+
+		let args = vec!["agent-md", "--cwd", "/tmp", "lint", "test.md"];
+		let cli = Cli::try_parse_from(args).unwrap();
+
+		assert_eq!(cli.cwd, Some("/tmp".to_string()));
+		assert!(cli.command.is_some());
+	}
+
+	#[test]
+	fn test_cli_parse_without_cwd_flag() {
+		use crate::Cli;
+		use clap::Parser;
+
+		let args = vec!["agent-md", "lint", "test.md"];
+		let cli = Cli::try_parse_from(args).unwrap();
+
+		assert_eq!(cli.cwd, None);
+		assert!(cli.command.is_some());
+	}
+
+	#[test]
+	fn test_cli_parse_cwd_with_fmt_command() {
+		use crate::Cli;
+		use clap::Parser;
+
+		let args = vec!["agent-md", "--cwd", "/project", "fmt", "document.md"];
+		let cli = Cli::try_parse_from(args).unwrap();
+
+		assert_eq!(cli.cwd, Some("/project".to_string()));
+		assert!(cli.command.is_some());
+	}
+
+	#[test]
+	fn test_cli_parse_cwd_with_config_command() {
+		use crate::Cli;
+		use clap::Parser;
+
+		let args = vec!["agent-md", "--cwd", "/project", "config"];
+		let cli = Cli::try_parse_from(args).unwrap();
+
+		assert_eq!(cli.cwd, Some("/project".to_string()));
+		assert!(cli.command.is_some());
+	}
+
+	#[test]
+	fn test_cli_parse_cwd_with_default_fmt_file() {
+		use crate::Cli;
+		use clap::Parser;
+
+		let args = vec!["agent-md", "README.md", "--cwd", "/project"];
+		let cli = Cli::try_parse_from(args).unwrap();
+
+		assert_eq!(cli.cwd, Some("/project".to_string()));
+		assert_eq!(cli.path, Some("README.md".to_string()));
+		assert!(cli.command.is_none());
+	}
+
+	#[test]
+	fn test_cwd_config_discovery_for_format_options() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_cwd_fmt");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let cfg_path = temp_dir.join("agent-md.json");
+		fs::write(&cfg_path, r#"{"remove_bold": false}"#).unwrap();
+
+		let target = Some(temp_dir.to_str().unwrap());
+		let opts = crate::cli::get_format_options_for_target_with_options(
+			None, None, None, None, None, None, None, target, false,
+		);
+
+		assert!(!opts.remove_bold);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_cwd_config_discovery_for_lint_options() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_cwd_lint");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let cfg_path = temp_dir.join("agent-md.json");
+		fs::write(&cfg_path, r#"{"no-duplicate-heading": false}"#).unwrap();
+
+		let target = Some(temp_dir.to_str().unwrap());
+		let markdown = "# Title\n\n## Section\n\n## Section\n";
+		let res =
+			crate::linter::validate_markdown_for_target_with_options(markdown, target, None, false);
+
+		assert!(res.valid);
+		assert!(res.errors.is_empty());
+
+		let _ = fs::remove_dir_all(&temp_dir);
+	}
+
+	#[test]
+	fn test_config_status_precedence_explicit_over_cwd() {
+		let temp_cwd = std::env::temp_dir().join("agent_md_test_prec_cwd");
+		let temp_custom = std::env::temp_dir().join("agent_md_test_prec_custom");
+		let _ = fs::remove_dir_all(&temp_cwd);
+		let _ = fs::remove_dir_all(&temp_custom);
+		fs::create_dir_all(&temp_cwd).unwrap();
+		fs::create_dir_all(&temp_custom).unwrap();
+
+		let cwd_cfg = temp_cwd.join("agent-md.json");
+		fs::write(&cwd_cfg, r#"{"remove_bold": false}"#).unwrap();
+
+		let custom_cfg = temp_custom.join("agent-md.json");
+		fs::write(&custom_cfg, r#"{"remove_bold": true}"#).unwrap();
+
+		let custom_path = Some(custom_cfg.to_str().unwrap());
+		let cwd = Some(temp_cwd.to_str().unwrap());
+		let base_dir = custom_path.or(cwd);
+
+		let status = crate::config::get_config_status_with_options(base_dir, true, false);
+		assert!(status.exists);
+		assert_eq!(status.path, Some(custom_cfg.to_str().unwrap().to_string()));
+
+		let _ = fs::remove_dir_all(&temp_cwd);
+		let _ = fs::remove_dir_all(&temp_custom);
+	}
+
+	#[test]
+	fn test_init_config_with_cwd() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_init_cwd");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let result = crate::config::init_config(Some(temp_dir.to_str().unwrap()), false);
+		assert!(result.is_ok());
+		assert!(temp_dir.join(".agent-md.json").exists());
 
 		let _ = fs::remove_dir_all(&temp_dir);
 	}

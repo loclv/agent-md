@@ -128,9 +128,10 @@ cargo audit
 ## Adding New Features
 
 1. Validation Rules: Add logic to `src/rules/` and run them inside `src/linter.rs`'s `validate_markdown` function
-2. CLI Commands: Extend `Commands` and `Cli` in `src/main.rs` and add handler functions in `src/commands.rs`
-3. Tests: Add comprehensive tests to `src/tests.rs`
-4. Documentation: Update relevant sections in `docs/`
+2. CLI Commands: Extend `Commands` and `Cli` in `src/cli.rs` and add handler functions in `src/commands.rs`
+3. Global Options: Add global CLI options to the `Cli` struct in `src/cli.rs` and update command handlers to use them
+4. Tests: Add comprehensive tests to `src/tests.rs`
+5. Documentation: Update relevant sections in `docs/`
 
 ### Configuration System
 

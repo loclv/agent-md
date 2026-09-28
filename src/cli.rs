@@ -24,6 +24,14 @@ pub struct Cli {
 	)]
 	pub config: Option<String>,
 
+	/// Working directory for configuration discovery
+	#[arg(
+		long = "cwd",
+		global = true,
+		help = "Working directory for configuration discovery"
+	)]
+	pub cwd: Option<String>,
+
 	/// Ignore `markdownlintrc.*` configuration files during discovery
 	#[arg(
 		long = "ignore-markdownlintrc",

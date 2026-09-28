@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.17] - 2026-09-28
+
+### Added
+
+- Global `--cwd` Option: Added global `--cwd <path>` option to specify a working directory for configuration discovery. This allows reading configuration files from a different directory than the current working directory. The option works with all commands and integrates with the existing configuration discovery system.
+- Configuration Discovery Enhancement: Updated `lint`, `lint-file`, `fmt`, and `config` commands to use the `--cwd` option for configuration file discovery, providing more flexibility in multi-project workflows.
+- CWD Option Tests: Added unit tests for CLI parsing of the global `--cwd` flag, including validation with different commands (fmt, config) and proper argument handling.
+
+### Fixed
+
+- Lint CWD Target Resolution: Fixed an issue in `cmd_lint_with_options` where `--cwd` was ignored when linting a file path instead of raw content.
+- Config Precedence: Fixed option precedence in `cmd_config_with_options` so explicit `--config` or path arguments take precedence over the `--cwd` directory fallback.
+
 ### VS Code Extension
 
 - Formatter test suite: Added unit and integration tests covering all format settings (`agentMd.format.removeBold`, `agentMd.format.compactBlankLines`, `agentMd.format.collapseSpaces`, `agentMd.format.removeHorizontalRules`, `agentMd.format.removeEmphasis`).
