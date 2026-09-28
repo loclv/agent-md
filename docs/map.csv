@@ -1,0 +1,11 @@
+name,description,path
+dev,Development,DEV.md
+,Blogs,blogs/
+intro,🚀 Introducing agent-md,blogs/intro.md
+config,Configuration,config.md
+ideal-md,,ideal.md.log
+llm-agent-integration-skill,LLM/Agent Integration Skill: agent-md CLI,llm-agent-integration-skill.md
+llm-agent-rule,LLM Agent Rule: Use agent-md CLI,llm-agent-rule.md
+logo-editable,,logo-editable.svg
+markdown-writing-rules,Markdown Writing Rules for AI Agents,markdown-writing-rules.md
+packages,Packages,packages.md
