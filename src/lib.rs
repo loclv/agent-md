@@ -17,6 +17,7 @@
 pub mod cli;
 pub mod commands;
 pub mod config;
+pub mod config_discovery;
 pub mod format;
 #[cfg(test)]
 mod html_tests;
@@ -25,6 +26,7 @@ pub mod jsonc;
 pub mod linter;
 pub mod parser;
 pub mod rules;
+pub mod sections;
 #[cfg(test)]
 mod tests;
 pub mod types;
@@ -41,5 +43,9 @@ pub use linter::{
 	get_resolved_config_with_options, validate_markdown, validate_markdown_for_target,
 	validate_markdown_for_target_with_options, validate_markdown_with_config,
 	validate_markdown_with_custom_config, validate_markdown_with_custom_config_with_options,
+};
+pub use sections::{
+	extract_section_content, find_section_end, find_section_range, insert_section_content,
+	replace_section_content,
 };
 pub use types::{Document, EditResult, LintError, LintResult};

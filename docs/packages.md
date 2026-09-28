@@ -5,7 +5,7 @@
 ## Changes Made
 
 1. Library Crate Root ([`src/lib.rs`](./src/lib.rs)):
-   - Created the root library crate exporting public modules: `commands`, `config`, `format`, `linter`, `parser`, `rules`, `types`, and `cli`.
+   - Created the root library crate exporting public modules: `commands`, `config`, `config_discovery`, `format`, `linter`, `parser`, `rules`, `sections`, `types`, and `cli`.
    - Re-exported core programmatic APIs at crate root for consumers:
      ```rust
      use agent_md::{format_markdown, format_markdown_with_options, parse_markdown, validate_markdown};
