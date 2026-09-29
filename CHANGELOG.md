@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-30
+
+### Added
+
+- SIMD Optimization Module: Added `src/simd.rs` providing cross-platform SIMD vectorization primitives (ARM NEON and x86_64 AVX2/SSE2 with runtime feature detection and scalar fallbacks) for newline counting (`count_newlines`), two-byte set membership (`has_byte2`), consecutive space detection (`has_consecutive_spaces`), and case-insensitive ASCII substring search (`contains_ascii_case_insensitive`).
+- SIMD Accelerated Linter and Formatter: Integrated SIMD acceleration into `cmd_search`, heading line numbering in `commands.rs`, bold and emphasis marker stripping in `format/lines.rs`, space collapsing in `format/lines.rs`, bold linting in `rules/no_bold.rs`, graph indicator searches in `rules/no_ascii_graph.rs`, table syntax checks in `rules/simple_tables.rs`, and link checks in `rules/useless_links.rs`.
+
+### Fixed
+
+- Folder Tree Indentation: Fixed an issue in `format_folder_structure` where nested branches under folders retained 4-space indentation instead of normalizing to 2 spaces. Nested leading space indentation is now scaled from 4 spaces to 2 spaces while preserving idempotency and existing 2-space indented structures.
+
 ## [0.2.17] - 2026-09-28
 
 ### Added

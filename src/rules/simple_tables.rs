@@ -12,6 +12,11 @@ pub struct TableIssue {
 }
 
 pub fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
+	// SIMD: Fast early exit using vectorized memchr. Lines without a pipe '|'
+	// cannot be table rows, skipping trimming, character iteration, and column parsing.
+	if memchr::memchr(b'|', line.as_bytes()).is_none() {
+		return Vec::new();
+	}
 	let mut issues = Vec::new();
 	let trimmed = line.trim();
 
@@ -128,6 +133,9 @@ pub fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
 }
 
 pub fn validate_table_trailing_spaces(line: &str) -> Option<TableIssue> {
+	// SIMD: Fast early exit using vectorized memchr. Non-table lines bypass
+	// string trimming and cell splitting immediately.
+	memchr::memchr(b'|', line.as_bytes())?;
 	let trimmed = line.trim();
 
 	if trimmed.starts_with('|') && trimmed.ends_with('|') {

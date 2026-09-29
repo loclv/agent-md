@@ -1,4 +1,11 @@
 pub fn find_bold_text(line: &str) -> Vec<usize> {
+	// SIMD: Fast early exit. Bold text strictly requires '*' or '_'.
+	// Using vectorized byte membership skips AST parsing and Vec<char> collection
+	// for the vast majority of lines that contain neither delimiter.
+	if !crate::simd::has_byte2(line.as_bytes(), b'*', b'_') {
+		return Vec::new();
+	}
+
 	let mut results = Vec::new();
 
 	let mut exempt_ranges = Vec::new();

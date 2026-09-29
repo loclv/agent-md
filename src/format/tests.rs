@@ -1873,6 +1873,34 @@ data/
 }
 
 #[test]
+fn test_format_markdown_folder_structure_nested_spaces() {
+	let content = r#"# File tree
+
+```text
+example-folder/
+├── file-1.txt
+├── file-2.txt
+└── sub-folder/
+    ├── file-3.txt
+    └── file-4.txt
+```
+"#;
+	let expected = r#"# File tree
+
+```text
+example-folder/
+├─file-1.txt
+├─file-2.txt
+└─sub-folder/
+  ├─file-3.txt
+  └─file-4.txt
+```
+"#;
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
 fn test_format_markdown_folder_structure_txt() {
 	let content = r#"```txt
 data/

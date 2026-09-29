@@ -51,6 +51,12 @@ pub fn process_markdown_line(line: &str, options: &FormatOptions, is_heading: bo
 /// Delimiters immediately followed by whitespace (opening) or preceded by whitespace (closing)
 /// are ignored per Markdown formatting rules.
 pub fn remove_bold_markers(line: &str) -> String {
+	// SIMD: Fast early exit. Most markdown lines contain neither '*' nor '_'.
+	// Using a vectorized 2-byte search (NEON/AVX2/SSE2) skips heap allocations
+	// and character-by-character parsing in just a few CPU cycles.
+	if !crate::simd::has_byte2(line.as_bytes(), b'*', b'_') {
+		return line.to_string();
+	}
 	let mut result = String::new();
 	let chars: Vec<char> = line.chars().collect();
 	let mut i = 0;
@@ -188,6 +194,11 @@ pub fn is_horizontal_rule(line: &str) -> bool {
 /// or preceded by whitespace (closing) are ignored to prevent misinterpreting list item bullets
 /// or mathematical expressions.
 pub fn remove_emphasis_markers(line: &str) -> String {
+	// SIMD: Fast early exit. If neither '*' nor '_' is present in the line,
+	// bypass `line.chars().collect::<Vec<char>>()` and stateful delimiter traversal.
+	if !crate::simd::has_byte2(line.as_bytes(), b'*', b'_') {
+		return line.to_string();
+	}
 	let mut result = String::new();
 	let chars: Vec<char> = line.chars().collect();
 	let mut i = 0;
@@ -423,6 +434,12 @@ pub fn collapse_multiple_spaces(line: &str) -> String {
 	let leading_len = line.chars().take_while(|&c| c == ' ').count();
 	let leading = &line[..leading_len];
 	let rest = &line[leading_len..];
+
+	// SIMD: Fast early exit. Check for consecutive space pairs (`  `) using SIMD vector
+	// comparisons. Lines with standard single spacing bypass `Vec<char>` allocation completely.
+	if !crate::simd::has_consecutive_spaces(rest.as_bytes()) {
+		return line.to_string();
+	}
 
 	let chars: Vec<char> = rest.chars().collect();
 	let mut result = String::from(leading);

@@ -1,4 +1,9 @@
 pub fn find_useless_link(line: &str) -> Vec<usize> {
+	// SIMD: Fast early exit using vectorized memchr. Lines without an opening bracket '['
+	// cannot contain Markdown links, skipping `Vec<char>` allocation and bracket parsing.
+	if memchr::memchr(b'[', line.as_bytes()).is_none() {
+		return Vec::new();
+	}
 	let mut results = Vec::new();
 	let chars: Vec<char> = line.chars().collect();
 	let mut i = 0;

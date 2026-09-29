@@ -207,8 +207,34 @@ pub fn is_folder_structure(content: &str) -> bool {
 /// - Removes spacer lines (lines with only vertical connectors like `│`)
 /// - Removes redundant `─` dashes (e.g. `├──` -> `├─`, `└──` -> `└─`)
 /// - Removes spaces between the branch connector and the file/folder name
+/// - Normalizes 4-space indentation to 2 spaces for nested branches
 /// - Collapses multiple spaces before `#` comments to a single space
 pub fn format_folder_structure(content: &str) -> String {
+	let mut leading_space_counts = Vec::new();
+	for line in content.lines() {
+		if is_spacer_line(line) {
+			continue;
+		}
+		if let Some((prefix, _, _)) = parse_branch_line(line) {
+			let expanded = prefix.replace('\t', "    ");
+			let leading_spaces = expanded.chars().take_while(|&c| c == ' ').count();
+			leading_space_counts.push(leading_spaces);
+		}
+	}
+
+	let has_leading = leading_space_counts.iter().any(|&c| c > 0);
+	let all_multiples_of_4 = leading_space_counts
+		.iter()
+		.filter(|&&c| c > 0)
+		.all(|&c| c % 4 == 0);
+	let min_leading = leading_space_counts
+		.iter()
+		.filter(|&&c| c > 0)
+		.min()
+		.copied()
+		.unwrap_or(0);
+	let scale_spaces = has_leading && all_multiples_of_4 && min_leading >= 4;
+
 	let mut formatted_lines = Vec::new();
 
 	for line in content.lines() {
@@ -217,8 +243,20 @@ pub fn format_folder_structure(content: &str) -> String {
 		}
 
 		if let Some((prefix, branch_char, rest)) = parse_branch_line(line) {
+			let expanded = prefix.replace('\t', "    ");
+			let formatted_prefix = if scale_spaces {
+				let leading_spaces = expanded.chars().take_while(|&c| c == ' ').count();
+				let rest_prefix = &expanded[leading_spaces..];
+				let new_leading = leading_spaces / 2;
+				format!("{}{}", " ".repeat(new_leading), rest_prefix)
+			} else {
+				expanded
+			};
 			let formatted_rest = collapse_spaces_before_comment(rest.trim_end());
-			formatted_lines.push(format!("{}{}─{}", prefix, branch_char, formatted_rest));
+			formatted_lines.push(format!(
+				"{}{}─{}",
+				formatted_prefix, branch_char, formatted_rest
+			));
 		} else {
 			formatted_lines.push(collapse_spaces_before_comment(line.trim_end()));
 		}
@@ -619,6 +657,34 @@ mod tests {
 	fn test_format_folder_structure_nested() {
 		let input = "data/\n├── src/\n│   │\n│   ├── main.rs   # main\n│   │\n│   └── lib.rs    # lib\n└── tests/\n";
 		let expected = "data/\n├─src/\n│   ├─main.rs # main\n│   └─lib.rs # lib\n└─tests/\n";
+		assert_eq!(format_folder_structure(input), expected);
+	}
+
+	#[test]
+	fn test_format_folder_structure_nested_spaces() {
+		let input = "example-folder/\n├── file-1.txt\n├── file-2.txt\n└── sub-folder/\n    ├── file-3.txt\n    └── file-4.txt\n";
+		let expected = "example-folder/\n├─file-1.txt\n├─file-2.txt\n└─sub-folder/\n  ├─file-3.txt\n  └─file-4.txt\n";
+		assert_eq!(format_folder_structure(input), expected);
+	}
+
+	#[test]
+	fn test_format_folder_structure_nested_spaces_idempotent() {
+		let input = "example-folder/\n├─file-1.txt\n├─file-2.txt\n└─sub-folder/\n  ├─file-3.txt\n  └─file-4.txt\n";
+		let expected = "example-folder/\n├─file-1.txt\n├─file-2.txt\n└─sub-folder/\n  ├─file-3.txt\n  └─file-4.txt\n";
+		assert_eq!(format_folder_structure(input), expected);
+	}
+
+	#[test]
+	fn test_format_folder_structure_nested_multilevel_4_spaces() {
+		let input = "root/\n└── a/\n    └── b/\n        └── c.txt\n";
+		let expected = "root/\n└─a/\n  └─b/\n    └─c.txt\n";
+		assert_eq!(format_folder_structure(input), expected);
+	}
+
+	#[test]
+	fn test_format_folder_structure_nested_multilevel_idempotent() {
+		let input = "root/\n└─a/\n  └─b/\n    └─c.txt\n";
+		let expected = "root/\n└─a/\n  └─b/\n    └─c.txt\n";
 		assert_eq!(format_folder_structure(input), expected);
 	}
 }

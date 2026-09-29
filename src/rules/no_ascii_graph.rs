@@ -49,10 +49,14 @@ pub fn find_ascii_graph(line: &str) -> Option<usize> {
 
 	let graph_indicators = ["graph:", "chart:", "diagram:", "flow:", "tree:"];
 
-	let line_lower = line.to_lowercase();
 	for indicator in &graph_indicators {
-		if let Some(pos) = line_lower.find(indicator) {
-			return Some(pos + 1);
+		// SIMD: Accelerate case-insensitive indicator detection across the line.
+		// Avoids calling `line.to_lowercase()` (allocating a new String) for every
+		// indicator when none are present in the line.
+		if crate::simd::contains_ascii_case_insensitive(line, indicator) {
+			if let Some(pos) = line.to_lowercase().find(indicator) {
+				return Some(pos + 1);
+			}
 		}
 	}
 

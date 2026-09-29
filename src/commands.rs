@@ -44,10 +44,12 @@ pub fn parse_markdown(content: &str) -> Document {
 						.skip_while(|c| c.is_whitespace())
 						.collect();
 
-					let line_num = content[..current_heading_offset]
-						.chars()
-						.filter(|&c| c == '\n')
-						.count() + 1;
+					// SIMD: Use hardware-accelerated newline counting (ARM NEON / x86_64 AVX2 / SSE2)
+					// to calculate the 1-based line number across the preceding document slice in
+					// vector chunks (16/32 bytes) rather than iterating scalar chars and decoding UTF-8.
+					let line_num =
+						crate::simd::count_newlines(&content.as_bytes()[..current_heading_offset])
+							+ 1;
 					headings.push(Heading {
 						level: current_level,
 						text: heading_text,
@@ -603,10 +605,24 @@ pub fn cmd_ignore(path: &str, human: bool) {
 pub fn cmd_search(path: &str, query: &str, human: bool) {
 	match fs::read_to_string(path) {
 		Ok(content) => {
-			let query_lower = query.to_lowercase();
+			// SIMD: Accelerate case-insensitive matching for ASCII queries across all lines.
+			// This avoids heap-allocating `line.to_lowercase()` for every line in the file
+			// by using vectorized 16/32-byte chunks and first-byte matching to quickly skip
+			// non-matching lines.
+			let query_is_ascii = query.is_ascii();
+			let query_lower = if query_is_ascii {
+				String::new()
+			} else {
+				query.to_lowercase()
+			};
 			let mut matches = Vec::new();
 			for (i, line) in content.lines().enumerate() {
-				if line.to_lowercase().contains(&query_lower) {
+				let matched = if query_is_ascii {
+					crate::simd::contains_ascii_case_insensitive(line, query)
+				} else {
+					line.to_lowercase().contains(&query_lower)
+				};
+				if matched {
 					matches.push(Match {
 						line: i + 1,
 						content: line.to_string(),

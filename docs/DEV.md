@@ -23,6 +23,7 @@ agent-md/
     commands.rs - CLI subcommand handlers and parsing logic
     sections.rs - Section locate, extract, replace and insert helpers
     parser.rs - Structured Markdown parser (block-based)
+    simd.rs - Hardware SIMD vectorization primitives (ARM NEON, x86_64 AVX2/SSE2)
     format/ - Formatting modules
       mod.rs - Structured formatter orchestration
       tables.rs - Table formatting (separator compaction, row formatting)
@@ -47,6 +48,8 @@ agent-md follows a Parse-then-Format architecture:
 1. Parsing: The `src/parser.rs` module decomposes the raw Markdown text into a sequence of `MarkdownBlock` elements (e.g., `Heading`, `CodeBlock`, `List`, `Table`, `Html`). This stage also extracts YAML frontmatter.
 2. Formatting: The `format_markdown_structured` function in `src/format/mod.rs` iterates over these blocks and applies formatting rules based on the block type and user configuration (from `.agent-md.json`, `agent-md.json`, or `markdownlintrc.*` fallbacks, including `remove_bold`, `compact_blank_lines`, `collapse_spaces`, `remove_horizontal_rules`, `remove_emphasis`, and `minify_html`).
 3. Inline Line Processing: The `src/format/lines.rs` module processes individual markdown lines, handling tasks such as collapsing redundant spaces while preserving spaces and content inside inline code spans (`find_code_span_end`), stripping bold markers (`remove_bold`) and emphasis markers (`remove_emphasis`) outside code, and standardizing list item indentations. When `remove_bold` is disabled, double asterisks and underscores are preserved and protected from single emphasis removal. The `src/format/html.rs` module minifies HTML tags and blocks while strictly preserving Markdown autolinks and pure URLs (`<https://...>`, `<user@example.com>`, `<example.dev/path/>`). Inline code blocks throughout paragraphs, lists, and table cells (`src/format/bold_tables.rs`) are preserved unchanged.
+
+5. SIMD Vectorization: The `src/simd.rs` module provides hardware-accelerated vectorization for core hot paths, including newline counting, delimiter scanning, consecutive space checks, and ASCII case-insensitive search. It targets ARM NEON on AArch64 and AVX2/SSE2 on x86_64 with runtime feature detection and scalar fallbacks.
 
 This approach is more robust than simple line-based processing, especially for complex structures like nested lists or tables.
 

@@ -45,8 +45,8 @@ An example of file tree before and after:
 +├─file-1.txt
 +├─file-2.txt
 +└─sub-folder/
-+    ├─file-3.txt
-+    └─file-4.txt
++  ├─file-3.txt
++  └─file-4.txt
 ```
 
 - LLM reads less and faster.
@@ -444,7 +444,7 @@ Commands like `list` and directory-level `fmt` automatically respect these ignor
 - Removes empty list items (e.g., a trailing `- ` line with no content).
 - Preserves code block content, including relative indentation and syntax inside nested code blocks within list items.
 - Collapses multiple spaces before `#` comments in shell code blocks (`bash`, `sh`, `shell`, `zsh`).
-- Formats folder structures in `text`, `txt`, or unlabelled code blocks by removing redundant `─` dashes (e.g., `├──` to `├─`, `└──` to `└─`), stripping spacer lines (`│`), removing spaces before file names, and collapsing spaces before comments.
+- Formats folder structures in `text`, `txt`, or unlabelled code blocks by removing redundant `─` dashes (e.g., `├──` to `├─`, `└──` to `└─`), stripping spacer lines (`│`), removing spaces before file names, normalizing 4-space indentation to 2 spaces for nested branches, and collapsing spaces before comments.
 - Automatically converts 4 leading spaces of list item indentation to 2 spaces, and 2 leading tabs to 1 tab for sub-items, reducing token usage in nested lists.
 - Respects `.markdownlintignore` and `.gitignore` when formatting directories, skipping ignored paths (like `target/`, `dist/`, `logs/`) and temporary files.
 
@@ -547,6 +547,7 @@ Unlike simple line-based formatters, `agent-md` uses a structured parser that:
 2. Identifies Document Blocks: Recognizes headings, code blocks, tables, lists, HTML blocks, and paragraphs.
 3. Applies Context-Aware Formatting: Formats each block according to its type and your configuration options.
 4. Optimizes for LLMs: Ensures the output is clean, consistent, and token-efficient while remaining human-readable.
+5. Hardware SIMD Acceleration: Employs cross-platform vectorization (ARM NEON and x86_64 AVX2/SSE2) for high-throughput newline counting, search scanning, and early-exit rule checks.
 
 ## Validation Rules
 

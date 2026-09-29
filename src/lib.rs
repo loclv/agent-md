@@ -27,6 +27,7 @@ pub mod linter;
 pub mod parser;
 pub mod rules;
 pub mod sections;
+pub mod simd;
 #[cfg(test)]
 mod tests;
 pub mod types;

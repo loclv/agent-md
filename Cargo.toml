@@ -1,6 +1,6 @@
 [package]
 name = "agent-md"
-version = "0.2.17"
+version = "0.3.0"
 edition = "2021"
 description = "Fast Markdown editor, linter, and formatter designed for AI agents"
 license = "MIT"
@@ -46,3 +46,6 @@ chrono = "0.4"
 strip = true
 lto = true
 opt-level = "z"
+
+[dev-dependencies]
+proptest = "1"
