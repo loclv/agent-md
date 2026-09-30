@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Table Formatting Escaped Pipes: Fixed an issue where escaped pipes (`\|`) representing literal characters or "or" conditions inside table cells were erroneously split into multiple cells and formatted with extra spaces (e.g. `cell \ | cell`). Table cell splitting now treats escaped pipes (`\|`) and pipes inside inline code spans as cell content rather than column delimiters.
+- Table Column Count and Trailing Space Validation: Updated table syntax and trailing space linters in `simple_tables` to ignore escaped pipes (`\|`) when computing table column limits and checking cell whitespace.
+- Backslash Escape Handling: Reviewed and improved backslash escape logic across `find_link_destination_end`, `find_code_span_end`, `find_useless_link`, `remove_bold_markers`, `remove_emphasis_markers`, and `strip_bold_from_cell`, ensuring even counts of backslashes (escaped backslashes `\\`) do not falsely escape following delimiters.
+
 ## [0.3.0] - 2026-09-30
 
 ### Added

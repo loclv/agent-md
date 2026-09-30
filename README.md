@@ -437,6 +437,7 @@ Commands like `list` and directory-level `fmt` automatically respect these ignor
 ### Format markdown
 
 - Formats the markdown file in-place, trimming leading and trailing spaces from table cells.
+- Preserves escaped pipes (`\|`) and pipes inside inline code spans in table cells without splitting cells or inserting extra spaces.
 - Formats empty table cells with a single space (`| |`) to maintain clean table structure.
 - Normalizes table separator rows (e.g., `|:---|:---|` becomes `|---|---|`), removing alignment colons to save tokens.
 - Removes trailing colons from headings (e.g., `## header:` becomes `## header`).

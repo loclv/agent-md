@@ -9,7 +9,7 @@ pub fn find_useless_link(line: &str) -> Vec<usize> {
 	let mut i = 0;
 
 	while i < chars.len() {
-		if chars[i] == '[' {
+		if chars[i] == '[' && !crate::format::tables::is_char_escaped(&chars, i) {
 			let bracket_start = i;
 			let mut bracket_end = i + 1;
 			let mut bracket_content = String::new();
@@ -17,7 +17,7 @@ pub fn find_useless_link(line: &str) -> Vec<usize> {
 
 			while bracket_end < chars.len() {
 				let ch = chars[bracket_end];
-				if ch == ']' {
+				if ch == ']' && !crate::format::tables::is_char_escaped(&chars, bracket_end) {
 					found_closing_bracket = true;
 					break;
 				}
@@ -36,10 +36,12 @@ pub fn find_useless_link(line: &str) -> Vec<usize> {
 
 				while paren_start < chars.len() {
 					let ch = chars[paren_start];
-					if ch == '(' {
+					if ch == '(' && !crate::format::tables::is_char_escaped(&chars, paren_start) {
 						paren_depth += 1;
 						url.push(ch);
-					} else if ch == ')' {
+					} else if ch == ')'
+						&& !crate::format::tables::is_char_escaped(&chars, paren_start)
+					{
 						paren_depth -= 1;
 						if paren_depth == 0 {
 							found_closing_paren = true;
@@ -208,5 +210,12 @@ mod tests {
 		let result = find_useless_link(line);
 		assert_eq!(result.len(), 1); // Should trim whitespace
 		assert_eq!(result[0], 7);
+	}
+
+	#[test]
+	fn test_find_useless_link_escaped_brackets() {
+		let line = "Visit \\[example.com\\](https://example.com) for more";
+		let result = find_useless_link(line);
+		assert_eq!(result.len(), 0); // Escaped bracket should not trigger
 	}
 }

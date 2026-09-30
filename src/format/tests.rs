@@ -454,6 +454,30 @@ fn test_format_markdown_nested_pipes_in_code() {
 }
 
 #[test]
+fn test_format_markdown_table_escaped_pipe_preserved() {
+	let content = "| Operation | Syntax |\n|---|---|\n| Logical OR | cell \\| cell |\n";
+	let expected = "| Operation | Syntax |\n|---|---|\n| Logical OR | cell \\| cell |\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_table_escaped_pipe_with_spacing() {
+	let content = "| Header |\n|---|\n| cell  \\|  cell |\n";
+	let expected = "| Header |\n|---|\n| cell  \\|  cell |\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_markdown_table_multiple_escaped_pipes() {
+	let content = "| Choices |\n|---|\n| opt1 \\| opt2 \\| opt3 |\n";
+	let expected = "| Choices |\n|---|\n| opt1 \\| opt2 \\| opt3 |\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
 fn test_format_markdown_single_row_table() {
 	let content = "| Only | Header | Row |\n";
 	let expected = "| Only | Header | Row |\n";

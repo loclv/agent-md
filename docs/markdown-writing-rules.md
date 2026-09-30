@@ -190,6 +190,16 @@ Note: `agent-md fmt` will convert `|:---|:---|` to `|---|---|`.
 
 Note: `agent-md fmt` formats empty table cells with a single space (`| |`) to normalize table structure cleanly.
 
+✅ Valid - Escaped pipes (`\|`) for "or" conditions inside table cells
+
+```text
+| Option | Syntax |
+|---|---|
+| Filter | name \| tag \| id |
+```
+
+Note: `agent-md fmt` preserves escaped pipes (`\|`) inside table cells without inserting extra spaces or splitting the cell.
+
 ### Rationale for Simple Tables Rule
 
 Complex tables are difficult for AI agents to parse and can introduce formatting inconsistencies. Simple tables are more reliable for machine processing.

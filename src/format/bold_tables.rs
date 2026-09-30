@@ -64,10 +64,17 @@ pub fn strip_bold_from_cell(cell: &str) -> String {
 		}
 
 		// Check for **bold** pattern
-		if i + 1 < chars.len() && chars[i] == '*' && chars[i + 1] == '*' {
+		if i + 1 < chars.len()
+			&& chars[i] == '*'
+			&& chars[i + 1] == '*'
+			&& !super::tables::is_char_escaped(&chars, i)
+		{
 			let mut j = i + 2;
 			while j + 1 < chars.len() {
-				if chars[j] == '*' && chars[j + 1] == '*' {
+				if chars[j] == '*'
+					&& chars[j + 1] == '*'
+					&& !super::tables::is_char_escaped(&chars, j)
+				{
 					chars[i + 2..j].iter().for_each(|&c| result.push(c));
 					i = j + 2;
 					break;
@@ -82,10 +89,17 @@ pub fn strip_bold_from_cell(cell: &str) -> String {
 		}
 
 		// Check for __bold__ pattern
-		if i + 1 < chars.len() && chars[i] == '_' && chars[i + 1] == '_' {
+		if i + 1 < chars.len()
+			&& chars[i] == '_'
+			&& chars[i + 1] == '_'
+			&& !super::tables::is_char_escaped(&chars, i)
+		{
 			let mut j = i + 2;
 			while j + 1 < chars.len() {
-				if chars[j] == '_' && chars[j + 1] == '_' {
+				if chars[j] == '_'
+					&& chars[j + 1] == '_'
+					&& !super::tables::is_char_escaped(&chars, j)
+				{
 					chars[i + 2..j].iter().for_each(|&c| result.push(c));
 					i = j + 2;
 					break;

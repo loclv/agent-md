@@ -113,7 +113,11 @@ pub fn remove_bold_markers(line: &str) -> String {
 		}
 
 		// Check for **bold** pattern
-		if i + 1 < chars.len() && chars[i] == '*' && chars[i + 1] == '*' {
+		if i + 1 < chars.len()
+			&& chars[i] == '*'
+			&& chars[i + 1] == '*'
+			&& !super::tables::is_char_escaped(&chars, i)
+		{
 			// Opening delimiter MUST NOT be followed by whitespace (e.g., "** bold")
 			if i + 2 < chars.len() && chars[i + 2].is_whitespace() {
 				result.push(chars[i]);
@@ -123,7 +127,10 @@ pub fn remove_bold_markers(line: &str) -> String {
 			// Search for matching closing **
 			let mut j = i + 2;
 			while j + 1 < chars.len() {
-				if chars[j] == '*' && chars[j + 1] == '*' {
+				if chars[j] == '*'
+					&& chars[j + 1] == '*'
+					&& !super::tables::is_char_escaped(&chars, j)
+				{
 					// Closing delimiter MUST NOT be preceded by whitespace (e.g., "bold **")
 					if j > i + 2 && chars[j - 1].is_whitespace() {
 						break;
@@ -144,7 +151,11 @@ pub fn remove_bold_markers(line: &str) -> String {
 		}
 
 		// Check for __bold__ pattern
-		if i + 1 < chars.len() && chars[i] == '_' && chars[i + 1] == '_' {
+		if i + 1 < chars.len()
+			&& chars[i] == '_'
+			&& chars[i + 1] == '_'
+			&& !super::tables::is_char_escaped(&chars, i)
+		{
 			// Opening delimiter MUST NOT be followed by whitespace (e.g., "__ bold")
 			if i + 2 < chars.len() && chars[i + 2].is_whitespace() {
 				result.push(chars[i]);
@@ -154,7 +165,10 @@ pub fn remove_bold_markers(line: &str) -> String {
 			// Search for matching closing __
 			let mut j = i + 2;
 			while j + 1 < chars.len() {
-				if chars[j] == '_' && chars[j + 1] == '_' {
+				if chars[j] == '_'
+					&& chars[j + 1] == '_'
+					&& !super::tables::is_char_escaped(&chars, j)
+				{
 					// Closing delimiter MUST NOT be preceded by whitespace (e.g., "bold __")
 					if j > i + 2 && chars[j - 1].is_whitespace() {
 						break;
@@ -302,6 +316,7 @@ pub fn remove_emphasis_markers(line: &str) -> String {
 		if i + 1 < chars.len()
 			&& ((chars[i] == '*' && chars[i + 1] != '*')
 				|| (chars[i] == '_' && chars[i + 1] != '_'))
+			&& !super::tables::is_char_escaped(&chars, i)
 		{
 			// Opening delimiter MUST NOT be followed by whitespace (e.g., "* bullet" or "_ word")
 			if chars[i + 1].is_whitespace() {
@@ -326,7 +341,7 @@ pub fn remove_emphasis_markers(line: &str) -> String {
 
 			let mut j = i + 1;
 			while j < chars.len() {
-				if chars[j] == marker {
+				if chars[j] == marker && !super::tables::is_char_escaped(&chars, j) {
 					let is_double = (j + 1 < chars.len() && chars[j + 1] == marker)
 						|| (j > 0 && chars[j - 1] == marker);
 					if !is_double {
@@ -374,7 +389,10 @@ pub fn remove_emphasis_markers(line: &str) -> String {
 /// In Markdown, a code span begins with a delimiter run of N backticks and ends with the first
 /// subsequent delimiter run of exactly N backticks.
 pub fn find_code_span_end(chars: &[char], start: usize) -> Option<usize> {
-	if start >= chars.len() || chars[start] != '`' {
+	if start >= chars.len()
+		|| chars[start] != '`'
+		|| (start > 0 && super::tables::is_char_escaped(chars, start))
+	{
 		return None;
 	}
 
@@ -413,9 +431,9 @@ pub fn find_link_destination_end(chars: &[char], paren_start: usize) -> Option<u
 
 	while idx < chars.len() {
 		let c = chars[idx];
-		if c == '(' && (idx == 0 || chars[idx - 1] != '\\') {
+		if c == '(' && !super::tables::is_char_escaped(chars, idx) {
 			depth += 1;
-		} else if c == ')' && (idx == 0 || chars[idx - 1] != '\\') {
+		} else if c == ')' && !super::tables::is_char_escaped(chars, idx) {
 			depth -= 1;
 			if depth == 0 {
 				return Some(idx);

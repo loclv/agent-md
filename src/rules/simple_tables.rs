@@ -26,7 +26,7 @@ pub fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
 			.all(|c| c == '|' || c == '-' || c == ' ' || c == ':');
 
 		if is_separator_row {
-			let parts: Vec<&str> = trimmed.split('|').collect();
+			let parts = crate::format::tables::split_table_cells(trimmed);
 			for part in parts {
 				let part_trimmed = part.trim();
 				if !part_trimmed.is_empty() {
@@ -119,8 +119,9 @@ pub fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
 			return issues;
 		}
 
-		let pipe_count = trimmed.matches('|').count();
-		if pipe_count > 6 {
+		let cells = crate::format::tables::split_table_cells(trimmed);
+		let delimiter_count = cells.len().saturating_sub(1);
+		if delimiter_count > 6 {
 			issues.push(TableIssue {
 				column: 1,
 				message: "Very wide tables should be simplified".to_string(),
@@ -138,13 +139,16 @@ pub fn validate_table_trailing_spaces(line: &str) -> Option<TableIssue> {
 	memchr::memchr(b'|', line.as_bytes())?;
 	let trimmed = line.trim();
 
-	if trimmed.starts_with('|') && trimmed.ends_with('|') {
+	if trimmed.len() >= 2
+		&& trimmed.starts_with('|')
+		&& crate::format::tables::ends_with_unescaped_pipe(trimmed)
+	{
 		let is_separator_row = trimmed
 			.chars()
 			.all(|c| c == '|' || c == '-' || c == ' ' || c == ':');
 
 		if !is_separator_row {
-			let cells: Vec<&str> = trimmed.split('|').collect();
+			let cells = crate::format::tables::split_table_cells(trimmed);
 			for (i, cell) in cells.iter().enumerate() {
 				if i == 0 || i == cells.len() - 1 {
 					continue;
@@ -397,5 +401,19 @@ mod tests {
 		let line = "This is not a table";
 		let result = validate_table_syntax(line);
 		assert_eq!(result.len(), 0); // Non-table lines should be valid
+	}
+
+	#[test]
+	fn test_validate_table_syntax_escaped_pipes_not_counted_as_columns() {
+		let line = "| Col1 | a \\| b \\| c | Col3 | Col4 | Col5 |";
+		let result = validate_table_syntax(line);
+		assert_eq!(result.len(), 0); // 5 columns despite having escaped pipes
+	}
+
+	#[test]
+	fn test_validate_table_trailing_spaces_escaped_pipe() {
+		let line = "| Col1 | a \\| b | Col3 |";
+		let result = validate_table_trailing_spaces(line);
+		assert!(result.is_none());
 	}
 }
