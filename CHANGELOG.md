@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [0.3.1]
+## [0.4.0] - 2026-10-01
 
 ### Fixed
 
