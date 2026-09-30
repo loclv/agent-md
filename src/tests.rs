@@ -532,6 +532,32 @@ Final paragraph.
 		assert!(entries.iter().skip(1).all(|e| e.entry_type == "paragraph"));
 	}
 
+	#[test]
+	fn test_parse_markdown_heading_lines() {
+		let content = "# Title\n\nParagraph\n\n## Subheading\n\n### Sub-subheading";
+		let doc = parse_markdown(content);
+		assert_eq!(doc.headings.len(), 3);
+		assert_eq!(doc.headings[0].text, "Title");
+		assert_eq!(doc.headings[0].line, 1);
+		assert_eq!(doc.headings[1].text, "Subheading");
+		assert_eq!(doc.headings[1].line, 5);
+		assert_eq!(doc.headings[2].text, "Sub-subheading");
+		assert_eq!(doc.headings[2].line, 7);
+	}
+
+	#[test]
+	fn test_parse_markdown_to_jsonl_lists_and_tables() {
+		let content = "# Title\n\n- Item 1\n- Item 2\n\n| Col 1 | Col 2 |\n| --- | --- |\n| Val 1 | Val 2 |\n";
+		let entries = parse_markdown_to_jsonl(content);
+		assert_eq!(entries.len(), 4);
+		assert_eq!(entries[0].entry_type, "heading");
+		assert_eq!(entries[1].entry_type, "paragraph");
+		assert_eq!(entries[1].content, "Item 1");
+		assert_eq!(entries[2].entry_type, "paragraph");
+		assert_eq!(entries[2].content, "Item 2");
+		assert_eq!(entries[3].entry_type, "paragraph");
+	}
+
 	// Integration tests for command workflows
 	#[test]
 	fn test_document_workflow_parsing() {

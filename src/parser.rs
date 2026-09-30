@@ -7,6 +7,7 @@ pub enum MarkdownBlock {
 		level: u32,
 		text: String,
 		raw: String,
+		line: usize,
 	},
 	CodeBlock {
 		language: Option<String>,
@@ -115,17 +116,29 @@ pub fn parse(content: &str) -> ParsedMarkdown {
 			continue;
 		}
 
-		// Heading
+		// ATX Heading
 		if trimmed.starts_with('#') {
-			let level = trimmed.chars().take_while(|&c| c == '#').count() as u32;
-			let text = trimmed.trim_start_matches('#').trim().to_string();
-			blocks.push(MarkdownBlock::Heading {
-				level,
-				text,
-				raw: line.to_string(),
-			});
-			i += 1;
-			continue;
+			let hash_count = trimmed.chars().take_while(|&c| c == '#').count();
+			if (1..=6).contains(&hash_count) {
+				let rest = &trimmed[hash_count..];
+				if rest.is_empty() || rest.starts_with(' ') || rest.starts_with('\t') {
+					let mut heading_text = rest.trim();
+					if heading_text.ends_with('#') {
+						let stripped = heading_text.trim_end_matches('#').trim_end();
+						if !stripped.is_empty() {
+							heading_text = stripped;
+						}
+					}
+					blocks.push(MarkdownBlock::Heading {
+						level: hash_count as u32,
+						text: heading_text.to_string(),
+						raw: line.to_string(),
+						line: i + 1,
+					});
+					i += 1;
+					continue;
+				}
+			}
 		}
 
 		// Horizontal Rule

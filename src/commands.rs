@@ -1,4 +1,3 @@
-use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Parser as MarkdownParser, Tag, TagEnd};
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -16,49 +15,15 @@ use crate::types::{
 pub fn parse_markdown(content: &str) -> Document {
 	let word_count = content.split_whitespace().count();
 	let line_count = content.lines().count();
+	let parsed = crate::parser::parse(content);
 	let mut headings = Vec::new();
 
-	let parser = MarkdownParser::new(content);
-	let mut in_heading = false;
-	let mut current_level = 0;
-	let mut current_heading_offset = 0;
-
-	for (event, range) in parser.into_offset_iter() {
-		match event {
-			Event::Start(Tag::Heading { level, .. }) => {
-				in_heading = true;
-				current_level = level as u32;
-				current_heading_offset = range.start;
-			}
-			Event::End(TagEnd::Heading(_)) => {
-				if in_heading {
-					// Extract the raw heading text from the original content
-					let heading_start = current_heading_offset;
-					let heading_end = range.end;
-					let heading_text = content[heading_start..heading_end].trim();
-
-					// Remove the leading # characters and whitespace
-					let heading_text = heading_text
-						.chars()
-						.skip_while(|c| *c == '#')
-						.skip_while(|c| c.is_whitespace())
-						.collect();
-
-					// SIMD: Use hardware-accelerated newline counting (ARM NEON / x86_64 AVX2 / SSE2)
-					// to calculate the 1-based line number across the preceding document slice in
-					// vector chunks (16/32 bytes) rather than iterating scalar chars and decoding UTF-8.
-					let line_num =
-						crate::simd::count_newlines(&content.as_bytes()[..current_heading_offset])
-							+ 1;
-					headings.push(Heading {
-						level: current_level,
-						text: heading_text,
-						line: line_num,
-					});
-				}
-				in_heading = false;
-			}
-			_ => {}
+	for block in parsed.blocks {
+		if let crate::parser::MarkdownBlock::Heading {
+			level, text, line, ..
+		} = block
+		{
+			headings.push(Heading { level, text, line });
 		}
 	}
 
@@ -72,108 +37,131 @@ pub fn parse_markdown(content: &str) -> Document {
 }
 
 pub fn parse_markdown_to_jsonl(content: &str) -> Vec<JsonlEntry> {
-	let parser = MarkdownParser::new(content);
+	let parsed = crate::parser::parse(content);
 	let mut entries = Vec::new();
-	let mut current_text = String::new();
-	let mut current_heading_level: Option<u32> = None;
-	let mut current_heading_text = String::new();
-	let mut in_heading = false;
-	let mut in_code_block = false;
-	let mut code_language = String::new();
-	let mut code_content = String::new();
+	let mut current_paragraph = String::new();
 
-	let flush_text = |text: &str, entries: &mut Vec<JsonlEntry>| {
-		if !text.trim().is_empty() {
+	let flush_paragraph = |current_paragraph: &mut String, entries: &mut Vec<JsonlEntry>| {
+		let trimmed = current_paragraph.trim();
+		if !trimmed.is_empty() {
 			entries.push(JsonlEntry {
 				entry_type: "paragraph".to_string(),
-				content: text.trim().to_string(),
+				content: trimmed.to_string(),
 				level: None,
 				language: None,
 			});
+			current_paragraph.clear();
 		}
 	};
 
-	for event in parser {
-		match event {
-			Event::Start(Tag::Heading { level, .. }) => {
-				flush_text(&current_text, &mut entries);
-				current_text = String::new();
-				in_heading = true;
-				current_heading_level = Some(match level {
-					HeadingLevel::H1 => 1,
-					HeadingLevel::H2 => 2,
-					HeadingLevel::H3 => 3,
-					HeadingLevel::H4 => 4,
-					HeadingLevel::H5 => 5,
-					HeadingLevel::H6 => 6,
+	for block in parsed.blocks {
+		match block {
+			crate::parser::MarkdownBlock::Frontmatter(_) => {}
+			crate::parser::MarkdownBlock::Heading { level, text, .. } => {
+				flush_paragraph(&mut current_paragraph, &mut entries);
+				entries.push(JsonlEntry {
+					entry_type: "heading".to_string(),
+					content: text,
+					level: Some(level),
+					language: None,
 				});
-				current_heading_text = String::new();
 			}
-			Event::Text(text) if in_heading => {
-				current_heading_text.push_str(&text);
+			crate::parser::MarkdownBlock::CodeBlock {
+				language, content, ..
+			} => {
+				flush_paragraph(&mut current_paragraph, &mut entries);
+				entries.push(JsonlEntry {
+					entry_type: "code_block".to_string(),
+					content,
+					level: None,
+					language,
+				});
 			}
-			Event::End(TagEnd::Heading(_)) => {
-				if !current_heading_text.is_empty() {
+			crate::parser::MarkdownBlock::List { items, .. } => {
+				flush_paragraph(&mut current_paragraph, &mut entries);
+				for item in items {
+					let trimmed = item.trim();
+					let item_text = if let Some(stripped) = trimmed
+						.strip_prefix("- ")
+						.or_else(|| trimmed.strip_prefix("* "))
+						.or_else(|| trimmed.strip_prefix("+ "))
+					{
+						stripped
+					} else if let Some(dot_pos) = trimmed.find(". ") {
+						if trimmed[..dot_pos].chars().all(|c| c.is_ascii_digit()) {
+							&trimmed[dot_pos + 2..]
+						} else {
+							trimmed
+						}
+					} else if let Some(paren_pos) = trimmed.find(") ") {
+						if trimmed[..paren_pos].chars().all(|c| c.is_ascii_digit()) {
+							&trimmed[paren_pos + 2..]
+						} else {
+							trimmed
+						}
+					} else {
+						trimmed
+					};
+					if !item_text.trim().is_empty() {
+						entries.push(JsonlEntry {
+							entry_type: "paragraph".to_string(),
+							content: item_text.trim().to_string(),
+							level: None,
+							language: None,
+						});
+					}
+				}
+			}
+			crate::parser::MarkdownBlock::Table { raw, .. } => {
+				flush_paragraph(&mut current_paragraph, &mut entries);
+				let table_text = raw.trim();
+				if !table_text.is_empty() {
 					entries.push(JsonlEntry {
-						entry_type: "heading".to_string(),
-						content: current_heading_text.clone(),
-						level: current_heading_level,
+						entry_type: "paragraph".to_string(),
+						content: table_text.to_string(),
+						level: None,
 						language: None,
 					});
 				}
-				in_heading = false;
-				current_heading_level = None;
 			}
-			Event::Start(Tag::CodeBlock(kind)) => {
-				flush_text(&current_text, &mut entries);
-				current_text = String::new();
-				in_code_block = true;
-				code_content = String::new();
-				code_language = match kind {
-					CodeBlockKind::Fenced(lang) => lang.to_string(),
-					CodeBlockKind::Indented => String::new(),
+			crate::parser::MarkdownBlock::Html(raw) => {
+				flush_paragraph(&mut current_paragraph, &mut entries);
+				let html_text = raw.trim();
+				if !html_text.is_empty() {
+					entries.push(JsonlEntry {
+						entry_type: "paragraph".to_string(),
+						content: html_text.to_string(),
+						level: None,
+						language: None,
+					});
+				}
+			}
+			crate::parser::MarkdownBlock::Paragraph(s) => {
+				let trimmed = s.trim();
+				let line_text = if trimmed.starts_with('>') {
+					trimmed.trim_start_matches('>').trim()
+				} else {
+					trimmed
 				};
-			}
-			Event::End(TagEnd::CodeBlock) => {
-				entries.push(JsonlEntry {
-					entry_type: "code_block".to_string(),
-					content: code_content.clone(),
-					level: None,
-					language: if code_language.is_empty() {
-						None
+				if !line_text.is_empty() {
+					if current_paragraph.is_empty() {
+						current_paragraph.push_str(line_text);
 					} else {
-						Some(code_language.clone())
-					},
-				});
-				in_code_block = false;
+						current_paragraph.push(' ');
+						current_paragraph.push_str(line_text);
+					}
+				}
 			}
-			Event::Text(text) if in_code_block => {
-				code_content.push_str(&text);
+			crate::parser::MarkdownBlock::BlankLine => {
+				flush_paragraph(&mut current_paragraph, &mut entries);
 			}
-			Event::Text(text) if !in_heading && !in_code_block => {
-				current_text.push_str(&text);
-				current_text.push(' ');
+			crate::parser::MarkdownBlock::HorizontalRule(_) => {
+				flush_paragraph(&mut current_paragraph, &mut entries);
 			}
-			Event::Code(code) if !in_heading && !in_code_block => {
-				current_text.push_str(&code);
-				current_text.push(' ');
-			}
-			Event::End(TagEnd::Paragraph) if !in_heading && !in_code_block => {
-				flush_text(&current_text, &mut entries);
-				current_text = String::new();
-			}
-			Event::End(TagEnd::Item) if !in_heading && !in_code_block => {
-				flush_text(&current_text, &mut entries);
-				current_text = String::new();
-			}
-			Event::SoftBreak | Event::HardBreak if !in_heading && !in_code_block => {
-				current_text.push(' ');
-			}
-			_ => {}
 		}
 	}
 
-	flush_text(&current_text, &mut entries);
+	flush_paragraph(&mut current_paragraph, &mut entries);
 	entries
 }
 
