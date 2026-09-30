@@ -1,17 +1,31 @@
-use serde::{Deserialize, Serialize};
+use crate::json::{JsonObject, JsonValue, ToJson};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+pub use crate::json::json_output;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JsonlEntry {
-	#[serde(rename = "type")]
 	pub entry_type: String,
 	pub content: String,
-	#[serde(skip_serializing_if = "Option::is_none")]
 	pub level: Option<u32>,
-	#[serde(skip_serializing_if = "Option::is_none")]
 	pub language: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl ToJson for JsonlEntry {
+	fn to_json(&self) -> JsonValue {
+		let mut obj = JsonObject::new();
+		obj.insert("type", self.entry_type.as_str());
+		obj.insert("content", self.content.as_str());
+		if let Some(level) = self.level {
+			obj.insert("level", level);
+		}
+		if let Some(ref lang) = self.language {
+			obj.insert("language", lang.as_str());
+		}
+		JsonValue::Object(obj)
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Document {
 	pub path: String,
 	pub content: String,
@@ -20,41 +34,105 @@ pub struct Document {
 	pub headings: Vec<Heading>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl ToJson for Document {
+	fn to_json(&self) -> JsonValue {
+		let mut obj = JsonObject::new();
+		obj.insert("path", self.path.as_str());
+		obj.insert("content", self.content.as_str());
+		obj.insert("word_count", self.word_count);
+		obj.insert("line_count", self.line_count);
+		obj.insert("headings", self.headings.to_json());
+		JsonValue::Object(obj)
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Heading {
 	pub level: u32,
 	pub text: String,
 	pub line: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl ToJson for Heading {
+	fn to_json(&self) -> JsonValue {
+		let mut obj = JsonObject::new();
+		obj.insert("level", self.level);
+		obj.insert("text", self.text.as_str());
+		obj.insert("line", self.line);
+		JsonValue::Object(obj)
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EditResult {
 	pub success: bool,
 	pub message: String,
 	pub document: Option<Document>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl ToJson for EditResult {
+	fn to_json(&self) -> JsonValue {
+		let mut obj = JsonObject::new();
+		obj.insert("success", self.success);
+		obj.insert("message", self.message.as_str());
+		match &self.document {
+			Some(doc) => obj.insert("document", doc.to_json()),
+			None => obj.insert("document", JsonValue::Null),
+		}
+		JsonValue::Object(obj)
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SearchResult {
 	pub query: String,
 	pub matches: Vec<Match>,
 	pub total: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl ToJson for SearchResult {
+	fn to_json(&self) -> JsonValue {
+		let mut obj = JsonObject::new();
+		obj.insert("query", self.query.as_str());
+		obj.insert("matches", self.matches.to_json());
+		obj.insert("total", self.total);
+		JsonValue::Object(obj)
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Match {
 	pub line: usize,
 	pub content: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl ToJson for Match {
+	fn to_json(&self) -> JsonValue {
+		let mut obj = JsonObject::new();
+		obj.insert("line", self.line);
+		obj.insert("content", self.content.as_str());
+		JsonValue::Object(obj)
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LintResult {
 	pub valid: bool,
 	pub errors: Vec<LintError>,
 	pub warnings: Vec<LintWarning>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+impl ToJson for LintResult {
+	fn to_json(&self) -> JsonValue {
+		let mut obj = JsonObject::new();
+		obj.insert("valid", self.valid);
+		obj.insert("errors", self.errors.to_json());
+		obj.insert("warnings", self.warnings.to_json());
+		JsonValue::Object(obj)
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LintError {
 	pub line: usize,
 	pub column: usize,
@@ -62,7 +140,18 @@ pub struct LintError {
 	pub rule: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl ToJson for LintError {
+	fn to_json(&self) -> JsonValue {
+		let mut obj = JsonObject::new();
+		obj.insert("line", self.line);
+		obj.insert("column", self.column);
+		obj.insert("message", self.message.as_str());
+		obj.insert("rule", self.rule.as_str());
+		JsonValue::Object(obj)
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LintWarning {
 	pub line: usize,
 	pub column: usize,
@@ -70,11 +159,14 @@ pub struct LintWarning {
 	pub rule: String,
 }
 
-pub fn json_output<T: ?Sized + Serialize>(value: &T, human: bool) -> String {
-	if human {
-		serde_json::to_string_pretty(value).unwrap()
-	} else {
-		serde_json::to_string(value).unwrap()
+impl ToJson for LintWarning {
+	fn to_json(&self) -> JsonValue {
+		let mut obj = JsonObject::new();
+		obj.insert("line", self.line);
+		obj.insert("column", self.column);
+		obj.insert("message", self.message.as_str());
+		obj.insert("rule", self.rule.as_str());
+		JsonValue::Object(obj)
 	}
 }
 

@@ -22,6 +22,7 @@ pub mod format;
 #[cfg(test)]
 mod html_tests;
 pub mod ignore;
+pub mod json;
 pub mod jsonc;
 pub mod linter;
 pub mod parser;
@@ -31,6 +32,7 @@ pub mod simd;
 #[cfg(test)]
 mod tests;
 pub mod types;
+pub mod yaml;
 
 pub use cli::{Cli, Commands};
 pub use commands::parse_markdown;

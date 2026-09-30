@@ -1,7 +1,7 @@
 //! JSONC comment stripping for configuration files.
 //!
 //! `agent-md` accepts `.jsonc` configuration files and comment-annotated
-//! `.markdownlintrc` files, but `serde_json` only parses strict JSON.
+//! `.markdownlintrc` files before parsing with the native JSON parser.
 //! This module bridges the gap by removing `//` and `/* */` comments
 //! before parsing, so the config layer never deals with comments directly.
 
@@ -95,6 +95,7 @@ pub(crate) fn strip_json_comments(content: &str) -> String {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::json::JsonValue;
 
 	#[test]
 	fn test_strip_json_comments_preserves_urls_in_strings() {
@@ -102,8 +103,8 @@ mod tests {
 		let stripped = strip_json_comments(content);
 		assert!(stripped.contains("https://example.com//path"));
 		assert!(!stripped.contains("// done"));
-		let val: serde_json::Value = serde_json::from_str(&stripped).unwrap();
-		assert_eq!(val.get("other").unwrap(), 1);
+		let val = JsonValue::parse(&stripped).unwrap();
+		assert_eq!(val.get("other").unwrap().as_u64(), Some(1));
 	}
 
 	#[test]
@@ -113,8 +114,8 @@ mod tests {
 		let stripped = strip_json_comments(content);
 		assert!(stripped.contains("//kept"));
 		assert!(!stripped.contains("gone"));
-		let val: serde_json::Value = serde_json::from_str(&stripped).unwrap();
-		assert_eq!(val.get("c").unwrap(), 1);
+		let val = JsonValue::parse(&stripped).unwrap();
+		assert_eq!(val.get("c").unwrap().as_u64(), Some(1));
 	}
 
 	#[test]
@@ -122,8 +123,8 @@ mod tests {
 		let content = "{\n/* one\ntwo */\n\"a\": 1\n}";
 		let stripped = strip_json_comments(content);
 		assert_eq!(stripped.lines().count(), content.lines().count());
-		let val: serde_json::Value = serde_json::from_str(&stripped).unwrap();
-		assert_eq!(val.get("a").unwrap(), 1);
+		let val = JsonValue::parse(&stripped).unwrap();
+		assert_eq!(val.get("a").unwrap().as_u64(), Some(1));
 	}
 
 	#[test]
@@ -141,7 +142,7 @@ mod tests {
 		let content = "{\"greeting\": \"Xin chào // thế giới\", \"a\": 1} // chú thích";
 		let stripped = strip_json_comments(content);
 		assert!(stripped.contains("Xin chào // thế giới"));
-		let val: serde_json::Value = serde_json::from_str(&stripped).unwrap();
-		assert_eq!(val.get("a").unwrap(), 1);
+		let val = JsonValue::parse(&stripped).unwrap();
+		assert_eq!(val.get("a").unwrap().as_u64(), Some(1));
 	}
 }

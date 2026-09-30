@@ -8,6 +8,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::config::{ConfigStatus, AGENT_MD_CONFIG_FILES, CONFIG_FILES, MARKDOWNLINT_CONFIG_FILES};
+use crate::json::JsonValue;
 use crate::jsonc::strip_json_comments;
 
 /// Check whether a path is a `markdownlintrc.*` configuration file.
@@ -35,8 +36,8 @@ pub fn candidate_config_files(ignore_markdownlintrc: bool) -> &'static [&'static
 ///
 /// Requires an object so stray strings or empty files do not count as
 /// valid configuration.
-fn parse_yaml_object(content: &str) -> Option<serde_json::Value> {
-	serde_yaml::from_str::<serde_json::Value>(content)
+fn parse_yaml_object(content: &str) -> Option<JsonValue> {
+	crate::yaml::parse_yaml(content)
 		.ok()
 		.filter(|val| val.is_object())
 }
@@ -47,15 +48,15 @@ fn parse_yaml_object(content: &str) -> Option<serde_json::Value> {
 /// `.markdownlintrc` (tried as JSON, then JSONC, then YAML).
 /// `.json` and `.jsonc` files stay strict JSON to preserve existing
 /// invalid-file behavior; other extensions fall back to YAML.
-pub fn parse_config_str(path_str: &str, content: &str) -> Option<serde_json::Value> {
+pub fn parse_config_str(path_str: &str, content: &str) -> Option<JsonValue> {
 	if path_str.ends_with(".yaml") || path_str.ends_with(".yml") {
 		return parse_yaml_object(content);
 	}
-	if let Ok(val) = serde_json::from_str::<serde_json::Value>(content) {
+	if let Ok(val) = JsonValue::parse(content) {
 		return Some(val);
 	}
 	let stripped = strip_json_comments(content);
-	if let Ok(val) = serde_json::from_str::<serde_json::Value>(&stripped) {
+	if let Ok(val) = JsonValue::parse(&stripped) {
 		return Some(val);
 	}
 	if path_str.ends_with(".json") || path_str.ends_with(".jsonc") {
@@ -65,7 +66,7 @@ pub fn parse_config_str(path_str: &str, content: &str) -> Option<serde_json::Val
 }
 
 /// Parse a configuration file at `path_str`.
-fn parse_config_file(path_str: &str) -> Option<serde_json::Value> {
+fn parse_config_file(path_str: &str) -> Option<JsonValue> {
 	let content = fs::read_to_string(path_str).ok()?;
 	parse_config_str(path_str, &content)
 }
@@ -94,7 +95,7 @@ pub fn find_config_file(custom_path: Option<&str>) -> Option<String> {
 /// `ignore_markdownlintrc` (snake_case). Only native `agent-md.json`
 /// configuration files are consulted for this key; `markdownlintrc.*`
 /// files never set it.
-pub fn config_value_ignores_markdownlintrc(value: &serde_json::Value) -> bool {
+pub fn config_value_ignores_markdownlintrc(value: &JsonValue) -> bool {
 	matches!(
 		value.get("ignore-markdownlintrc").and_then(|v| v.as_bool()),
 		Some(true)
@@ -276,7 +277,7 @@ pub fn find_config_for_target_with_options(
 
 /// Read and parse configuration file.
 /// Returns (resolved_path, parsed_json) if found and valid.
-pub fn read_config(custom_path: Option<&str>) -> Option<(String, serde_json::Value)> {
+pub fn read_config(custom_path: Option<&str>) -> Option<(String, JsonValue)> {
 	read_config_with_options(custom_path, false)
 }
 
@@ -284,7 +285,7 @@ pub fn read_config(custom_path: Option<&str>) -> Option<(String, serde_json::Val
 pub fn read_config_with_options(
 	custom_path: Option<&str>,
 	ignore_markdownlintrc: bool,
-) -> Option<(String, serde_json::Value)> {
+) -> Option<(String, JsonValue)> {
 	let path_str = find_config_file_with_options(custom_path, ignore_markdownlintrc)?;
 	let json_val = parse_config_file(&path_str)?;
 	Some((path_str, json_val))
@@ -294,7 +295,7 @@ pub fn read_config_with_options(
 pub fn read_config_for_target(
 	target_path: Option<&str>,
 	custom_config: Option<&str>,
-) -> Option<(String, serde_json::Value)> {
+) -> Option<(String, JsonValue)> {
 	read_config_for_target_with_options(target_path, custom_config, false)
 }
 
@@ -303,7 +304,7 @@ pub fn read_config_for_target_with_options(
 	target_path: Option<&str>,
 	custom_config: Option<&str>,
 	ignore_markdownlintrc: bool,
-) -> Option<(String, serde_json::Value)> {
+) -> Option<(String, JsonValue)> {
 	let path_str =
 		find_config_for_target_with_options(target_path, custom_config, ignore_markdownlintrc)?;
 	let json_val = parse_config_file(&path_str)?;
@@ -311,7 +312,7 @@ pub fn read_config_for_target_with_options(
 }
 
 /// Get configuration JSON value if configuration file exists and is valid.
-pub fn get_config(custom_path: Option<&str>) -> Option<serde_json::Value> {
+pub fn get_config(custom_path: Option<&str>) -> Option<JsonValue> {
 	get_config_with_options(custom_path, false)
 }
 
@@ -322,7 +323,7 @@ pub fn get_config(custom_path: Option<&str>) -> Option<serde_json::Value> {
 pub fn get_config_with_options(
 	custom_path: Option<&str>,
 	ignore_markdownlintrc: bool,
-) -> Option<serde_json::Value> {
+) -> Option<JsonValue> {
 	read_config_with_options(custom_path, ignore_markdownlintrc).map(|(_, val)| val)
 }
 
@@ -330,7 +331,7 @@ pub fn get_config_with_options(
 pub fn get_config_for_target(
 	target_path: Option<&str>,
 	custom_config: Option<&str>,
-) -> Option<serde_json::Value> {
+) -> Option<JsonValue> {
 	get_config_for_target_with_options(target_path, custom_config, false)
 }
 
@@ -342,7 +343,7 @@ pub fn get_config_for_target_with_options(
 	target_path: Option<&str>,
 	custom_config: Option<&str>,
 	ignore_markdownlintrc: bool,
-) -> Option<serde_json::Value> {
+) -> Option<JsonValue> {
 	read_config_for_target_with_options(target_path, custom_config, ignore_markdownlintrc)
 		.map(|(_, val)| val)
 }

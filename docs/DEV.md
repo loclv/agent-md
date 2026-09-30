@@ -17,7 +17,9 @@ agent-md/
     types.rs - Common types, structures and utilities
     config.rs - Configuration types, resolution and init
     config_discovery.rs - Config file lookup, parsing and target resolution
+    json.rs - Native zero-dependency JSON parser, serializer, and value representation
     jsonc.rs - JSONC comment stripping for configuration files
+    yaml.rs - Native zero-dependency YAML configuration parser
     ignore.rs - Ignore file (.markdownlintignore, .gitignore) resolution and matching
     linter.rs - Lint rules orchestration
     commands.rs - CLI subcommand handlers and parsing logic
@@ -72,6 +74,15 @@ This approach is more robust than simple line-based processing, especially for c
 3. Fallback: If no configuration file is located in the target directory tree, the resolver falls back to the current working directory.
 4. Explicit Override: When `--config <PATH>` is supplied on the CLI, it bypasses ancestor discovery and uses the specified configuration file or directory directly.
 5. Ignore Markdownlint: When global `--ignore-markdownlintrc` is set (default `false`), automatic discovery skips `markdownlintrc.*` files and uses only native agent-md configuration. The same option can be set via the `ignore-markdownlintrc` (or `ignore_markdownlintrc`) key in `agent-md.json`; the CLI flag always wins, and only native files are consulted for this key (`markdownlintrc.*` files never set it). An explicit `--config` file path is still respected.
+
+## Architecture: Zero-Dependency JSON and YAML Handling
+
+agent-md uses internal, zero-dependency parser and serializer modules for configuration and CLI output:
+
+1. Native JSON Data Representation (`src/json.rs`): Defines `JsonValue` (`Null`, `Bool`, `Number`, `String`, `Array`, `Object`) and `JsonObject` (order-preserving key-value mapping). Implements `ToJson` for all output structures and provides both compact (`to_string`) and 2-space indented (`to_string_pretty`) serialization.
+2. Native JSON Parser (`src/json.rs`): A recursive descent parser that parses JSON configuration files (`.agent-md.json`, `.markdownlint.json`, `.markdownlint.jsonc` after comment stripping).
+3. Native YAML Parser (`src/yaml.rs`): An indentation-based YAML parser for `.markdownlint.yaml` and `.markdownlint.yml` configuration files that handles `#` comments, scalar types (booleans, numbers, strings), and nested mapping objects without relying on deprecated crates or unsafe C code.
+4. Dependency Elimination: Replaced `serde`, `serde_json`, and `serde_yaml`, pruning transitive dependencies (`syn`, `quote`, `proc-macro2`, `unsafe-libyaml`, `itoa`, `ryu`, `indexmap`, `hashbrown`, `equivalent`) and accelerating compilation.
 
 ## Building
 

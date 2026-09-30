@@ -10,7 +10,8 @@ mod tests {
 	use super::*;
 	use crate::commands::{extract_section_content, parse_markdown_to_jsonl};
 	use crate::types::{
-		unescape_content, Document, EditResult, Heading, JsonlEntry, Match, SearchResult,
+		json_output, unescape_content, Document, EditResult, Heading, JsonlEntry, Match,
+		SearchResult,
 	};
 	use crate::{Cli, Commands};
 	use clap::Parser;
@@ -26,7 +27,7 @@ mod tests {
 			language: None,
 		};
 
-		let json = serde_json::to_string(&entry).unwrap();
+		let json = json_output(&entry, false);
 		assert!(json.contains("paragraph"));
 		assert!(json.contains("Test content"));
 	}
@@ -40,7 +41,7 @@ mod tests {
 			language: Some("rust".to_string()),
 		};
 
-		let json = serde_json::to_string(&entry).unwrap();
+		let json = json_output(&entry, false);
 		assert!(json.contains("heading"));
 		assert!(json.contains("Test Heading"));
 		assert!(json.contains("2"));
@@ -62,7 +63,7 @@ mod tests {
 			}],
 		};
 
-		let json = serde_json::to_string(&doc).unwrap();
+		let json = json_output(&doc, false);
 		assert!(json.contains("test.md"));
 		assert!(json.contains("Test"));
 		assert!(json.contains("2"));
@@ -86,7 +87,7 @@ mod tests {
 			document: Some(doc),
 		};
 
-		let json = serde_json::to_string(&result).unwrap();
+		let json = json_output(&result, false);
 		assert!(json.contains("true"));
 		assert!(json.contains("Success"));
 	}
@@ -99,7 +100,7 @@ mod tests {
 			document: None,
 		};
 
-		let json = serde_json::to_string(&result).unwrap();
+		let json = json_output(&result, false);
 		assert!(json.contains("false"));
 		assert!(json.contains("Error"));
 	}
@@ -116,7 +117,7 @@ mod tests {
 			total: 1,
 		};
 
-		let json = serde_json::to_string(&result).unwrap();
+		let json = json_output(&result, false);
 		assert!(json.contains("test"));
 		assert!(json.contains("1"));
 	}

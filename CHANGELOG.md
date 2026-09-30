@@ -12,8 +12,14 @@ All notable changes to this project will be documented in this file.
 - Table Column Count and Trailing Space Validation: Updated table syntax and trailing space linters in `simple_tables` to ignore escaped pipes (`\|`) when computing table column limits and checking cell whitespace.
 - Backslash Escape Handling: Reviewed and improved backslash escape logic across `find_link_destination_end`, `find_code_span_end`, `find_useless_link`, `remove_bold_markers`, `remove_emphasis_markers`, and `strip_bold_from_cell`, ensuring even counts of backslashes (escaped backslashes `\\`) do not falsely escape following delimiters.
 
+### Added
+
+- Native JSON Module (`src/json.rs`): Zero-dependency JSON parser, serializer, and dynamic value model (`JsonValue`, `JsonObject`). Features recursive descent parsing, compact and pretty (2-space) formatting, full UTF-8 escape handling, and a `ToJson` trait implemented for all CLI response structures.
+- Native YAML Parser (`src/yaml.rs`): Zero-dependency indentation-based YAML mapping and list parser for `.markdownlint.yaml` and `.markdownlint.yml` configuration files.
+
 ### Removed
 
+- Removed `serde`, `serde_json`, and `serde_yaml` Dependencies: Replaced external serialization and configuration crates with internal zero-dependency modules `src/json.rs` and `src/yaml.rs`. Pruned transitive dependencies including `syn`, `quote`, `proc-macro2`, `serde_derive`, `unsafe-libyaml`, `itoa`, `ryu`, `indexmap`, `hashbrown`, and `equivalent`, substantially reducing compilation time and removing all unsafe transpiled C code.
 - Removed `pulldown-cmark` Dependency: Replaced external `pulldown-cmark` parser usage in `src/commands.rs` (`parse_markdown` and `parse_markdown_to_jsonl`) with the internal native block parser in `src/parser.rs`. Heading blocks now track 1-based line numbers directly, and JSONL extraction processes internal blocks (`heading`, `code_block`, `paragraph`, `list`, `table`). This eliminates `pulldown-cmark` and its transitive dependencies (`pulldown-cmark-escape`, `unicase`, `getopts`, `unicode-width`), making agent-md lighter and reducing compilation overhead.
 
 ## [0.3.0] - 2026-09-30

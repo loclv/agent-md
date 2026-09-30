@@ -672,17 +672,14 @@ pub fn cmd_stats(path: &str, human: bool) {
 		Ok(content) => {
 			let mut doc = parse_markdown(&content);
 			doc.path = path.to_string();
+			let mut stats_obj = crate::json::JsonObject::new();
+			stats_obj.insert("path", doc.path);
+			stats_obj.insert("word_count", doc.word_count);
+			stats_obj.insert("line_count", doc.line_count);
+			stats_obj.insert("heading_count", doc.headings.len());
 			println!(
 				"{}",
-				json_output(
-					&serde_json::json!({
-						"path": doc.path,
-						"word_count": doc.word_count,
-						"line_count": doc.line_count,
-						"heading_count": doc.headings.len(),
-					}),
-					human
-				)
+				json_output(&crate::json::JsonValue::Object(stats_obj), human)
 			);
 		}
 		Err(e) => {

@@ -1,4 +1,4 @@
-use serde::Serialize;
+use crate::json::{JsonObject, JsonValue, ToJson};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -37,16 +37,30 @@ pub const CONFIG_FILES: &[&str] = &[
 const DEFAULT_MAX_LINE_LENGTH: u64 = 0;
 
 /// Configuration status representation for JSON output.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConfigStatus {
 	pub exists: bool,
 	pub path: Option<String>,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub config: Option<serde_json::Value>,
+	pub config: Option<JsonValue>,
+}
+
+impl ToJson for ConfigStatus {
+	fn to_json(&self) -> JsonValue {
+		let mut obj = JsonObject::new();
+		obj.insert("exists", self.exists);
+		match &self.path {
+			Some(p) => obj.insert("path", p.as_str()),
+			None => obj.insert("path", JsonValue::Null),
+		}
+		if let Some(ref cfg) = self.config {
+			obj.insert("config", cfg.clone());
+		}
+		JsonValue::Object(obj)
+	}
 }
 
 /// Fully resolved configuration with all options and their effective values.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResolvedConfig {
 	pub blanks_around_headings: bool,
 	pub blanks_around_lists: bool,
@@ -68,6 +82,33 @@ pub struct ResolvedConfig {
 	pub remove_horizontal_rules: bool,
 	pub remove_emphasis: bool,
 	pub minify_html: bool,
+}
+
+impl ToJson for ResolvedConfig {
+	fn to_json(&self) -> JsonValue {
+		let mut obj = JsonObject::new();
+		obj.insert("blanks_around_headings", self.blanks_around_headings);
+		obj.insert("blanks_around_lists", self.blanks_around_lists);
+		obj.insert("blanks_around_fences", self.blanks_around_fences);
+		obj.insert("blanks_around_tables", self.blanks_around_tables);
+		obj.insert("first_line_heading", self.first_line_heading);
+		obj.insert("no_duplicate_heading", self.no_duplicate_heading);
+		obj.insert("no_duplicate_headings", self.no_duplicate_headings);
+		obj.insert("line_length", self.line_length);
+		obj.insert("max_line_length", self.max_line_length);
+		obj.insert("ol_prefix", self.ol_prefix);
+		obj.insert("table_column_style", self.table_column_style);
+		obj.insert("no_hard_tabs", self.no_hard_tabs);
+		obj.insert("no_inline_html", self.no_inline_html);
+		obj.insert("ignore_markdownlintrc", self.ignore_markdownlintrc);
+		obj.insert("remove_bold", self.remove_bold);
+		obj.insert("compact_blank_lines", self.compact_blank_lines);
+		obj.insert("collapse_spaces", self.collapse_spaces);
+		obj.insert("remove_horizontal_rules", self.remove_horizontal_rules);
+		obj.insert("remove_emphasis", self.remove_emphasis);
+		obj.insert("minify_html", self.minify_html);
+		JsonValue::Object(obj)
+	}
 }
 
 impl Default for ResolvedConfig {
@@ -100,7 +141,7 @@ impl Default for ResolvedConfig {
 impl ResolvedConfig {
 	/// Build a `ResolvedConfig` from an optional JSON value, falling back to defaults
 	/// for any missing or invalid keys.
-	pub fn from_json(config: Option<&serde_json::Value>) -> Self {
+	pub fn from_json(config: Option<&JsonValue>) -> Self {
 		let defaults = Self::default();
 		let Some(cfg) = config else {
 			return defaults;
@@ -190,7 +231,7 @@ impl ResolvedConfig {
 
 /// Extract a boolean value from a JSON config object for the given key.
 /// Falls back to `default` when the key is missing or not a boolean.
-pub fn get_bool_config(config: Option<&serde_json::Value>, key: &str, default: bool) -> bool {
+pub fn get_bool_config(config: Option<&JsonValue>, key: &str, default: bool) -> bool {
 	config
 		.and_then(|c| c.get(key))
 		.and_then(|val| val.as_bool())
@@ -199,7 +240,7 @@ pub fn get_bool_config(config: Option<&serde_json::Value>, key: &str, default: b
 
 /// Extract a u64 value from a JSON config object for the given key.
 /// Falls back to `default` when the key is missing or not a number.
-pub fn get_u64_config(config: Option<&serde_json::Value>, key: &str, default: u64) -> u64 {
+pub fn get_u64_config(config: Option<&JsonValue>, key: &str, default: u64) -> u64 {
 	config
 		.and_then(|c| c.get(key))
 		.and_then(|val| val.as_u64())
@@ -209,7 +250,7 @@ pub fn get_u64_config(config: Option<&serde_json::Value>, key: &str, default: u6
 /// Extract a string value from a JSON config object for the given key.
 /// Falls back to `default` when the key is missing or not a string.
 pub fn get_string_config<'a>(
-	config: Option<&'a serde_json::Value>,
+	config: Option<&'a JsonValue>,
 	key: &str,
 	default: &'a str,
 ) -> &'a str {
@@ -221,7 +262,7 @@ pub fn get_string_config<'a>(
 
 /// Resolve a `ResolvedConfig` from a JSON value, falling back to defaults
 /// for any missing or invalid keys.
-pub fn resolve_config(config: Option<&serde_json::Value>) -> ResolvedConfig {
+pub fn resolve_config(config: Option<&JsonValue>) -> ResolvedConfig {
 	ResolvedConfig::from_json(config)
 }
 
@@ -263,11 +304,21 @@ pub const DEFAULT_CONFIG_TEMPLATE: &str = r#"{
 "#;
 
 /// Result of initializing a configuration file.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InitConfigResult {
 	pub success: bool,
 	pub path: String,
 	pub message: String,
+}
+
+impl ToJson for InitConfigResult {
+	fn to_json(&self) -> JsonValue {
+		let mut obj = JsonObject::new();
+		obj.insert("success", self.success);
+		obj.insert("path", self.path.as_str());
+		obj.insert("message", self.message.as_str());
+		JsonValue::Object(obj)
+	}
 }
 
 /// Initialize a configuration file at the specified path or directory.
@@ -385,7 +436,7 @@ mod tests {
 		assert!(config_val.is_some());
 		assert_eq!(
 			config_val.unwrap().get("blanks-around-headings").unwrap(),
-			&serde_json::Value::Bool(true)
+			&JsonValue::Bool(true)
 		);
 	}
 
@@ -461,14 +512,14 @@ mod tests {
 
 	#[test]
 	fn test_resolve_config_empty_json_returns_defaults() {
-		let json = serde_json::json!({});
+		let json = crate::json!({});
 		let cfg = resolve_config(Some(&json));
 		assert_eq!(cfg, ResolvedConfig::default());
 	}
 
 	#[test]
 	fn test_resolve_config_override_all_booleans() {
-		let json = serde_json::json!({
+		let json = crate::json!({
 			"blanks-around-headings": false,
 			"blanks-around-lists": false,
 			"blanks-around-fences": false,
@@ -501,7 +552,7 @@ mod tests {
 
 	#[test]
 	fn test_resolve_config_format_options_kebab_case() {
-		let json = serde_json::json!({
+		let json = crate::json!({
 			"remove-bold": false,
 			"compact-blank-lines": false,
 			"collapse-spaces": false,
@@ -520,7 +571,7 @@ mod tests {
 
 	#[test]
 	fn test_resolve_config_format_options_snake_case() {
-		let json = serde_json::json!({
+		let json = crate::json!({
 			"remove_bold": false,
 			"compact_blank_lines": false,
 			"collapse_spaces": false,
@@ -539,7 +590,7 @@ mod tests {
 
 	#[test]
 	fn test_resolve_config_format_options_nested() {
-		let json = serde_json::json!({
+		let json = crate::json!({
 			"format": {
 				"remove_bold": false,
 				"minify-html": false
@@ -553,7 +604,7 @@ mod tests {
 
 	#[test]
 	fn test_resolve_config_partial_override() {
-		let json = serde_json::json!({
+		let json = crate::json!({
 			"blanks-around-headings": false,
 			"no-hard-tabs": false
 		});
@@ -576,7 +627,7 @@ mod tests {
 
 	#[test]
 	fn test_resolve_config_singular_duplicate_heading() {
-		let json = serde_json::json!({
+		let json = crate::json!({
 			"no-duplicate-heading": false
 		});
 		let cfg = resolve_config(Some(&json));
@@ -586,7 +637,7 @@ mod tests {
 
 	#[test]
 	fn test_resolve_config_plural_duplicate_heading() {
-		let json = serde_json::json!({
+		let json = crate::json!({
 			"no-duplicate-headings": false
 		});
 		let cfg = resolve_config(Some(&json));
@@ -596,7 +647,7 @@ mod tests {
 
 	#[test]
 	fn test_resolve_config_invalid_types_fallback_to_defaults() {
-		let json = serde_json::json!({
+		let json = crate::json!({
 			"blanks-around-headings": "not-a-bool",
 			"max-line-length": "not-a-number",
 			"line-length": 42,
@@ -614,7 +665,7 @@ mod tests {
 
 	#[test]
 	fn test_resolve_config_unknown_keys_ignored() {
-		let json = serde_json::json!({
+		let json = crate::json!({
 			"unknown-key": true,
 			"another-unknown": 123,
 			"blanks-around-headings": false
@@ -635,26 +686,26 @@ mod tests {
 
 	#[test]
 	fn test_get_bool_config_missing_key() {
-		let json = serde_json::json!({ "other": true });
+		let json = crate::json!({ "other": true });
 		assert!(get_bool_config(Some(&json), "blanks-around-headings", true));
 		assert!(!get_bool_config(Some(&json), "missing", false));
 	}
 
 	#[test]
 	fn test_get_bool_config_valid_value() {
-		let json = serde_json::json!({ "flag": false });
+		let json = crate::json!({ "flag": false });
 		assert!(!get_bool_config(Some(&json), "flag", true));
 
-		let json = serde_json::json!({ "flag": true });
+		let json = crate::json!({ "flag": true });
 		assert!(get_bool_config(Some(&json), "flag", false));
 	}
 
 	#[test]
 	fn test_get_bool_config_invalid_type_fallback() {
-		let json = serde_json::json!({ "flag": "string" });
+		let json = crate::json!({ "flag": "string" });
 		assert!(get_bool_config(Some(&json), "flag", true));
 
-		let json = serde_json::json!({ "flag": 123 });
+		let json = crate::json!({ "flag": 123 });
 		assert!(!get_bool_config(Some(&json), "flag", false));
 	}
 
@@ -667,29 +718,29 @@ mod tests {
 
 	#[test]
 	fn test_get_u64_config_missing_key() {
-		let json = serde_json::json!({ "other": 100 });
+		let json = crate::json!({ "other": 100 });
 		assert_eq!(get_u64_config(Some(&json), "max-line-length", 80), 80);
 	}
 
 	#[test]
 	fn test_get_u64_config_valid_value() {
-		let json = serde_json::json!({ "max-line-length": 120 });
+		let json = crate::json!({ "max-line-length": 120 });
 		assert_eq!(get_u64_config(Some(&json), "max-line-length", 80), 120);
 	}
 
 	#[test]
 	fn test_get_u64_config_invalid_type_fallback() {
-		let json = serde_json::json!({ "max-line-length": "not-a-number" });
+		let json = crate::json!({ "max-line-length": "not-a-number" });
 		assert_eq!(get_u64_config(Some(&json), "max-line-length", 80), 80);
 
-		let json = serde_json::json!({ "max-line-length": -5 });
+		let json = crate::json!({ "max-line-length": -5 });
 		// Negative numbers are not valid u64, so fallback
 		assert_eq!(get_u64_config(Some(&json), "max-line-length", 80), 80);
 	}
 
 	#[test]
 	fn test_get_u64_config_zero_value() {
-		let json = serde_json::json!({ "val": 0 });
+		let json = crate::json!({ "val": 0 });
 		assert_eq!(get_u64_config(Some(&json), "val", 99), 0);
 	}
 
@@ -702,7 +753,7 @@ mod tests {
 
 	#[test]
 	fn test_get_string_config_missing_key() {
-		let json = serde_json::json!({ "other": "value" });
+		let json = crate::json!({ "other": "value" });
 		assert_eq!(
 			get_string_config(Some(&json), "format", "markdown"),
 			"markdown"
@@ -711,13 +762,13 @@ mod tests {
 
 	#[test]
 	fn test_get_string_config_valid_value() {
-		let json = serde_json::json!({ "format": "html" });
+		let json = crate::json!({ "format": "html" });
 		assert_eq!(get_string_config(Some(&json), "format", "markdown"), "html");
 	}
 
 	#[test]
 	fn test_get_string_config_invalid_type_fallback() {
-		let json = serde_json::json!({ "format": 123 });
+		let json = crate::json!({ "format": 123 });
 		assert_eq!(
 			get_string_config(Some(&json), "format", "markdown"),
 			"markdown"
@@ -726,7 +777,7 @@ mod tests {
 
 	#[test]
 	fn test_get_string_config_empty_string() {
-		let json = serde_json::json!({ "format": "" });
+		let json = crate::json!({ "format": "" });
 		assert_eq!(get_string_config(Some(&json), "format", "markdown"), "");
 	}
 
@@ -931,7 +982,7 @@ mod tests {
 	#[test]
 	fn test_resolved_config_serialization() {
 		let cfg = ResolvedConfig::default();
-		let json = serde_json::to_string(&cfg).unwrap();
+		let json = crate::json::json_output(&cfg, false);
 		assert!(json.contains("blanks_around_headings"));
 		assert!(json.contains("max_line_length"));
 		assert!(json.contains("no_hard_tabs"));
@@ -942,9 +993,9 @@ mod tests {
 		let status = ConfigStatus {
 			exists: true,
 			path: Some("test.json".to_string()),
-			config: Some(serde_json::json!({ "key": "val" })),
+			config: Some(crate::json!({ "key": "val" })),
 		};
-		let json = serde_json::to_string(&status).unwrap();
+		let json = crate::json::json_output(&status, false);
 		assert!(json.contains("exists"));
 		assert!(json.contains("path"));
 		assert!(json.contains("config"));
@@ -957,7 +1008,7 @@ mod tests {
 			path: Some("test.json".to_string()),
 			config: None,
 		};
-		let json = serde_json::to_string(&status).unwrap();
+		let json = crate::json::json_output(&status, false);
 		assert!(!json.contains("config"));
 	}
 
@@ -966,7 +1017,7 @@ mod tests {
 	#[test]
 	fn test_resolve_config_matches_sample_config() {
 		// Match the sample .agent-md.json but with values flipped to false
-		let json = serde_json::json!({
+		let json = crate::json!({
 			"default": true,
 			"blanks-around-headings": false,
 			"blanks-around-lists": false,
@@ -998,7 +1049,7 @@ mod tests {
 
 	#[test]
 	fn test_resolve_config_all_enabled() {
-		let json = serde_json::json!({
+		let json = crate::json!({
 			"blanks-around-headings": true,
 			"blanks-around-lists": true,
 			"blanks-around-fences": true,
@@ -1075,7 +1126,7 @@ mod tests {
 		assert!(result.is_some());
 		assert_eq!(
 			result.unwrap().get("key").unwrap(),
-			&serde_json::Value::String("value".to_string())
+			&JsonValue::String("value".to_string())
 		);
 	}
 
@@ -1083,10 +1134,10 @@ mod tests {
 
 	#[test]
 	fn test_init_config_template_is_valid_json() {
-		let parsed: serde_json::Value =
-			serde_json::from_str(DEFAULT_CONFIG_TEMPLATE).expect("Template should be valid JSON");
+		let parsed: JsonValue =
+			JsonValue::parse(DEFAULT_CONFIG_TEMPLATE).expect("Template should be valid JSON");
 		assert!(parsed.is_object());
-		assert_eq!(parsed.get("default"), Some(&serde_json::json!(true)));
+		assert_eq!(parsed.get("default"), Some(&crate::json!(true)));
 
 		let resolved = resolve_config(Some(&parsed));
 		assert!(resolved.blanks_around_headings);
@@ -1204,7 +1255,7 @@ mod tests {
 		assert!(val.is_some());
 		assert_eq!(
 			val.unwrap().get("line-length").unwrap(),
-			&serde_json::Value::Bool(true)
+			&JsonValue::Bool(true)
 		);
 	}
 
@@ -1215,7 +1266,7 @@ mod tests {
 		assert!(val.is_some());
 		assert_eq!(
 			val.unwrap().get("line-length").unwrap(),
-			&serde_json::Value::Bool(true)
+			&JsonValue::Bool(true)
 		);
 	}
 
@@ -1274,31 +1325,31 @@ mod tests {
 
 	#[test]
 	fn test_resolve_config_ignore_markdownlintrc_keys() {
-		let kebab = serde_json::json!({ "ignore-markdownlintrc": true });
+		let kebab = crate::json!({ "ignore-markdownlintrc": true });
 		assert!(resolve_config(Some(&kebab)).ignore_markdownlintrc);
 
-		let snake = serde_json::json!({ "ignore_markdownlintrc": true });
+		let snake = crate::json!({ "ignore_markdownlintrc": true });
 		assert!(resolve_config(Some(&snake)).ignore_markdownlintrc);
 
 		assert!(!resolve_config(None).ignore_markdownlintrc);
 		assert!(!ResolvedConfig::default().ignore_markdownlintrc);
 
-		let invalid = serde_json::json!({ "ignore-markdownlintrc": "yes" });
+		let invalid = crate::json!({ "ignore-markdownlintrc": "yes" });
 		assert!(!resolve_config(Some(&invalid)).ignore_markdownlintrc);
 	}
 
 	#[test]
 	fn test_config_value_ignores_markdownlintrc() {
 		assert!(config_value_ignores_markdownlintrc(
-			&serde_json::json!({ "ignore-markdownlintrc": true })
+			&crate::json!({ "ignore-markdownlintrc": true })
 		));
 		assert!(config_value_ignores_markdownlintrc(
-			&serde_json::json!({ "ignore_markdownlintrc": true })
+			&crate::json!({ "ignore_markdownlintrc": true })
 		));
 		assert!(!config_value_ignores_markdownlintrc(
-			&serde_json::json!({ "ignore-markdownlintrc": false })
+			&crate::json!({ "ignore-markdownlintrc": false })
 		));
-		assert!(!config_value_ignores_markdownlintrc(&serde_json::json!({})));
+		assert!(!config_value_ignores_markdownlintrc(&crate::json!({})));
 	}
 
 	#[test]

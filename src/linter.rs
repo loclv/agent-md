@@ -28,14 +28,14 @@ pub fn get_resolved_config_custom_with_options(
 	resolve_config(get_config_with_options(custom_path, ignore_markdownlintrc).as_ref())
 }
 
-pub fn get_markdownlint_config() -> Option<serde_json::Value> {
+pub fn get_markdownlint_config() -> Option<crate::json::JsonValue> {
 	get_markdownlint_config_with_options(false)
 }
 
 /// Get markdownlint configuration, optionally ignoring `markdownlintrc.*` files.
 pub fn get_markdownlint_config_with_options(
 	ignore_markdownlintrc: bool,
-) -> Option<serde_json::Value> {
+) -> Option<crate::json::JsonValue> {
 	get_config_with_options(None, ignore_markdownlintrc)
 }
 
