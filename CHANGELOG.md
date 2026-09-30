@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.1]
+
 ### Fixed
 
 - Table Formatting Escaped Pipes: Fixed an issue where escaped pipes (`\|`) representing literal characters or "or" conditions inside table cells were erroneously split into multiple cells and formatted with extra spaces (e.g. `cell \ | cell`). Table cell splitting now treats escaped pipes (`\|`) and pipes inside inline code spans as cell content rather than column delimiters.
