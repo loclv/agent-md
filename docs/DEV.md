@@ -17,6 +17,7 @@ agent-md/
     types.rs - Common types, structures and utilities
     config.rs - Configuration types, resolution and init
     config_discovery.rs - Config file lookup, parsing and target resolution
+    datetime.rs - Native zero-dependency date and time utilities and parsing
     json.rs - Native zero-dependency JSON parser, serializer, and value representation
     jsonc.rs - JSONC comment stripping for configuration files
     yaml.rs - Native zero-dependency YAML configuration parser

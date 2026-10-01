@@ -18,6 +18,7 @@ pub mod cli;
 pub mod commands;
 pub mod config;
 pub mod config_discovery;
+pub mod datetime;
 pub mod format;
 #[cfg(test)]
 mod html_tests;
@@ -36,6 +37,7 @@ pub mod yaml;
 
 pub use cli::{Cli, Commands};
 pub use commands::parse_markdown;
+pub use datetime::{Date, DateTime, DateTimeError, Weekday};
 pub use format::{format_markdown, format_markdown_with_options, FormatOptions};
 pub use ignore::{
 	get_git_ignore, get_ignore_list, get_ignore_list_in_dir, get_markdownlint_ignore, is_ignored,

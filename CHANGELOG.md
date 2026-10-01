@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Native DateTime Module (`src/datetime.rs`): Added zero-dependency date and time utility functions and structures (`Date`, `DateTime`, `Weekday`, `DateTimeError`). Features UTC timestamp generation (`now_iso8601`, `today_iso8601`), civil calendar conversions with Howard Hinnant algorithm, leap year calculations, ISO 8601 / RFC 3339 parsing with timezone offset normalization, Unix epoch seconds and milliseconds conversions, and comprehensive strftime-style formatting (`%Y`, `%m`, `%d`, `%H`, `%M`, `%S`, `%f`, etc.).
+
+### Removed
+
+- Removed `chrono` Dependency: Completely eliminated `chrono = "0.4"` and all transitive dependencies (`iana-time-zone`, `js-sys`, `log`, `futures-util`, `pin-project-lite`, `slab`, `wasm-bindgen`, `windows-core`, `windows-implement`, `windows-interface`, `windows-result`, `windows-strings`), saving 238 lines from `Cargo.lock` and removing external OS-level bindings.
+
 ## [0.4.0] - 2026-10-01
 
 ### Fixed
