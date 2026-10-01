@@ -262,8 +262,314 @@ pub fn get_string_config<'a>(
 
 /// Resolve a `ResolvedConfig` from a JSON value, falling back to defaults
 /// for any missing or invalid keys.
+///
+/// Note: this does not apply per-file `overrides`. Use
+/// [`resolve_config_for_target`] when a target path is known.
 pub fn resolve_config(config: Option<&JsonValue>) -> ResolvedConfig {
 	ResolvedConfig::from_json(config)
+}
+
+/// A single per-file configuration override.
+///
+/// Matches the requested shape:
+///
+/// ```json
+/// {
+///   "overrides": [
+///     {
+///       "includes": ["scripts/*", "docs/*"],
+///       "rules": { "blanks-around-lists": false }
+///     }
+///   ]
+/// }
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConfigOverride {
+	/// Glob patterns matched against the target path. Empty means match all.
+	pub includes: Vec<String>,
+	/// Optional exclusion patterns. A matching exclude wins over includes.
+	pub excludes: Vec<String>,
+	/// Partial rule set applied on top of the base config when matched.
+	pub rules: JsonValue,
+}
+
+/// Collect string patterns from `includes`/`include`/`files` style keys.
+fn collect_patterns(obj: &crate::json::JsonObject, keys: &[&str]) -> Vec<String> {
+	for key in keys {
+		if let Some(val) = obj.get(key) {
+			if let Some(arr) = val.as_array() {
+				return arr
+					.iter()
+					.filter_map(|v| v.as_str().map(|s| s.to_string()))
+					.collect();
+			}
+			if let Some(s) = val.as_str() {
+				return vec![s.to_string()];
+			}
+		}
+	}
+	Vec::new()
+}
+
+/// Parse the `overrides` array from a config value.
+///
+/// Unknown shapes and invalid entries are skipped. The `rules` (or
+/// `options` alias) object may use the same kebab-case keys as the
+/// top-level config.
+pub fn parse_overrides(config: &JsonValue) -> Vec<ConfigOverride> {
+	let Some(arr) = config.get("overrides").and_then(|v| v.as_array()) else {
+		return Vec::new();
+	};
+	let mut out = Vec::new();
+	for entry in arr {
+		let Some(obj) = entry.as_object() else {
+			continue;
+		};
+		let includes = collect_patterns(obj, &["includes", "include", "files", "patterns"]);
+		let excludes = collect_patterns(obj, &["excludes", "exclude"]);
+		let rules = obj
+			.get("rules")
+			.or_else(|| obj.get("options"))
+			.cloned()
+			.unwrap_or(JsonValue::Null);
+		if !rules.is_object() {
+			continue;
+		}
+		out.push(ConfigOverride {
+			includes,
+			excludes,
+			rules,
+		});
+	}
+	out
+}
+
+/// Normalize a path or glob for override matching.
+fn normalize_override_path(value: &str) -> String {
+	value
+		.replace('\\', "/")
+		.trim_start_matches("./")
+		.trim_start_matches('/')
+		.to_string()
+}
+
+/// Match a single override glob against a single candidate path.
+///
+/// Uses [`crate::ignore::wildcard_match`] where `*` spans directories, so
+/// `scripts/*` also matches nested files. A bare directory name (no
+/// wildcard) matches everything underneath it, and a trailing `/*`
+/// prefix also matches the directory itself.
+fn override_pattern_matches(pattern: &str, candidate: &str) -> bool {
+	let pat = normalize_override_path(pattern);
+	let cand = normalize_override_path(candidate);
+	if pat.is_empty() || cand.is_empty() {
+		return false;
+	}
+	if crate::ignore::wildcard_match(&pat, &cand) {
+		return true;
+	}
+	if let Some(prefix) = pat.strip_suffix("/*") {
+		let prefix = prefix.trim_end_matches('/');
+		if cand == prefix || cand.starts_with(&format!("{}/", prefix)) {
+			return true;
+		}
+	}
+	if !pat.contains('*') && !pat.contains('?') {
+		let trimmed = pat.trim_end_matches('/');
+		if cand == trimmed || cand.starts_with(&format!("{}/", trimmed)) {
+			return true;
+		}
+	}
+	false
+}
+
+/// Build candidate strings for a target so overrides work regardless of
+/// whether the caller passes an absolute path, a cwd-relative path, or a
+/// config-relative path.
+fn override_candidates(target_path: &str, config_path: Option<&str>) -> Vec<String> {
+	use std::path::Path;
+	let mut candidates = Vec::new();
+	let normalized = target_path.replace('\\', "/");
+	candidates.push(normalized.clone());
+	if let Some(name) = Path::new(target_path).file_name().and_then(|n| n.to_str()) {
+		candidates.push(name.to_string());
+	}
+	// Relative to the config file directory (e.g. `docs/foo.md` for a
+	// config at the repo root and target `docs/foo.md` or an absolute path).
+	if let Some(cfg) = config_path {
+		let cfg_path = Path::new(cfg);
+		if let Some(dir) = cfg_path.parent() {
+			let dir_str = dir.to_string_lossy().replace('\\', "/");
+			let prefix = if dir_str.is_empty() || dir_str == "." {
+				String::new()
+			} else {
+				format!("{}/", dir_str.trim_end_matches('/'))
+			};
+			if !prefix.is_empty() && normalized.starts_with(&prefix) {
+				candidates.push(normalized[prefix.len()..].to_string());
+			}
+			// Absolute target under an absolute config dir.
+			if let Ok(rel) = Path::new(target_path).strip_prefix(dir) {
+				let rel_str = rel.to_string_lossy().replace('\\', "/");
+				if !rel_str.is_empty() {
+					candidates.push(rel_str);
+				}
+			}
+		}
+	}
+	// Relative to the current working directory for absolute targets.
+	if Path::new(target_path).is_absolute() {
+		if let Ok(cwd) = std::env::current_dir() {
+			if let Ok(rel) = Path::new(target_path).strip_prefix(&cwd) {
+				let rel_str = rel.to_string_lossy().replace('\\', "/");
+				if !rel_str.is_empty() {
+					candidates.push(rel_str);
+				}
+			}
+		}
+	}
+	candidates
+}
+
+/// Check whether an override applies to a target path.
+pub fn override_matches_target(
+	override_entry: &ConfigOverride,
+	target_path: &str,
+	config_path: Option<&str>,
+) -> bool {
+	let candidates = override_candidates(target_path, config_path);
+	if !override_entry.excludes.is_empty()
+		&& override_entry.excludes.iter().any(|pat| {
+			candidates
+				.iter()
+				.any(|cand| override_pattern_matches(pat, cand))
+		}) {
+		return false;
+	}
+	if override_entry.includes.is_empty() {
+		return true;
+	}
+	override_entry.includes.iter().any(|pat| {
+		candidates
+			.iter()
+			.any(|cand| override_pattern_matches(pat, cand))
+	})
+}
+
+/// Read a bool from an override `rules` object, accepting kebab-case,
+/// snake_case, and a nested `format` object for formatter keys.
+fn override_rule_bool(rules: &JsonValue, kebab: &str, snake: &str) -> Option<bool> {
+	if let Some(format) = rules.get("format").and_then(|v| v.as_object()) {
+		if let Some(v) = format.get(kebab).or_else(|| format.get(snake)) {
+			if let Some(b) = v.as_bool() {
+				return Some(b);
+			}
+		}
+	}
+	match (rules.get(kebab), rules.get(snake)) {
+		(Some(v), _) if v.is_boolean() => v.as_bool(),
+		(_, Some(v)) if v.is_boolean() => v.as_bool(),
+		_ => None,
+	}
+}
+
+/// Apply a single override `rules` object on top of a resolved config.
+///
+/// Unknown keys are ignored; invalid types leave the base value unchanged.
+fn apply_override_rules(base: &mut ResolvedConfig, rules: &JsonValue) {
+	if let Some(v) = override_rule_bool(rules, "blanks-around-headings", "blanks_around_headings") {
+		base.blanks_around_headings = v;
+	}
+	if let Some(v) = override_rule_bool(rules, "blanks-around-lists", "blanks_around_lists") {
+		base.blanks_around_lists = v;
+	}
+	if let Some(v) = override_rule_bool(rules, "blanks-around-fences", "blanks_around_fences") {
+		base.blanks_around_fences = v;
+	}
+	if let Some(v) = override_rule_bool(rules, "blanks-around-tables", "blanks_around_tables") {
+		base.blanks_around_tables = v;
+	}
+	if let Some(v) = override_rule_bool(rules, "first-line-heading", "first_line_heading") {
+		base.first_line_heading = v;
+	}
+	match (
+		rules.get("no-duplicate-heading"),
+		rules.get("no-duplicate-headings"),
+		rules.get("no_duplicate_heading"),
+		rules.get("no_duplicate_headings"),
+	) {
+		(Some(v), _, _, _) | (_, Some(v), _, _) | (_, _, Some(v), _) | (_, _, _, Some(v))
+			if v.is_boolean() =>
+		{
+			let b = v.as_bool().unwrap_or(base.no_duplicate_heading);
+			base.no_duplicate_heading = b;
+			base.no_duplicate_headings = b;
+		}
+		_ => {}
+	}
+	if let Some(v) = override_rule_bool(rules, "line-length", "line_length") {
+		base.line_length = v;
+	}
+	if let Some(v) = rules.get("max-line-length").and_then(|v| v.as_u64()) {
+		base.max_line_length = v;
+	}
+	if let Some(v) = override_rule_bool(rules, "ol-prefix", "ol_prefix") {
+		base.ol_prefix = v;
+	}
+	if let Some(v) = override_rule_bool(rules, "table-column-style", "table_column_style") {
+		base.table_column_style = v;
+	}
+	if let Some(v) = override_rule_bool(rules, "no-hard-tabs", "no_hard_tabs") {
+		base.no_hard_tabs = v;
+	}
+	if let Some(v) = override_rule_bool(rules, "no-inline-html", "no_inline_html") {
+		base.no_inline_html = v;
+	}
+	if let Some(v) = override_rule_bool(rules, "remove-bold", "remove_bold") {
+		base.remove_bold = v;
+	}
+	if let Some(v) = override_rule_bool(rules, "compact-blank-lines", "compact_blank_lines") {
+		base.compact_blank_lines = v;
+	}
+	if let Some(v) = override_rule_bool(rules, "collapse-spaces", "collapse_spaces") {
+		base.collapse_spaces = v;
+	}
+	if let Some(v) = override_rule_bool(rules, "remove-horizontal-rules", "remove_horizontal_rules")
+	{
+		base.remove_horizontal_rules = v;
+	}
+	if let Some(v) = override_rule_bool(rules, "remove-emphasis", "remove_emphasis") {
+		base.remove_emphasis = v;
+	}
+	if let Some(v) = override_rule_bool(rules, "minify-html", "minify_html") {
+		base.minify_html = v;
+	}
+}
+
+/// Resolve a config value into a `ResolvedConfig`, applying matching
+/// `overrides` entries for `target_path` in order (later entries win).
+///
+/// `config_path` is the discovered config file location and is used to
+/// match config-relative globs such as `docs/*`. When `target_path` is
+/// `None` (e.g. linting raw content), only the base config is returned.
+pub fn resolve_config_for_target(
+	config: Option<&JsonValue>,
+	target_path: Option<&str>,
+	config_path: Option<&str>,
+) -> ResolvedConfig {
+	let mut base = ResolvedConfig::from_json(config);
+	let Some(cfg) = config else {
+		return base;
+	};
+	let Some(target) = target_path else {
+		return base;
+	};
+	for entry in parse_overrides(cfg) {
+		if override_matches_target(&entry, target, config_path) {
+			apply_override_rules(&mut base, &entry.rules);
+		}
+	}
+	base
 }
 
 pub use crate::config_discovery::{
@@ -1423,5 +1729,109 @@ mod tests {
 
 		let ignored = get_config_with_options(temp_dir.to_str(), true);
 		assert!(ignored.is_none());
+	}
+
+	#[test]
+	fn test_parse_overrides_sample_shape() {
+		let json = crate::json!({
+			"overrides": [
+				{
+					"includes": ["scripts/*", "docs/*"],
+					"rules": { "blanks-around-lists": false }
+				}
+			]
+		});
+		let overrides = parse_overrides(&json);
+		assert_eq!(overrides.len(), 1);
+		assert_eq!(overrides[0].includes, vec!["scripts/*", "docs/*"]);
+		assert_eq!(
+			overrides[0].rules.get("blanks-around-lists"),
+			Some(&crate::json!(false))
+		);
+	}
+
+	#[test]
+	fn test_resolve_config_for_target_applies_sample_override() {
+		let json = crate::json!({
+			"blanks-around-lists": true,
+			"overrides": [
+				{
+					"includes": ["scripts/*", "docs/*"],
+					"rules": { "blanks-around-lists": false }
+				}
+			]
+		});
+		let matched = resolve_config_for_target(Some(&json), Some("docs/guide.md"), None);
+		assert!(!matched.blanks_around_lists);
+		let matched_nested =
+			resolve_config_for_target(Some(&json), Some("scripts/nested/tool.md"), None);
+		assert!(!matched_nested.blanks_around_lists);
+		let unmatched = resolve_config_for_target(Some(&json), Some("src/guide.md"), None);
+		assert!(unmatched.blanks_around_lists);
+	}
+
+	#[test]
+	fn test_resolve_config_for_target_later_override_wins_and_excludes() {
+		let json = crate::json!({
+			"blanks-around-lists": true,
+			"overrides": [
+				{
+					"includes": ["docs/*"],
+					"rules": { "blanks-around-lists": false }
+				},
+				{
+					"includes": ["docs/*"],
+					"excludes": ["docs/keep.md"],
+					"rules": { "blanks-around-lists": true }
+				}
+			]
+		});
+		let re_enabled = resolve_config_for_target(Some(&json), Some("docs/other.md"), None);
+		assert!(re_enabled.blanks_around_lists);
+		let excluded = resolve_config_for_target(Some(&json), Some("docs/keep.md"), None);
+		assert!(!excluded.blanks_around_lists);
+	}
+
+	#[test]
+	fn test_resolve_config_for_target_none_target_returns_base() {
+		let json = crate::json!({
+			"blanks-around-lists": true,
+			"overrides": [
+				{
+					"includes": ["docs/*"],
+					"rules": { "blanks-around-lists": false }
+				}
+			]
+		});
+		let cfg = resolve_config_for_target(Some(&json), None, None);
+		assert!(cfg.blanks_around_lists);
+	}
+
+	#[test]
+	fn test_resolve_config_for_target_config_relative_match() {
+		let json = crate::json!({
+			"blanks-around-lists": true,
+			"overrides": [
+				{
+					"includes": ["docs/*"],
+					"rules": { "blanks-around-lists": false }
+				}
+			]
+		});
+		let cfg = resolve_config_for_target(
+			Some(&json),
+			Some("/repo/docs/guide.md"),
+			Some("/repo/agent-md.json"),
+		);
+		assert!(!cfg.blanks_around_lists);
+	}
+
+	#[test]
+	fn test_override_invalid_entries_skipped() {
+		let json = crate::json!({
+			"overrides": ["not-an-object", { "includes": ["docs/*"] }]
+		});
+		assert!(parse_overrides(&json).is_empty());
+		assert!(parse_overrides(&crate::json!({})).is_empty());
 	}
 }

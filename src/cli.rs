@@ -348,6 +348,9 @@ pub fn get_format_options_for_target(
 
 /// Construct [`crate::format::FormatOptions`] for a target, optionally ignoring
 /// `markdownlintrc.*` configuration files.
+///
+/// Per-file `overrides` in the discovered config are applied when
+/// `target_path` is a file (e.g. `docs/guide.md` matches `docs/*`).
 pub fn get_format_options_for_target_with_options(
 	remove_bold: Option<bool>,
 	compact_blank_lines: Option<bool>,
@@ -359,14 +362,23 @@ pub fn get_format_options_for_target_with_options(
 	target_path: Option<&str>,
 	ignore_markdownlintrc: bool,
 ) -> crate::format::FormatOptions {
-	let cfg = crate::config::resolve_config(
-		crate::config::get_config_for_target_with_options(
-			target_path,
-			custom_config,
-			ignore_markdownlintrc,
-		)
-		.as_ref(),
-	);
+	let cfg = match crate::config::read_config_for_target_with_options(
+		target_path,
+		custom_config,
+		ignore_markdownlintrc,
+	) {
+		Some((path, value)) => {
+			crate::config::resolve_config_for_target(Some(&value), target_path, Some(&path))
+		}
+		None => crate::config::resolve_config(
+			crate::config::get_config_for_target_with_options(
+				target_path,
+				custom_config,
+				ignore_markdownlintrc,
+			)
+			.as_ref(),
+		),
+	};
 
 	crate::format::FormatOptions {
 		remove_bold: remove_bold.unwrap_or(cfg.remove_bold),
@@ -379,5 +391,46 @@ pub fn get_format_options_for_target_with_options(
 		blanks_around_fences: cfg.blanks_around_fences,
 		blanks_around_headings: cfg.blanks_around_headings,
 		minify_html: minify_html.unwrap_or(cfg.minify_html),
+	}
+}
+
+/// Re-resolve only the config-driven blank spacing fields for a file,
+/// keeping CLI-driven fields from `base` untouched.
+///
+/// Used when formatting a directory so each file gets its own `overrides`.
+pub fn patch_format_options_for_file(
+	base: &crate::format::FormatOptions,
+	file_path: &str,
+	custom_config: Option<&str>,
+	ignore_markdownlintrc: bool,
+) -> crate::format::FormatOptions {
+	let cfg = match crate::config::read_config_for_target_with_options(
+		Some(file_path),
+		custom_config,
+		ignore_markdownlintrc,
+	) {
+		Some((path, value)) => {
+			crate::config::resolve_config_for_target(Some(&value), Some(file_path), Some(&path))
+		}
+		None => crate::config::resolve_config(
+			crate::config::get_config_for_target_with_options(
+				Some(file_path),
+				custom_config,
+				ignore_markdownlintrc,
+			)
+			.as_ref(),
+		),
+	};
+	crate::format::FormatOptions {
+		remove_bold: base.remove_bold,
+		compact_blank_lines: base.compact_blank_lines,
+		trim_trailing_whitespace: base.trim_trailing_whitespace,
+		collapse_spaces: base.collapse_spaces,
+		remove_horizontal_rules: base.remove_horizontal_rules,
+		remove_emphasis: base.remove_emphasis,
+		blanks_around_lists: cfg.blanks_around_lists,
+		blanks_around_fences: cfg.blanks_around_fences,
+		blanks_around_headings: cfg.blanks_around_headings,
+		minify_html: base.minify_html,
 	}
 }

@@ -2,7 +2,8 @@ use crate::rules;
 use crate::types::{LintError, LintResult, LintWarning};
 
 use crate::config::{
-	get_config_for_target_with_options, get_config_with_options, resolve_config, ResolvedConfig,
+	get_config_for_target_with_options, get_config_with_options,
+	read_config_for_target_with_options, resolve_config, resolve_config_for_target, ResolvedConfig,
 };
 
 /// Resolve the full configuration from the default config file location.
@@ -293,10 +294,17 @@ pub fn validate_markdown_for_target_with_options(
 	custom_path: Option<&str>,
 	ignore_markdownlintrc: bool,
 ) -> LintResult {
-	let config = resolve_config(
-		get_config_for_target_with_options(target_path, custom_path, ignore_markdownlintrc)
-			.as_ref(),
-	);
+	let config = match read_config_for_target_with_options(
+		target_path,
+		custom_path,
+		ignore_markdownlintrc,
+	) {
+		Some((path, value)) => resolve_config_for_target(Some(&value), target_path, Some(&path)),
+		None => resolve_config(
+			get_config_for_target_with_options(target_path, custom_path, ignore_markdownlintrc)
+				.as_ref(),
+		),
+	};
 	validate_markdown_with_config(content, &config)
 }
 

@@ -11,7 +11,7 @@ pub mod tables;
 #[cfg(test)]
 mod tests;
 
-pub use io::{cmd_fmt, cmd_fmt_stdin};
+pub use io::{cmd_fmt, cmd_fmt_stdin, cmd_fmt_with_config};
 pub use lines::is_horizontal_rule;
 pub use options::FormatOptions;
 

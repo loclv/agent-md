@@ -93,3 +93,32 @@ Formatter options accept kebab-case or snake_case at the top level, or nested un
 ```
 
 When both spellings are present, the nested `format` object wins, then kebab-case, then snake_case. The sample template created by `agent-md init` lists every option with its default value.
+
+## Overrides
+
+Use `overrides` to apply different rule values to matching files. Each entry lists `includes` glob patterns and a `rules` object with the same keys as the top-level config. Entries apply in order and later entries win. An optional `excludes` list skips files from that entry.
+
+```json
+{
+  "blanks-around-lists": true,
+  "overrides": [
+    {
+      "includes": [
+        "scripts/*",
+        "docs/*"
+      ],
+      "rules": {
+        "blanks-around-lists": false
+      }
+    }
+  ]
+}
+```
+
+Matching details:
+
+- Patterns match the target file path, its path relative to the config file directory, and its path relative to the current directory.
+- `*` spans directories, so `scripts/*` matches `scripts/nested/tool.md`.
+- A bare directory name matches everything underneath it.
+- An empty `includes` list matches all files.
+- `lint` resolves overrides per target file; `fmt` re-resolves per file when formatting a directory, keeping CLI flags such as `--remove-bold=false` intact.

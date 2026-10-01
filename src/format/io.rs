@@ -50,6 +50,18 @@ pub fn format_single_file(path: &str, options: FormatOptions) -> Result<Document
 }
 
 pub fn cmd_fmt(path: &str, human: bool, options: FormatOptions) {
+	cmd_fmt_with_config(path, human, options, None, false)
+}
+
+/// Format a file or directory, re-resolving per-file `overrides` for
+/// directory runs so `scripts/*` and `docs/*` entries apply to each file.
+pub fn cmd_fmt_with_config(
+	path: &str,
+	human: bool,
+	options: FormatOptions,
+	custom_config: Option<&str>,
+	ignore_markdownlintrc: bool,
+) {
 	let path_buf = PathBuf::from(path);
 
 	if path_buf.is_dir() {
@@ -76,7 +88,13 @@ pub fn cmd_fmt(path: &str, human: bool, options: FormatOptions) {
 
 		for file in &files {
 			let file_path = file.to_string_lossy().to_string();
-			match format_single_file(&file_path, options.clone()) {
+			let file_options = crate::cli::patch_format_options_for_file(
+				&options,
+				&file_path,
+				custom_config,
+				ignore_markdownlintrc,
+			);
+			match format_single_file(&file_path, file_options) {
 				Ok(doc) => {
 					success_count += 1;
 					println!(

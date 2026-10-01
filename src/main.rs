@@ -107,7 +107,13 @@ fn main() {
 			if stdin {
 				format::cmd_fmt_stdin(options)
 			} else if let Some(p) = path {
-				format::cmd_fmt(&p, cli.human, options)
+				format::cmd_fmt_with_config(
+					&p,
+					cli.human,
+					options,
+					cli.config.as_deref(),
+					cli.ignore_markdownlintrc,
+				)
 			} else {
 				eprintln!("Error: Either --stdin or a file path is required");
 				std::process::exit(1);
@@ -130,7 +136,13 @@ fn main() {
 					target,
 					cli.ignore_markdownlintrc,
 				);
-				format::cmd_fmt(&path, cli.human, options)
+				format::cmd_fmt_with_config(
+					&path,
+					cli.human,
+					options,
+					cli.config.as_deref(),
+					cli.ignore_markdownlintrc,
+				)
 			} else {
 				// If no command and not version, show help
 				eprintln!("Usage: agent-md <COMMAND>");

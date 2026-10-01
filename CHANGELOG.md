@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Per-file `overrides` in `agent-md.json`: Added `overrides` array with `includes` globs, optional `excludes`, and a `rules` object using the same keys as top-level config (for example `blanks-around-lists`). Matching entries apply in order per target file, so `scripts/*` and `docs/*` can disable blank lines around lists while other paths keep defaults. `lint` resolves overrides per file and `fmt` re-resolves per file for directory runs.
+
 - Native DateTime Module (`src/datetime.rs`): Added zero-dependency date and time utility functions and structures (`Date`, `DateTime`, `Weekday`, `DateTimeError`). Features UTC timestamp generation (`now_iso8601`, `today_iso8601`), civil calendar conversions with Howard Hinnant algorithm, leap year calculations, ISO 8601 / RFC 3339 parsing with timezone offset normalization, Unix epoch seconds and milliseconds conversions, and comprehensive strftime-style formatting (`%Y`, `%m`, `%d`, `%H`, `%M`, `%S`, `%f`, etc.).
 
 ### Removed

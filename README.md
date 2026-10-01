@@ -143,7 +143,7 @@ Detailed guides and documentation are organized in the `docs/` folder:
 - [CLI Usage Guide](docs/cli-usage-guide.md): Complete command reference, section operations, formatting options, and structured parsing
 - [LLM / Agent Integration Rule](docs/llm-agent-rule.md): Integration patterns, section reads/writes, field extractions, and workflows for AI agents
 - [Markdown Writing Rules](docs/markdown-writing-rules.md): Formatting standards and AI-friendly rules
-- [Configuration Guide](docs/config.md): Configuration resolution and options reference
+- [Configuration Guide](docs/config.md): Configuration resolution, options reference, and per-file `overrides`
 - [VS Code Extension](docs/vscode-extension.md): Extension setup, settings, and keybindings
 - [Development Guide](docs/DEV.md): Architecture, building, testing, and contribution setup
 - [Vietnamese Documentation](README-vi.md): Bản tiếng Việt của README và tài liệu liên quan
