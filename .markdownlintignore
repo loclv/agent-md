@@ -4,3 +4,4 @@ target/
 docs/markdown-writing-rules.md
 markdownlint/
 test-md/
+docs/cli-usage-guide.md
