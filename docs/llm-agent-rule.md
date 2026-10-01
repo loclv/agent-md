@@ -16,15 +16,15 @@ When working with markdown files, always use the agent-md CLI tool instead of di
 ### Read Files
 
 ```bash
-agent-md read <path> --field content   # Get content
+agent-md read <path> --field content # Get content
 # example:
 agent-md read README.md -f content
 
-agent-md read <path> --field headings  # Get headings
+agent-md read <path> --field headings # Get headings
 # example:
 agent-md read README.md -f headings
 
-agent-md read <path> -f word_count     # Short form for word count
+agent-md read <path> -f word_count # Short form for word count
 # example:
 agent-md read README.md -f word_count
 
