@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-01
+
 ### Added
 
 - Per-file `overrides` in `agent-md.json`: Added `overrides` array with `includes` globs, optional `excludes`, and a `rules` object using the same keys as top-level config (for example `blanks-around-lists`). Matching entries apply in order per target file, so `scripts/*` and `docs/*` can disable blank lines around lists while other paths keep defaults. `lint` resolves overrides per file and `fmt` re-resolves per file for directory runs.

@@ -121,7 +121,7 @@ Add `agent-md` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-agent-md = "0.4.0"
+agent-md = "0.5.0"
 ```
 
 Use the programmatic APIs in your application:
