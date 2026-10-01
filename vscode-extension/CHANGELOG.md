@@ -20,6 +20,7 @@ All notable changes to the "agent-md-formatter" extension will be documented in 
 ## [0.1.0] - 2024-04-04
 
 ### Added
+
 - Initial release
 - Document formatting support for Markdown files using agent-md CLI
 - Configurable formatting options:
