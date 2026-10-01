@@ -2,82 +2,122 @@
 
 ## Core Rule
 
-When working with markdown files, always use the agent-md CLI tool instead of direct file operations.
+When working with markdown files, always use the `agent-md` CLI tool instead of direct file operations.
 
 ## Why Use agent-md
 
-- JSON output for easy parsing
-- Built-in validation for AI-friendly content
-- Designed for AI agent workflows
-- Consistent formatting
+- JSON output: All commands return structured JSON for easy parsing
+- Built-in validation: Automatic markdown validation ensures AI-friendly content
+- LLM-optimized: Designed specifically for AI agent workflows
+- Consistent formatting: Enforces markdown standards for readability and token savings
 
-## Basic Commands
+## Core Commands
 
-### Read Files
+### Read Files and Extract Fields
 
 ```bash
-agent-md read <path> --field content # Get content
-# example:
-agent-md read README.md -f content
+# Read whole document
+agent-md read <path>
 
-agent-md read <path> --field headings # Get headings
-# example:
-agent-md read README.md -f headings
+# Extract specific field (path, content, word_count, line_count, headings)
+agent-md read <path> --field content
+agent-md read <path> --field headings
+agent-md read <path> -f word_count
 
-agent-md read <path> -f word_count # Short form for word count
-# example:
-agent-md read README.md -f word_count
-
+# Read specific section without reading entire file
+agent-md read <path> --content "## Section Name"
+# Nested section:
+agent-md read <path> --content "## Development > Build"
 ```
 
-### Write Files
+### Write Files and Sections
 
 ```bash
+# Write file with pre-validation
 agent-md write <path> "<content>"
+
+# Write or replace a specific section
+agent-md write-section <path> --section "## Section" --content "<content>"
+
+# Append content to file
+agent-md append <path> "<content>"
+
+# Insert content at line number
+agent-md insert <path> <line> "<content>"
+
+# Delete lines
+agent-md delete <path> <line> [count]
 ```
 
-### Search Content
+### Search and Navigation
 
 ```bash
+# Search within file
 agent-md search <path> "<query>"
+
+# Extract document outline
+agent-md headings <path>
+
+# Get document statistics
+agent-md stats <path>
 ```
 
-### Validate Content
+### Validate and Format
 
 ```bash
+# Validate markdown file
+agent-md lint <path>
+
+# Validate content directly without creating a file
 agent-md lint --content "<content>"
-# example:
-agent-md lint --content "# Hello\n\nThis is a test"
+
+# Format markdown file in-place
+agent-md fmt <path>
 ```
 
-### Check Configuration
+### Project and Configuration Context
 
 ```bash
+# Check resolved configuration
 agent-md config --check
-# check if configuration file exists
-```
 
-### Inspect Ignore Rules
-
-```bash
+# Inspect ignore patterns from .markdownlintignore and .gitignore
 agent-md ignore
-# get merged deduplicated ignore rules from .markdownlintignore and .gitignore
+
+# Run commands with configuration from a specific project directory
+agent-md --cwd /path/to/project lint <path>
+agent-md --cwd /path/to/project fmt <path>
 ```
 
-## Integration Pattern
+## Integration Workflow
+
+When performing agentic edits on Markdown files, follow this pattern:
 
 ```bash
-agent-md read README.md -f headings
+# 1. Inspect document structure
+agent-md read README.md --field headings
+
+# 2. Search for relevant sections or keywords
 agent-md search README.md "TODO"
-agent-md lint --content "$CONTENT"
-agent-md write file.md "$CONTENT"
+
+# 3. Read only the relevant section
+agent-md read README.md --content "## Installation"
+
+# 4. Validate before writing
+agent-md lint --content "$NEW_CONTENT"
+
+# 5. Write validated content
+agent-md write README.md "$NEW_CONTENT"
 ```
 
-## Key Benefits
+## Task Execution Requirements
 
-1. Structured JSON output
-2. Automatic validation
-3. Error handling
-4. AI-optimized parsing
+On task completion, AI agents must:
 
-This rule ensures consistent markdown operations for AI agents.
+- Update documentation in the `docs/` directory
+- Update `README.md`
+- Write unit tests for changes
+- Run linting: `cargo clippy --all-targets --all-features -- -D warnings`
+- Run formatter: `cargo fmt`
+- Run tests: `cargo test`
+- Run `agent-md lint path/to/file.md` on every created or updated Markdown file

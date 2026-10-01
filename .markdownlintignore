@@ -5,3 +5,5 @@ docs/markdown-writing-rules.md
 markdownlint/
 test-md/
 docs/cli-usage-guide.md
+docs/cli-usage-guide-vi.md
+docs/vscode-extension.md

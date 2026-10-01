@@ -12,6 +12,13 @@ All notable changes to this project will be documented in this file.
 
 - Removed `chrono` Dependency: Completely eliminated `chrono = "0.4"` and all transitive dependencies (`iana-time-zone`, `js-sys`, `log`, `futures-util`, `pin-project-lite`, `slab`, `wasm-bindgen`, `windows-core`, `windows-implement`, `windows-interface`, `windows-result`, `windows-strings`), saving 238 lines from `Cargo.lock` and removing external OS-level bindings.
 
+### Documentation
+
+- Refactored `README.md` and `README-vi.md`: Cleaned up the landing pages by extracting verbose documentation into dedicated guides in `docs/`, organizing a central Documentation index, and keeping READMEs focused and concise.
+- Dedicated VS Code Extension Guide (`docs/vscode-extension.md`): Extracted full extension installation, settings, and keybinding documentation into a standalone reference guide.
+- Enriched LLM Agent Guidelines (`docs/llm-agent-rule.md`): Expanded agent rules with section reading/writing, configuration discovery with `--cwd`, and integration workflows.
+- Extracted Vietnamese CLI Usage Guide (`docs/cli-usage-guide-vi.md`): Moved exhaustive CLI commands, formatting options, and parsing rules to the docs folder.
+
 ## [0.4.0] - 2026-10-01
 
 ### Fixed

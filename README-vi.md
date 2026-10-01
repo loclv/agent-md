@@ -45,44 +45,48 @@ Một ví dụ về cây thư mục trước và sau khi format:
 +├─file-1.txt
 +├─file-2.txt
 +└─sub-folder/
-+    ├─file-3.txt
-+    └─file-4.txt
++  ├─file-3.txt
++  └─file-4.txt
 ```
 
 - LLM đọc ít token hơn và nhanh hơn.
 - Tiết kiệm token.
 - Tiết kiệm tiền.
 
-Kiểm tra các quy tắc trong file markdown:
+Kiểm tra các quy tắc trong file markdown cho LLM và Agents:
 
 ```bash
+cd project-folder-name
+# định dạng đệ quy thư mục hiện tại
+agent-md .
+
 agent-md lint README.md
 # {"valid":false,"errors":[{"line":7,"column":1,"message":...
 ```
 
 ## Tại sao công cụ này tồn tại
 
-Nhiều file markdown hiện nay được viết bởi LLM hoặc AI agents đang lãng phí rất nhiều token. Khi một LLM khác đọc lại những file này, nó tiếp tục tốn thêm token không cần thiết. Thậm chí file này được đọc đi đọc lại mỗi lần chat.
-Nguyên nhân là markdown được thiết kế để con người dễ đọc, nên thường chứa các yếu tố như in đậm, ký tự trang trí, khoảng trắng... Những thứ này hữu ích cho người, nhưng không cần thiết với LLM.
+Nhiều file markdown hiện nay được tạo bởi LLM hoặc AI agents đang lãng phí rất nhiều token. Khi một LLM khác đọc lại những file này, nó tiếp tục tốn thêm token không cần thiết. Thậm chí file này được đọc đi đọc lại mỗi lần chat.
+Nguyên nhân là markdown được thiết kế để con người dễ đọc, nên thường chứa các yếu tố như in đậm, ký tự trang trí, khoảng trắng thừa... Những thứ này hữu ích cho người, nhưng không cần thiết với LLM.
 
 Thực tế, LLM/agents không cần đọc toàn bộ file. Chúng chỉ cần truy cập đúng phần nội dung cần thiết (ví dụ: ## Development) thay vì xử lý cả tài liệu.
 
 ### Vấn đề
 
-- Lãng phí token: Các định dạng như in đậm, bảng, ký tự trang trí làm tăng số token mà không giúp ích cho AI
-- Đọc không hiệu quả: LLM vẫn phải xử lý cả các yếu tố trình bày như bold, ASCII art…
-- Cấu trúc dư thừa: Nhiều thành phần chỉ hữu ích cho người (bảng phức tạp, layout đẹp) nhưng không cần cho AI
-- Tăng chi phí: Mỗi lần LLM đọc lại tài liệu đều phải “trả phí” cho những phần định dạng này
+- Lãng phí token: Các định dạng như in đậm, bảng phức tạp và ký tự trang trí làm tăng số token mà không giúp ích cho AI
+- Đọc không hiệu quả: LLM vẫn phải xử lý các yếu tố trực quan như bold và ASCII art
+- Cấu trúc dư thừa: Nhiều thành phần chỉ hữu ích cho con người (bảng phức tạp, bố cục đẹp mắt) nhưng không cần thiết cho AI
+- Chi phí cao hơn: Mỗi lần LLM đọc tài liệu, nó phải trả một khoản token cho định dạng hướng tới con người
 
 ### Giải pháp
 
-agent-md đưa ra một cách viết markdown tối giản, thân thiện với AI, giúp:
+`agent-md` đưa ra một tiêu chuẩn markdown tối giản, thân thiện với AI, giúp:
 
-- Giảm token không cần thiết
-- Giữ nội dung rõ ràng, dễ truy cập theo từng phần
-- Vẫn đảm bảo con người có thể đọc được khi cần
+- Giảm các token không cần thiết
+- Giữ nội dung có cấu trúc rõ ràng, dễ truy cập theo từng phần
+- Vẫn đảm bảo tính dễ đọc cho con người khi cần
 
-Mục tiêu là: viết một lần, tối ưu cho cả người và AI, nhưng không lãng phí tài nguyên.
+Mục tiêu: viết một lần, tối ưu cho cả con người và AI—không lãng phí tài nguyên.
 
 ## Cài đặt
 
@@ -117,7 +121,7 @@ Thêm `agent-md` vào `Cargo.toml`:
 
 ```toml
 [dependencies]
-agent-md = "0.2.13"
+agent-md = "0.4.0"
 ```
 
 Sử dụng các API lập trình trong ứng dụng của bạn:
@@ -132,468 +136,75 @@ let result = validate_markdown(&formatted);
 assert!(result.valid);
 ```
 
-## Ví dụ sử dụng cụ thể
+## Tài liệu
 
-### Đầu vào: Markdown thông thường
+Tài liệu hướng dẫn chi tiết được sắp xếp trong thư mục `docs/`:
 
-Đây là một file markdown tiêu chuẩn mà nhiều LLM tạo ra:
+- [Hướng dẫn sử dụng CLI](docs/cli-usage-guide-vi.md): Danh mục lệnh đầy đủ, thao tác theo phần, tùy chọn định dạng và phân tích cú pháp có cấu trúc
+- [Quy tắc cho LLM / Agent](docs/llm-agent-rule.md): Các mẫu tích hợp, đọc/ghi theo phần và quy trình làm việc cho AI agent
+- [Quy tắc viết Markdown](docs/markdown-writing-rules.md): Tiêu chuẩn định dạng và quy tắc thân thiện với AI
+- [Hướng dẫn cấu hình](docs/config.md): Thứ tự ưu tiên cấu hình và bảng tham chiếu tùy chọn
+- [Tiện ích mở rộng VS Code](docs/vscode-extension.md): Hướng dẫn cài đặt, thiết lập cấu hình và phím tắt
+- [Hướng dẫn phát triển](docs/DEV.md): Kiến trúc, biên dịch, kiểm thử và hướng dẫn đóng góp
+- [Tài liệu tiếng Anh](README.md): Phiên bản tiếng Anh của tài liệu
 
-```markdown
-# Dự án Của Tôi
-
-## Tổng quan
-
-Đây là một dự án rất tuyệt vời với nhiều tính năng nổi bật:
-
-| Tính năng | Mô tả | Trạng thái |
-|---|---|---|
-| API | RESTful API hoàn chỉnh | ✅ Hoàn thành |
-| UI | Giao diện người dùng hiện đại | 🚧 Đang phát triển |
-| Tests | Unit tests và integration tests | ✅ Hoàn thành |
-
-### Các bước thực hiện
-
-1. Clone repository
-2. Cài đặt dependencies: `bun i`
-3. Chạy server: `bun dev`
-
->Lưu ý: Đảm bảo bạn có Node.js phiên bản 22+ được cài đặt!
-```
-
-### Đầu ra: Markdown thân thiện với AI qua agent-md
-
-Sau khi xử lý với agent-md, nội dung trở nên gọn gàng hơn:
-
-```markdown
-# Dự án Của Tôi
-
-## Tổng quan
-
-Đây là một dự án tuyệt vời với nhiều tính năng nổi bật:
-
-- API: RESTful API hoàn chỉnh (Hoàn thành)
-- UI: Giao diện người dùng hiện đại (Đang phát triển)
-- Tests: Unit tests và integration tests (Hoàn thành)
-
-## Các bước thực hiện
-
-1. Clone repository
-2. Cài đặt dependencies: `bun i`
-3. Chạy server: `bun dev`
-
-Lưu ý: Đảm bảo bạn có Node.js phiên bản 22+ được cài đặt.
-```
-
-### So sánh hiệu quả
+## Cách dùng nhanh
 
 ```bash
-# Kiểm tra file markdown thông thường
-agent-md lint regular-markdown.md
-# {"valid":false,"errors":[
-# {"line":3,"message":"No bold text allowed","rule":"no-bold"},
-# {"line":6,"message":"Complex table detected","rule":"simple-table"},
-# {"line":15,"message":"No bold text allowed","rule":"no-bold"}
-# ]}
+# Định dạng một tệp markdown trực tiếp
+agent-md fmt README.md
 
-# Kiểm tra file agent-md
-agent-md lint agent-md-markdown.md
-# {"valid":true,"errors":[],"warnings":[]}
+# Kiểm tra quy tắc tệp với đầu ra JSON
+agent-md lint README.md
+
+# Đọc riêng một phần theo đường dẫn tiêu đề
+agent-md read README.md --content "## Cài đặt"
+
+# Trích xuất các trường thông tin (path, content, word_count, line_count, headings)
+agent-md read README.md --field headings
+
+# Tìm kiếm trong tệp
+agent-md search README.md "TODO"
 ```
 
-Lợi ích:
-
-- Giảm ~20% số token không cần thiết
-- LLM đọc và xử lý nhanh hơn
-- Vẫn giữ được thông tin đầy đủ
-- Dễ dàng trích xuất phần cụ thể
-
-## Thêm quy tắc hoặc lệnh cho LLM/Agents tuân theo
-
-Ví dụ, khi thêm quy tắc mới, thêm vào tệp `AGENTS.md`.
->Sau khi tạo hoặc cập nhật bất kỳ tệp markdown nào, luôn chạy `agent-md lint path/to/file.md` để xác thực nội dung trước khi coi tác vụ hoàn thành.
-
-Hoặc chat với LLM/Agents:
->Use `agent-md` CLI to run lint
-
-## Các lệnh (đầu ra JSON thân thiện với LLM)
-
-Tất cả các lệnh đều trả về JSON để dễ phân tích.
-
-### Đọc một tệp
-
-```bash
-agent-md read <path>
-# Trả về: {path, content, word_count, line_count, headings}
-
-# Trích xuất trường cụ thể
-agent-md read <path> --field <field_name>
-# Các trường có sẵn: path, content, word_count, line_count, headings
-
-# Đọc phần cụ thể theo đường dẫn heading (không cần đọc toàn bộ tệp)
-agent-md read <path> --content <section_path>
-# Ví dụ: agent-md read README.md --content "## Development"
-# Các phần lồng nhau: agent-md read README.md --content "## Development > Build"
-```
-
-### Ghi một tệp
-
-```bash
-agent-md write <path> <content>
-# Trả về: {success, message, document}
-```
-
-### Ghi vào một phần cụ thể
-
-```bash
-agent-md write-section <path> --section <heading_path> --content <content>
-# Thay thế nội dung phần hiện có hoặc tạo phần mới
-# Ví dụ: agent-md write-section README.md --section "## Development" --content "Nội dung mới"
-# Các phần lồng nhau: agent-md write-section README.md --section "## Development > Build" --content "Nội dung mới"
-```
-
-```bash
-agent-md write <path> <content>
-# Trả về: {success, message, document}
-```
-
-### Thêm vào tệp
-
-```bash
-agent-md append <path> <content>
-# Trả về: {success, message, document}
-```
-
-### Chèn vào dòng
-
-```bash
-agent-md insert <path> <line> <content>
-# Trả về: {success, message, document}
-```
-
-### Xóa dòng
-
-```bash
-agent-md delete <path> <line> [count]
-# Trả về: {success, message, document}
-```
-
-### Liệt kê các tệp markdown
-
-```bash
-agent-md list <directory>
-# Trả về: [file paths...]
-```
-
-Liệt kê các tệp markdown trong thư mục được chỉ định (mặc định là `.`). Tự động bỏ qua các tệp và thư mục khớp với `.markdownlintignore` và `.gitignore`.
-
-### Tìm kiếm trong tệp
-
-```bash
-agent-md search <path> <query>
-# Trả về: {query, matches: [{line, content}], total}
-```
-
-### Lấy các heading
-
-```bash
-agent-md headings <path>
-# Trả về: [{level, text, line}...]
-```
-
-### Lấy thống kê
-
-```bash
-agent-md stats <path>
-# Trả về: {path, word_count, line_count, heading_count}
-```
-
-### Chuyển đổi sang JSONL
-
-```bash
-agent-md to-jsonl <path>
-# Trả về: các dòng JSONL với {type, content, level, language}
-```
-
-### Kiểm tra/Xác thực markdown
-
-```bash
-agent-md lint <path>
-# Trả về: {valid, errors: [{line, column, message, rule}], warnings: [{line, column, message, rule}]}
-
-agent-md lint --content "# Markdown content"
-# Xác thực nội dung trực tiếp mà không cần tệp
-
-agent-md lint-file <path>
-# Trả về: đầu ra kiểm tra dễ đọc với lỗi, cảnh báo, và tóm tắt
-```
-
-### Khởi tạo cấu hình
-
-Khởi tạo tệp cấu hình mặc định `.agent-md.json` tại thư mục hiện tại hoặc đường dẫn được chỉ định.
-
-```bash
-agent-md init
-# Khởi tạo .agent-md.json trong thư mục hiện tại
-
-agent-md init custom.json
-# Khởi tạo cấu hình tại đường dẫn tệp cụ thể
-
-agent-md init path/to/dir
-# Khởi tạo .agent-md.json bên trong thư mục được chỉ định
-
-agent-md init --force
-# Ghi đè tệp cấu hình đã tồn tại (hỗ trợ cờ -f)
-
-agent-md config --init
-# Tùy chọn thay thế qua lệnh con config với cờ --force tùy chọn
-```
-
-### Kiểm tra cấu hình
-
-Kiểm tra độ ưu tiên phân giải và trạng thái tệp cấu hình. Các tệp cấu hình được ưu tiên theo thứ tự sau:
-
-1. `.agent-md.json`
-2. `agent-md.json`
-3. `.markdownlint.json` (dự phòng)
-
-Tệp cấu hình mẫu được cung cấp tại `samples/.agent-md.json`.
-
-```bash
-agent-md config
-# Trả về: {exists, path, config}
-
-agent-md config --check
-# Trả về: {exists, path}
-
-agent-md config samples
-# Kiểm tra cấu hình trong thư mục
-
-agent-md config custom.json
-# Kiểm tra đường dẫn cấu hình cụ thể
-
-agent-md --config samples/.agent-md.json fmt document.md
-# Sử dụng tệp cấu hình cụ thể qua cờ toàn cục --config
-```
-
-### Kiểm tra quy tắc bỏ qua (ignore rules)
-
-Đọc tệp `.markdownlintignore` nếu tồn tại trong thư mục, hợp nhất với danh sách Git ignore (`.gitignore`) và loại bỏ các mục trùng lặp:
-
-```bash
-agent-md ignore
-# Trả về: ["dist/", "logs/", "target/", "/target", "temp/", "*.log", "*.tgz", ".antigravitycli"]
-
-agent-md ignore path/to/dir
-# Trả về các mẫu bị bỏ qua cho thư mục được chỉ định
-
-agent-md --human ignore
-# Mảng JSON định dạng đẹp
-```
-
-Các lệnh như `list` và `fmt` trên thư mục sẽ tự động tuân theo các quy tắc này để bỏ qua các thư mục và tệp không cần thiết.
-
-### Định dạng markdown
-
-- Định dạng tệp markdown tại chỗ, loại bỏ các khoảng trắng thừa trong ô bảng.
-- Tự động tuân theo `.markdownlintignore` và `.gitignore` khi định dạng thư mục, bỏ qua các thư mục như `target/`, `dist/`, `logs/`.
-- Định dạng cấu trúc thư mục trong các khối mã `text`, `txt`, hoặc không gắn nhãn bằng cách thu gọn thành các tiền tố một gạch ngang (`├─` và `└─`), loại bỏ các dòng đệm dọc (`│`), và căn chỉnh các bình luận `#`.
-- Loại bỏ dấu hai chấm ở cuối tiêu đề (ví dụ: `## header:` thành `## header`).
-- Tự động thêm thẻ ngôn ngữ `text` cho các khối mã chưa khai báo ngôn ngữ (ví dụ: ` ``` ` thành ` ```text `).
-- Bảo toàn các dòng phân tách và nội dung khối mã.
-- Thu gọn các khoảng trắng thừa trước các bình luận `#` trong các khối mã shell (`bash`, `sh`, `shell`, `zsh`).
-
-```bash
-agent-md fmt <path>
-# Trả về dữ liệu JSON: {success, message, document}
-```
-
-#### Định dạng tùy chọn
-
-Trình định dạng áp dụng các quy tắc thu gọn theo mặc định để giảm số lượng token:
-
-| Tùy chọn | Mô tả | Mặc định |
-|---|---|---|
-| `remove_bold` | Xóa các dấu `**bold**` và `__bold__` | `true` |
-| `compact_blank_lines` | Thu gọn nhiều dòng trống liên tiếp (giữ lại các dòng trống đơn quanh tiêu đề) | `true` |
-| `collapse_spaces` | Thu gọn nhiều khoảng trắng giữa các từ | `true` |
-| `remove_horizontal_rules` | Xóa các dòng `---`, `***`, `___` | `true` |
-| `remove_emphasis` | Xóa các dấu `*italic*` và `_italic_` | `true` |
-| `blanks_around_lists` | Đảm bảo danh sách được bao quanh bởi các dòng trống (cấu hình trong `.agent-md.json` hoặc `.markdownlint.json`) | `true` |
-| `blanks_around_fences` | Đảm bảo các khối mã được bao quanh bởi các dòng trống (cấu hình trong `.agent-md.json` hoặc `.markdownlint.json`) | `true` |
-| `blanks_around_headings` | Đảm bảo tiêu đề được bao quanh bởi các dòng trống (cấu hình trong `.agent-md.json` hoặc `.markdownlint.json`) | `true` |
-| `minify_html` | Thu nhỏ các thẻ và khối HTML bằng cách loại bỏ khoảng trắng và dòng mới không cần thiết | `true` |
-
-Ví dụ:
-
-```bash
-agent-md fmt document.md
-```
-
-##### Thu nhỏ HTML
-
-Các khối và thẻ HTML được thu nhỏ để giảm lãng phí token:
-
-- Loại bỏ khoảng trắng, tab và dòng mới không cần thiết bên trong thẻ HTML
-- Loại bỏ thụt đầu dòng thừa bên trong các khối HTML
-- Gộp các dòng chỉ chứa thẻ đóng với phần tử đứng trước
-- Giữ nguyên tên thẻ HTML, thuộc tính và giá trị thuộc tính
-
-Đầu vào:
-
-```html
-<p align="center">
-  <img src="badge.png" alt="Markdown" />
-</p>
-```
-
-Đầu ra:
-
-```html
-<p align="center">
-<img src="badge.png" alt="Markdown" /></p>
-```
-
-## Cách thức hoạt động: Phân tích cấu trúc (Structured Parsing)
-
-Khác với các trình định dạng theo dòng đơn giản, `agent-md` sử dụng bộ phân tích cấu trúc để:
-
-1. Trích xuất YAML Frontmatter: Giữ nguyên metadata ở đầu tài liệu.
-2. Xác định các khối tài liệu: Nhận diện tiêu đề, khối mã, bảng, danh sách và đoạn văn.
-3. Áp dụng định dạng theo ngữ cảnh: Định dạng từng khối dựa trên loại của nó và các tùy chọn cấu hình.
-4. Tối ưu hóa cho LLM: Đảm bảo đầu ra sạch sẽ, nhất quán và tiết kiệm token trong khi vẫn dễ đọc cho con người.
-
-## Quy tắc xác thực
-
-Công cụ kiểm tra thực thi các tiêu chuẩn markdown thân thiện với AI.
-
-### Quy tắc lỗi (nội dung khối)
-
-- Không văn bản in đậm: `**bold**` và `__bold__` bị từ chối (lỗi), ngoại trừ trong khối mã
-- Cấu trúc heading: Nhiều heading H1 và các cấp heading bị bỏ qua bị từ chối (lỗi)
-- Cú pháp bảng: Thuộc tính bảng phức tạp và định dạng phân tách không chính xác bị từ chối (lỗi)
-- Cú pháp bảng đơn giản: Bảng rất rộng và định dạng inline trong ô bị từ chối (lỗi)
-- Không đồ họa ASCII: Ký tự vẽ hộp và các mẫu trực quan bị từ chối (lỗi)
-- Thực hành tốt nhất khối mã: Các khối mã không có đặc tả ngôn ngữ bị từ chối (lỗi)
-- Định dạng danh sách: Các dấu danh sách không nhất quán và đánh số bị từ chối (lỗi)
-- Thụt lề khoảng trắng: Thụt lề quá nhiều (hơn 2 khoảng trắng) trong văn bản thường bị từ chối (lỗi) (khối mã miễn trừ)
-- Không liên kết vô dụng: Các liên kết có văn bản bằng URL bị từ chối (lỗi)
-
-### Quy tắc cảnh báo (hướng dẫn kiểu)
-
-Chi tiết tại <docs/markdown-writing-rules.md>
-
-### Xác thực tự động
-
-Lệnh `write` xác thực nội dung trước khi ghi để đảm bảo markdown thân thiện với AI.
-
-## Chạy Tests
-
-```bash
-cargo test
-```
+Để xem toàn bộ hướng dẫn lệnh chi tiết, xem [Hướng dẫn sử dụng CLI](docs/cli-usage-guide-vi.md).
 
 ## Quy tắc cho LLMs/Agents: Sử dụng agent-md CLI
 
 Khi làm việc với các tệp markdown, luôn ưu tiên công cụ CLI `agent-md` hơn là chỉnh sửa tệp trực tiếp.
 Xem `docs/llm-agent-rule.md` để có hướng dẫn tích hợp hoàn chỉnh và các thực hành tốt nhất.
 
-### Tại sao sử dụng agent-md?
-
-- Đầu ra JSON: Tất cả các lệnh đều trả về JSON có cấu trúc để dễ phân tích
-- Xác thực tích hợp: Xác thực markdown tự động đảm bảo nội dung thân thiện với AI
-- Tối ưu hóa cho LLM: Được thiết kế đặc biệt cho các quy trình làm việc của AI agent
-- Định dạng nhất quán: Thực thi các tiêu chuẩn markdown để dễ đọc hơn
-
-### Mô hình sử dụng cốt lõi
-
-```bash
-# Đọc nội dung tệp
-CONTENT=$(agent-md read <path> --field content)
-
-# Đọc các phần cụ thể (không cần đọc toàn bộ tệp)
-agent-md read <path> --content "## Tên Phần"
-# Các phần lồng nhau: agent-md read <path> --content "## Development > Build"
-
-# Luôn ghi tệp với agent-md (xác thực trước)
-agent-md write <path> "<nội dung>"
-
-# Ghi vào phần cụ thể
-agent-md write-section <path> --section "## Phần" --content "<nội dung>"
-
-# Tìm kiếm trong các tệp
-agent-md search <path> "<truy vấn>"
-
-# Lấy cấu trúc tài liệu
-agent-md headings <path>
-```
-
-### Quy tắc tích hợp
-
 QUY TẮC: Khi cần đọc, ghi, hoặc sửa đổi các tệp markdown, sử dụng các lệnh `agent-md` thay vì các thao tác tệp trực tiếp. Công cụ cung cấp dữ liệu có cấu trúc và đảm bảo chất lượng nội dung.
 
-### Quy trình làm việc ví dụ
+Khi hoàn thành tác vụ, bạn phải cập nhật tài liệu (`docs/`), cập nhật `README.md`, và viết unit tests cho các thay đổi của bạn.
 
 ```bash
-# 1. Lấy cấu trúc tài liệu
+# Quy trình cốt lõi
 agent-md read README.md --field headings
-
-# 2. Tìm kiếm nội dung cụ thể
 agent-md search README.md "TODO"
-
-# 3. Xác thực nội dung mới
 agent-md lint --content "# Tiêu đề Mới\nNội dung ở đây"
-
-# 4. Ghi nội dung đã xác thực
 agent-md write README.md "# Tiêu đề Mới\nNội dung hợp lệ"
 ```
 
-## Đọc tệp và trích xuất trường
+## Tiện ích mở rộng VS Code
 
-Sử dụng tùy chọn --field (được khuyến nghị):
+`agent-md` có sẵn dưới dạng tiện ích mở rộng cho VS Code để định dạng các tệp Markdown theo yêu cầu hoặc tự động khi lưu.
 
-```bash
-agent-md read README.md --field path # Lấy đường dẫn tệp
-agent-md read README.md --field content # Lấy nội dung
-agent-md read README.md --field headings # Lấy các heading
-agent-md read README.md -f word_count # Form ngắn cho số từ
-```
-
-Đọc phần "Development" - không cần LLM đọc toàn bộ tệp:
-
-```bash
-agent-md read README.md -c="Development"
-# Các phần lồng nhau: agent-md read README.md -c="Development > Build"
-```
-
-## Ví dụ sử dụng cho LLMs
-
-```bash
-# Tìm kiếm nội dung
-agent-md search /path/to/file.md "TODO"
-# ví dụ:
-agent-md search README.md "TODO"
-
-# Lấy tất cả các heading để điều hướng
-agent-md headings /path/to/file.md
-# ví dụ:
-agent-md headings README.md
-
-# Kiểm tra một tệp
-agent-md lint README.md
-# ví dụ:
-agent-md lint README.md
-
-# Kiểm tra với đầu ra dễ đọc
-agent-md lint-file README.md
-
-# Xác thực markdown trước khi ghi
-agent-md lint --content "# Tiêu đề\nNội dung với văn bản **in đậm**"
-agent-md write document.md "# Tiêu đề\nNội dung hợp lệ không có in đậm"
-```
+- Cài đặt từ [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=loclv.agent-md-formatter).
+- Xem [Hướng dẫn tiện ích mở rộng VS Code](docs/vscode-extension.md) để biết thêm về cấu hình và cài đặt từ mã nguồn.
 
 ## Phát triển
 
 Xem `docs/DEV.md` để có hướng dẫn phát triển hoàn chỉnh.
+
+```bash
+cargo build --release # Xây dựng phiên bản release
+cargo test # Chạy tests
+cargo fmt # Định dạng mã nguồn
+cargo fmt --check # Kiểm tra định dạng mã nguồn
+cargo clippy --all-targets --all-features -- -D warnings # Chạy clippy lints
+cargo audit # Kiểm tra bảo mật
+```
 
 ## Giấy phép
 

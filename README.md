@@ -2,15 +2,15 @@
 
 <div align="center"><img src="logo.svg" alt="agent-md logo" width="128" height="128"><br /><div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 22px;"><div style="margin-top: auto; margin-bottom: auto;"><a href="https://dopana.com" target="_blank">Sponsored by dopana.com</a></div><a href="https://unikorn.vn/p/agent-md?ref=embed-agent-md" target="_blank"><img src="https://unikorn.vn/api/widgets/badge/agent-md?theme=dark" alt="agent-md trên Unikorn.vn" style="width: 256px; height: 64px;" width="256" height="64" /></a></div></div>
 
-<div align="center"><a href="https://marketplace.visualstudio.com/items?itemName=loclv.agent-md-formatter&ssr=false#overview" target="_blank">Extention in VS Code, Cursor, Devin, Antigravity</a></div>
+<div align="center"><a href="https://marketplace.visualstudio.com/items?itemName=loclv.agent-md-formatter&ssr=false#overview" target="_blank">Extension in VS Code, Cursor, Devin, Antigravity</a></div>
 
-Format markdown file for LLM and Agents:
+Format markdown files for LLMs and AI Agents:
 
 ```bash
 agent-md README.md
 ```
 
-An example of table before and after:
+An example of table formatting before and after:
 
 ```diff
  | Function | Arguments | Return Type | Description                   |
@@ -22,7 +22,7 @@ An example of table before and after:
 +| `sub()` | a, b | i32 | Subtracts numbers |
 ```
 
-An example of comments in code block before and after:
+An example of comments in code blocks before and after:
 
 ```diff
 -bun i                      # Install dependencies
@@ -33,7 +33,7 @@ An example of comments in code block before and after:
 +bun run something-else # Run something else
 ```
 
-An example of file tree before and after:
+An example of file trees before and after:
 
 ```diff
  example-folder/
@@ -53,7 +53,7 @@ An example of file tree before and after:
 - Save more tokens.
 - Save more money.
 
-Lint markdown file for LLM and Agents:
+Lint markdown files for LLMs and AI Agents:
 
 ```bash
 cd project-folder-name
@@ -136,134 +136,66 @@ let result = validate_markdown(&formatted);
 assert!(result.valid);
 ```
 
-## Usage
+## Documentation
 
-Read more at [CLI Usage Guide](docs/cli-usage-guide.md)
+Detailed guides and documentation are organized in the `docs/` folder:
+
+- [CLI Usage Guide](docs/cli-usage-guide.md): Complete command reference, section operations, formatting options, and structured parsing
+- [LLM / Agent Integration Rule](docs/llm-agent-rule.md): Integration patterns, section reads/writes, field extractions, and workflows for AI agents
+- [Markdown Writing Rules](docs/markdown-writing-rules.md): Formatting standards and AI-friendly rules
+- [Configuration Guide](docs/config.md): Configuration resolution and options reference
+- [VS Code Extension](docs/vscode-extension.md): Extension setup, settings, and keybindings
+- [Development Guide](docs/DEV.md): Architecture, building, testing, and contribution setup
+- [Vietnamese Documentation](README-vi.md): Bản tiếng Việt của README và tài liệu liên quan
+
+## Quick Usage
+
+```bash
+# Format a markdown file in-place
+agent-md fmt README.md
+
+# Lint a file with JSON output
+agent-md lint README.md
+
+# Read only a specific section by heading path
+agent-md read README.md --content "## Installation"
+
+# Extract fields (path, content, word_count, line_count, headings)
+agent-md read README.md --field headings
+
+# Search within files
+agent-md search README.md "TODO"
+```
+
+For the complete command manual, see the [CLI Usage Guide](docs/cli-usage-guide.md).
 
 ## Rule for LLMs/Agents: Use agent-md CLI
 
 When working with markdown files, always prefer the `agent-md` CLI tool over direct file editing.
 See `docs/llm-agent-rule.md` for the complete integration guideline and best practices.
 
-### Why use agent-md?
-
-- JSON output: All commands return structured JSON for easy parsing
-- Built-in validation: Automatic markdown validation ensures AI-friendly content
-- LLM-optimized: Designed specifically for AI agent workflows
-- Consistent formatting: Enforces markdown standards for better readability
-
-### Core Usage Pattern
-
-```bash
-# Read file content
-CONTENT=$(agent-md read <path> --field content)
-
-# Read specific sections (no need to read entire file)
-agent-md read <path> --content "## Section Name"
-# Nested sections: agent-md read <path> --content "## Development > Build"
-
-# Always write files with agent-md (validates first)
-agent-md write <path> "<content>"
-
-# Write to specific section
-agent-md write-section <path> --section "## Section" --content "<content>"
-
-# Search within files
-agent-md search <path> "<query>"
-
-# Get document structure
-agent-md headings <path>
-
-# Run commands with configuration from specific directory
-agent-md --cwd /path/to/project lint <path>
-```
-
-### Integration Rule
-
 RULE: When you need to read, write, or modify markdown files, use `agent-md` commands instead of direct file operations. The tool provides structured data and ensures content quality.
 
-### Example Workflow
+On task completion, you must update documentation (`docs/`), update `README.md`, and write unit tests for your changes.
 
 ```bash
-# 1. Get document structure
+# Core workflow
 agent-md read README.md --field headings
-
-# 2. Search for specific content
 agent-md search README.md "TODO"
-
-# 3. Validate new content
 agent-md lint --content "# New Title\nContent here"
-
-# 4. Write validated content
 agent-md write README.md "# New Title\nValid content"
 ```
 
-## Read File and Extract Fields
+## VS Code Extension
 
-Use --field option (recommended):
+`agent-md` is available as a VS Code extension for formatting Markdown files on demand or automatically on save.
 
-```bash
-agent-md read README.md --field path # Get file path
-agent-md read README.md --field content # Get content
-agent-md read README.md --field headings # Get headings
-agent-md read README.md -f word_count # Short form for word count
-```
-
-Read "Development" section - no need LLM to read entire file:
-
-```bash
-agent-md read README.md -c="Development"
-# Nested sections: agent-md read README.md -c="Development > Build"
-```
-
-## Example Usage for LLMs
-
-```bash
-# Search for content
-agent-md search /path/to/file.md "TODO"
-# example:
-agent-md search README.md "TODO"
-
-# Get all headings for navigation
-agent-md headings /path/to/file.md
-# example:
-agent-md headings README.md
-
-# Lint a file
-agent-md lint README.md
-# example:
-agent-md lint README.md
-
-# Lint with human-readable output
-agent-md lint-file README.md
-
-# Validate markdown before writing
-agent-md lint --content "# Title\nContent with **bold** text"
-agent-md write document.md "# Title\nValid content without bold"
-```
-
-Example output when use "--human" flag:
-
-```json
-{
-  "valid": false,
-  "errors": [
-    {
-      "line": 9,
-      "column": 27,
-      "message": "ASCII graph detected in code block. Use LLM-readable formats instead: Structured CSV, JSON, Mermaid Diagram, Numbered List with Conditions, ZON format, or simple progress indicators",
-      "rule": "no-ascii-graph"
-    }
-  ],
-  "warnings": []
-}
-```
+- Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=loclv.agent-md-formatter).
+- See the [VS Code Extension Guide](docs/vscode-extension.md) for full configuration, settings, and manual build instructions.
 
 ## Development
 
 See `docs/DEV.md` for complete development setup and guidelines.
-
-### Development Commands
 
 ```bash
 cargo build --release # Build release version
@@ -272,68 +204,6 @@ cargo fmt # Format code
 cargo fmt --check # Check if code is formatted
 cargo clippy --all-targets --all-features -- -D warnings # Run clippy lints
 cargo audit # Security audit
-cargo watch -x run # Watch for changes and rebuild
-cargo doc --open # Build and open documentation
-```
-
-## VS Code Extension
-
-`agent-md` includes a VS Code extension for formatting Markdown files.
-
-### Install from Marketplace
-
-The extension is available on the VS Code Marketplace. Search for "Agent-MD Formatter" and install it or download it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=loclv.agent-md-formatter).
-
-### Install from Source
-
-1. Build the CLI first (see Installation section)
-2. Build the extension:
-
-```bash
-cd vscode-extension
-bun i
-bun compile
-```
-
-3. Install in VS Code:
-- Open VS Code
-- Go to Extensions (Cmd+Shift+X)
-- Click "..." menu > "Install from VSIX"
-- Select `vscode-extension/agent-md-formatter-0.1.0.vsix`
-
-Or use CLI:
-
-```bash
-code --install-extension vscode-extension/agent-md-formatter-0.1.0.vsix
-```
-
-### Features
-
-- Format on demand or on save
-- Configurable formatting options
-- Integrates with VS Code formatting system
-
-### Settings
-
-- `agentMd.path`: Path to agent-md executable (default: `agent-md`, automatically detects workspace `target/release`, `~/.cargo/bin`, and common local paths)
-- `agentMd.format.removeBold`: Remove bold markers (default: true)
-- `agentMd.format.compactBlankLines`: Compact blank lines (default: true)
-- `agentMd.format.collapseSpaces`: Collapse multiple spaces (default: true)
-- `agentMd.format.removeHorizontalRules`: Remove horizontal rules (default: true)
-- `agentMd.format.removeEmphasis`: Remove emphasis markers (default: true)
-
-### Usage
-
-Open a Markdown file and use `Shift+Option+F` (macOS) or `Shift+Alt+F` (Windows/Linux) to format.
-Enable "Format on Save":
-
-```json
-{
-  "[markdown]": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "agent-md.agent-md-formatter"
-  }
-}
 ```
 
 ## License
