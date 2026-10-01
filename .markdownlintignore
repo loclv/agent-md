@@ -1,3 +1,5 @@
 dist/
 logs/
 target/
+docs/markdown-writing-rules.md
+markdownlint
