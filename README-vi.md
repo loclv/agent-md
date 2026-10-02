@@ -121,7 +121,7 @@ Thêm `agent-md` vào `Cargo.toml`:
 
 ```toml
 [dependencies]
-agent-md = "0.5.0"
+agent-md = "x.y.z" # replace with actual version
 ```
 
 Sử dụng các API lập trình trong ứng dụng của bạn:

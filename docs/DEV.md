@@ -241,25 +241,6 @@ cargo test test_validate_space_indentation -- --nocapture
 - Memory usage scales linearly with document size
 - Test performance with: `cargo test test_validate_markdown_large_document_performance`
 
-## Release Process
-
-```bash
-# 1. Update version in Cargo.toml
-# 2. Update CHANGELOG.md
-# 3. Run full test suite
-cargo test
-
-# 4. Build release
-cargo build --release
-
-# Or install to ~/bin
-cargo build --release --target-dir ~/bin
-
-# 5. Tag release
-git tag -a v0.1.0 -m "Release version 0.1.0"
-git push origin v0.1.0
-```
-
 ## Contributing Guidelines
 
 - Follow existing code style and patterns
