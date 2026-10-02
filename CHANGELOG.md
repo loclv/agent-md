@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Homebrew Tap (`loclv/homebrew-tools`): Published build-from-source `agent-md` formula installable via `brew tap loclv/tools` followed by `brew install agent-md`. No CI required; the formula compiles the `v0.5.0` GitHub release tarball locally with `cargo`.
+
 ## [0.5.0] - 2026-10-01
 
 ### Added

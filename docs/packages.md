@@ -57,4 +57,11 @@ fn main() {
 cargo install agent-md
 ```
 
+Or via Homebrew (macOS and Linux):
+
+```bash
+brew tap loclv/tools
+brew install agent-md
+```
+
 Or packaged via `cargo package --allow-dirty` for local distribution.

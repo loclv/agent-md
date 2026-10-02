@@ -115,6 +115,13 @@ Or install directly via Cargo:
 cargo install agent-md
 ```
 
+Or install via Homebrew (macOS and Linux):
+
+```bash
+brew tap loclv/tools
+brew install agent-md
+```
+
 ### Use as a Rust Library
 
 Add `agent-md` to your `Cargo.toml`:
