@@ -4,6 +4,8 @@
 
 <div align="center"><a href="https://marketplace.visualstudio.com/items?itemName=loclv.agent-md-formatter&ssr=false#overview" target="_blank">Extension in VS Code, Cursor, Devin, Antigravity</a></div>
 
+<div align="center">Documentation: <a href="https://agent-md-551.pages.dev">https://agent-md-551.pages.dev</a></div>
+
 Format markdown files for LLMs and AI Agents:
 
 ```bash
@@ -144,6 +146,8 @@ assert!(result.valid);
 ```
 
 ## Documentation
+
+Online documentation: <https://agent-md-551.pages.dev/>
 
 Detailed guides and documentation are organized in the `docs/` folder:
 
