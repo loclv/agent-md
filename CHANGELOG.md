@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-01
+
 ### Added
 
 - KaTeX and LaTeX Math Formatting Preservation: Ensured KaTeX and LaTeX math expressions are preserved completely untouched by the formatter and cleanly supported by the linter. Added `find_math_span_end` to detect inline (`$...$`) and single-line display (`$$...$$`) math spans, preventing `remove_bold_markers`, `remove_emphasis_markers`, `collapse_multiple_spaces`, `minify_html_tags_in_text`, and table cell formatting from stripping subscripts (`_`), multiplication or asterisks (`*`), powers (`**`), spacing, comparison operators (`<`, `>`), or table pipes (`|`). Added `MarkdownBlock::MathBlock` to natively parse and preserve multi-line `$$...$$` display math blocks. Exempted math spans from `no-ascii-graph` and `no-bold` linter rules to eliminate false-positive warnings on mathematical notations and integrals. Added comprehensive unit test coverage for KaTeX expressions across inline equations, display blocks, lists, blockquotes, tables, and nested markdown code blocks.
