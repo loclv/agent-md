@@ -69,7 +69,7 @@ agent-md lint README.md
 Nhiều file markdown hiện nay được tạo bởi LLM hoặc AI agents đang lãng phí rất nhiều token. Khi một LLM khác đọc lại những file này, nó tiếp tục tốn thêm token không cần thiết. Thậm chí file này được đọc đi đọc lại mỗi lần chat.
 Nguyên nhân là markdown được thiết kế để con người dễ đọc, nên thường chứa các yếu tố như in đậm, ký tự trang trí, khoảng trắng thừa... Những thứ này hữu ích cho người, nhưng không cần thiết với LLM.
 
-Thực tế, LLM/agents không cần đọc toàn bộ file. Chúng chỉ cần truy cập đúng phần nội dung cần thiết (ví dụ: ## Development) thay vì xử lý cả tài liệu.
+Hầu hết các formatter/linter markdown hiện nay đều được thiết kế cho con người dễ đọc, tuy nhiên chưa có 1 formatter/linter nào dành cho AI Agent LLM.
 
 ### Vấn đề
 
