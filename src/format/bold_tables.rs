@@ -34,6 +34,17 @@ pub fn strip_bold_from_cell(cell: &str) -> String {
 			}
 		}
 
+		// Preserve KaTeX / math spans unchanged
+		if chars[i] == '$' {
+			if let Some(math_end) = super::lines::find_math_span_end(&chars, i) {
+				for &c in &chars[i..=math_end] {
+					result.push(c);
+				}
+				i = math_end + 1;
+				continue;
+			}
+		}
+
 		// Skip HTML tags and autolinks
 		if chars[i] == '<' && i + 1 < chars.len() {
 			let next_c = chars[i + 1];

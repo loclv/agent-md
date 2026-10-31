@@ -65,11 +65,11 @@ fn strip_yaml_comment(line: &str) -> &str {
 		match c {
 			'\'' if !in_double && prev_char != '\\' => in_single = !in_single,
 			'"' if !in_single && prev_char != '\\' => in_double = !in_double,
-			'#' if !in_single && !in_double => {
-				// Only treat as comment if preceded by start of line or whitespace
-				if i == 0 || line[..i].ends_with(|ws: char| ws.is_whitespace()) {
-					return &line[..i];
-				}
+			'#' if !in_single
+				&& !in_double
+				&& (i == 0 || line[..i].ends_with(|ws: char| ws.is_whitespace())) =>
+			{
+				return &line[..i];
 			}
 			_ => {}
 		}

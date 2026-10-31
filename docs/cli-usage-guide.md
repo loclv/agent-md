@@ -313,6 +313,7 @@ Commands like `list` and directory-level `fmt` automatically respect these ignor
 - Collapses multiple spaces before `#` comments in shell code blocks (`bash`, `sh`, `shell`, `zsh`).
 - Formats folder structures in `text`, `txt`, or unlabelled code blocks by removing redundant `─` dashes (e.g., `├──` to `├─`, `└──` to `└─`), stripping spacer lines (`│`), removing spaces before file names, normalizing 4-space indentation to 2 spaces for nested branches, and collapsing spaces before comments.
 - Automatically converts 4 leading spaces of list item indentation to 2 spaces, and 2 leading tabs to 1 tab for sub-items, reducing token usage in nested lists.
+- Preserves KaTeX and LaTeX math expressions completely unchanged, including inline math (`$y = ax + b$`) and display math blocks (`$$...$$`), without altering subscripts (`_`), multiplication or asterisks (`*`), powers (`**`), spacing, comparison operators (`<`, `>`), or table pipes (`|`).
 - Respects `.markdownlintignore` and `.gitignore` when formatting directories, skipping ignored paths (like `target/`, `dist/`, `logs/`) and temporary files.
 
 ```bash

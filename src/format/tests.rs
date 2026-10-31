@@ -2231,3 +2231,190 @@ fn test_format_markdown_preserves_url_underscores_in_table() {
 	let result = format_markdown(content);
 	assert_eq!(result, content);
 }
+
+#[test]
+fn test_find_math_span_end_inline() {
+	use super::lines::find_math_span_end;
+
+	let s: Vec<char> = "$y = ax + b$".chars().collect();
+	assert_eq!(find_math_span_end(&s, 0), Some(11));
+
+	let s2: Vec<char> = "text $y = ax + b$ more".chars().collect();
+	assert_eq!(find_math_span_end(&s2, 5), Some(16));
+
+	// Preceded by whitespace before closing delimiter -> not closing
+	let s3: Vec<char> = "$invalid $".chars().collect();
+	assert_eq!(find_math_span_end(&s3, 0), None);
+
+	// Followed by whitespace after opening delimiter -> not opening
+	let s4: Vec<char> = "$ invalid$".chars().collect();
+	assert_eq!(find_math_span_end(&s4, 0), None);
+
+	// Escaped delimiter -> not math
+	let s5: Vec<char> = "\\$not math$".chars().collect();
+	assert_eq!(find_math_span_end(&s5, 1), None);
+
+	// Currency: closing followed by digit
+	let s6: Vec<char> = "$20$30".chars().collect();
+	assert_eq!(find_math_span_end(&s6, 0), None);
+
+	// Display math
+	let s7: Vec<char> = "$$y = ax + b$$".chars().collect();
+	assert_eq!(find_math_span_end(&s7, 0), Some(13));
+}
+
+#[test]
+fn test_format_katex_inline_basic() {
+	let content = "$y = ax + b$\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_katex_inline_multiplication_asterisks() {
+	let content = "$y = a*x + b*c$\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+
+	let content2 = "$a * b * c$\n";
+	let result2 = format_markdown(content2);
+	assert_eq!(result2, content2);
+}
+
+#[test]
+fn test_format_katex_inline_subscripts_underscores() {
+	let content = "$x_{1} + x_{2} = y$\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+
+	let content2 = "$\\alpha_{min} + \\beta_{max} = \\gamma_0$\n";
+	let result2 = format_markdown(content2);
+	assert_eq!(result2, content2);
+}
+
+#[test]
+fn test_format_katex_inline_powers_double_asterisks() {
+	let content = "$a ** b$\n";
+	let options = FormatOptions {
+		remove_bold: true,
+		..Default::default()
+	};
+	let result = format_markdown_with_options(content, options);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_katex_inline_multiple_spaces() {
+	let content = "$a  +  b$\n";
+	let options = FormatOptions {
+		collapse_spaces: true,
+		..Default::default()
+	};
+	let result = format_markdown_with_options(content, options);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_katex_inline_comparison_operators() {
+	let content = "$x < y > z$\n";
+	let options = FormatOptions {
+		minify_html: true,
+		..Default::default()
+	};
+	let result = format_markdown_with_options(content, options);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_katex_inline_within_sentence() {
+	let content = "The linear equation is $y = ax + b$, where $a \\ne 0$.\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_katex_with_surrounding_bold_and_emphasis() {
+	let content = "**Formula:** $y = a*x + b$ and *Note:* $x_{1} + x_{2}$\n";
+	let expected = "Formula: $y = a*x + b$ and Note: $x_{1} + x_{2}$\n";
+	let options = FormatOptions {
+		remove_bold: true,
+		remove_emphasis: true,
+		..Default::default()
+	};
+	let result = format_markdown_with_options(content, options);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_katex_single_line_display_math() {
+	let content = "$$y = ax + b$$\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+
+	let content2 = "$$x_{1} + x_{2} = a * b * c$$\n";
+	let result2 = format_markdown(content2);
+	assert_eq!(result2, content2);
+}
+
+#[test]
+fn test_format_katex_multiline_display_math_block() {
+	let content = "$$\ny = ax + b\n$$\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+
+	let complex =
+		"$$\n\\begin{aligned}\nx_{1} + x_{2} &= a * b * c \\\\\ny &= d + e\n\\end{aligned}\n$$\n";
+	let result_complex = format_markdown(complex);
+	assert_eq!(result_complex, complex);
+}
+
+#[test]
+fn test_format_katex_in_table_cells() {
+	let content =
+		"| Name | Formula |\n|---|---|\n| Linear | $y = ax + b$ |\n| Product | $a * b * c$ |\n| Subscript | $x_{1} + x_{2}$ |\n| Absolute | $|x| < 1$ |\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_katex_in_list_items() {
+	let content = "- Formula: $y = ax + b$\n- Product: $a * b * c$\n- Subscript: $x_{1} + x_{2}$\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_katex_in_blockquotes() {
+	let content = "> $y = ax + b$\n> $x_{1} + x_{2} = a * b$\n";
+	let expected = ">$y = ax + b$\n>$x_{1} + x_{2} = a * b$\n";
+	let result = format_markdown(content);
+	assert_eq!(result, expected);
+}
+
+#[test]
+fn test_format_katex_in_headings() {
+	let content = "# Linear Model: $y = ax + b$\n\n## Product: $a * b * c$\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_katex_in_markdown_code_block() {
+	let content = "```md\n# Math\n\n$y = ax + b$\n\n$$\nx_{1} + x_{2} = a * b\n$$\n```\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_currency_distinguished_from_katex() {
+	let content = "I have $20 and he has $30.\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_escaped_dollar() {
+	let content = "This is \\$not math\\$ but $y = ax + b$ is math.\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}

@@ -69,6 +69,14 @@ pub fn split_table_cells(table_content: &str) -> Vec<&str> {
 			}
 		}
 
+		// Skip KaTeX / math spans so pipes within math (e.g., $|x| < 1$) are not treated as cell delimiters
+		if chars[i] == '$' && !is_char_escaped(&chars, i) {
+			if let Some(math_end) = crate::format::lines::find_math_span_end(&chars, i) {
+				i = math_end + 1;
+				continue;
+			}
+		}
+
 		if chars[i] == '|' && !is_char_escaped(&chars, i) {
 			delimiter_byte_indices.push(byte_offsets[i]);
 		}

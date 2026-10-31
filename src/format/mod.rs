@@ -12,7 +12,7 @@ pub mod tables;
 mod tests;
 
 pub use io::{cmd_fmt, cmd_fmt_stdin, cmd_fmt_with_config};
-pub use lines::is_horizontal_rule;
+pub use lines::{find_math_span_end, is_horizontal_rule};
 pub use options::FormatOptions;
 
 #[allow(dead_code)]
@@ -184,6 +184,7 @@ pub fn format_markdown_structured(content: &str, options: FormatOptions) -> Stri
 
 				let formatted_items = lines::format_list_items(items);
 				let mut in_list_code_block = false;
+				let mut in_list_math_block = false;
 				for item in formatted_items {
 					let trimmed = item.trim();
 					if trimmed.starts_with("```") {
@@ -200,6 +201,16 @@ pub fn format_markdown_structured(content: &str, options: FormatOptions) -> Stri
 						formatted_parts.push(fence);
 						formatted_parts.push("\n".to_string());
 					} else if in_list_code_block {
+						formatted_parts.push(item);
+						formatted_parts.push("\n".to_string());
+					} else if trimmed
+						.strip_prefix("$$")
+						.is_some_and(|rest| !rest.contains("$$"))
+					{
+						in_list_math_block = !in_list_math_block;
+						formatted_parts.push(item);
+						formatted_parts.push("\n".to_string());
+					} else if in_list_math_block {
 						formatted_parts.push(item);
 						formatted_parts.push("\n".to_string());
 					} else {
@@ -221,6 +232,15 @@ pub fn format_markdown_structured(content: &str, options: FormatOptions) -> Stri
 					formatted_parts.push(raw.clone());
 				}
 				formatted_parts.push("\n".to_string());
+				last_was_frontmatter = false;
+			}
+			crate::parser::MarkdownBlock::MathBlock(raw) => {
+				ensure_newlines(&mut formatted_parts, 1, options.compact_blank_lines);
+				let mut math_str = raw.clone();
+				if !math_str.ends_with('\n') {
+					math_str.push('\n');
+				}
+				formatted_parts.push(math_str);
 				last_was_frontmatter = false;
 			}
 			crate::parser::MarkdownBlock::Paragraph(s) => {

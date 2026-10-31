@@ -25,6 +25,7 @@ pub enum MarkdownBlock {
 		raw: String,
 	},
 	Html(String),
+	MathBlock(String),
 	Paragraph(String),
 	BlankLine,
 	HorizontalRule(String),
@@ -106,6 +107,37 @@ pub fn parse(content: &str) -> ParsedMarkdown {
 			code_block_raw.push_str(line);
 			code_block_raw.push('\n');
 			i += 1;
+			continue;
+		}
+
+		// Display Math Block handling ($$)
+		if let Some(rest) = trimmed.strip_prefix("$$") {
+			// Single-line display math block: $$...$$
+			if rest.contains("$$") {
+				let mut math_raw = line.to_string();
+				math_raw.push('\n');
+				blocks.push(MarkdownBlock::MathBlock(math_raw));
+				i += 1;
+				continue;
+			}
+
+			// Multi-line display math block
+			let mut math_raw = String::new();
+			math_raw.push_str(line);
+			math_raw.push('\n');
+			i += 1;
+			while i < lines.len() {
+				let current_line = lines[i];
+				let current_trimmed = current_line.trim();
+				math_raw.push_str(current_line);
+				math_raw.push('\n');
+				if current_trimmed.ends_with("$$") {
+					i += 1;
+					break;
+				}
+				i += 1;
+			}
+			blocks.push(MarkdownBlock::MathBlock(math_raw));
 			continue;
 		}
 
@@ -427,5 +459,27 @@ mod tests {
 		assert!(matches!(parsed.blocks[4], MarkdownBlock::List { .. }));
 		assert!(matches!(parsed.blocks[6], MarkdownBlock::CodeBlock { .. }));
 		assert!(matches!(parsed.blocks[8], MarkdownBlock::Table { .. }));
+	}
+
+	#[test]
+	fn test_parse_display_math_single_line() {
+		let content = "$$y = ax + b$$\n";
+		let parsed = parse(content);
+		assert_eq!(parsed.blocks.len(), 1);
+		match &parsed.blocks[0] {
+			MarkdownBlock::MathBlock(raw) => assert_eq!(raw, "$$y = ax + b$$\n"),
+			_ => panic!("Expected MathBlock"),
+		}
+	}
+
+	#[test]
+	fn test_parse_display_math_multiline() {
+		let content = "$$\ny = ax + b\n$$\n";
+		let parsed = parse(content);
+		assert_eq!(parsed.blocks.len(), 1);
+		match &parsed.blocks[0] {
+			MarkdownBlock::MathBlock(raw) => assert_eq!(raw, "$$\ny = ax + b\n$$\n"),
+			_ => panic!("Expected MathBlock"),
+		}
 	}
 }

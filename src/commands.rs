@@ -136,6 +136,18 @@ pub fn parse_markdown_to_jsonl(content: &str) -> Vec<JsonlEntry> {
 					});
 				}
 			}
+			crate::parser::MarkdownBlock::MathBlock(raw) => {
+				flush_paragraph(&mut current_paragraph, &mut entries);
+				let math_text = raw.trim();
+				if !math_text.is_empty() {
+					entries.push(JsonlEntry {
+						entry_type: "paragraph".to_string(),
+						content: math_text.to_string(),
+						level: None,
+						language: None,
+					});
+				}
+			}
 			crate::parser::MarkdownBlock::Paragraph(s) => {
 				let trimmed = s.trim();
 				let line_text = if trimmed.starts_with('>') {

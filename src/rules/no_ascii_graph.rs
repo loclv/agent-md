@@ -7,6 +7,13 @@ pub fn find_ascii_graph(line: &str) -> Option<usize> {
 		return None;
 	}
 
+	// KaTeX / math blocks and standalone equations are not ASCII graphs
+	if (trimmed.starts_with('$') && trimmed.ends_with('$') && trimmed.len() >= 2)
+		|| trimmed.starts_with("$$")
+	{
+		return None;
+	}
+
 	let ascii_graph_patterns = [
 		"┌─┐",
 		"└─┘",

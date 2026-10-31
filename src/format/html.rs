@@ -492,6 +492,17 @@ pub fn minify_html_tags_in_text(text: &str) -> String {
 			}
 		}
 
+		// Skip KaTeX / math spans
+		if chars[i] == '$' {
+			if let Some(math_end) = crate::format::lines::find_math_span_end(&chars, i) {
+				for &c in &chars[i..=math_end] {
+					result.push(c);
+				}
+				i = math_end + 1;
+				continue;
+			}
+		}
+
 		// Check for HTML comment <!--
 		if i + 3 < chars.len()
 			&& chars[i] == '<'

@@ -62,12 +62,24 @@ pub fn validate_markdown_with_config(content: &str, config: &ResolvedConfig) -> 
 	let mut warnings = Vec::new();
 
 	let mut in_code_block = false;
+	let mut in_math_block = false;
 
 	for (line_num, line) in content.lines().enumerate() {
 		let line_num = line_num + 1;
 
 		if line.trim().starts_with("```") {
 			in_code_block = !in_code_block;
+			continue;
+		}
+
+		if let Some(rest) = line.trim().strip_prefix("$$") {
+			if !rest.contains("$$") {
+				in_math_block = !in_math_block;
+				continue;
+			}
+		}
+
+		if in_math_block {
 			continue;
 		}
 

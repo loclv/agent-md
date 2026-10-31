@@ -73,6 +73,17 @@ pub fn remove_bold_markers(line: &str) -> String {
 			}
 		}
 
+		// Skip KaTeX / math spans (e.g., $y = ax + b$ or $$y = ax + b$$)
+		if chars[i] == '$' {
+			if let Some(math_end) = find_math_span_end(&chars, i) {
+				for &c in &chars[i..=math_end] {
+					result.push(c);
+				}
+				i = math_end + 1;
+				continue;
+			}
+		}
+
 		// Skip HTML tags and autolinks (e.g., <https://example.com/__init__.py> or <a href="...">)
 		if chars[i] == '<' && i + 1 < chars.len() {
 			let next_c = chars[i + 1];
@@ -225,6 +236,17 @@ pub fn remove_emphasis_markers(line: &str) -> String {
 					result.push(c);
 				}
 				i = code_end + 1;
+				continue;
+			}
+		}
+
+		// Skip KaTeX / math spans (e.g., $y = a*x + b$ or $x_{1} + x_{2}$)
+		if chars[i] == '$' {
+			if let Some(math_end) = find_math_span_end(&chars, i) {
+				for &c in &chars[i..=math_end] {
+					result.push(c);
+				}
+				i = math_end + 1;
 				continue;
 			}
 		}
@@ -420,6 +442,66 @@ pub fn find_code_span_end(chars: &[char], start: usize) -> Option<usize> {
 	None
 }
 
+/// Find the end index (inclusive) of a KaTeX / math span starting at `start` where `chars[start] == '$'`.
+///
+/// Supports inline math (`$...$`) and display math (`$$...$$`) on the same line.
+///
+/// Rules:
+/// - Delimiters must not be escaped with an odd number of preceding backslashes (`\$`).
+/// - For single `$`, opening delimiter must not be immediately followed by whitespace.
+/// - For single `$`, closing delimiter must not be immediately preceded by whitespace.
+/// - For single `$`, closing delimiter must not be immediately followed by an ASCII digit
+///   (to prevent currency strings like `$20 and $30` from being treated as math).
+/// - For `$$`, closing delimiter is `$$`.
+pub fn find_math_span_end(chars: &[char], start: usize) -> Option<usize> {
+	if start >= chars.len()
+		|| chars[start] != '$'
+		|| (start > 0 && super::tables::is_char_escaped(chars, start))
+	{
+		return None;
+	}
+
+	let is_double = start + 1 < chars.len() && chars[start + 1] == '$';
+	if is_double {
+		let mut idx = start + 2;
+		while idx + 1 < chars.len() {
+			if chars[idx] == '$'
+				&& chars[idx + 1] == '$'
+				&& !super::tables::is_char_escaped(chars, idx)
+			{
+				return Some(idx + 1);
+			}
+			idx += 1;
+		}
+		None
+	} else {
+		if start + 1 >= chars.len() || chars[start + 1].is_whitespace() {
+			return None;
+		}
+
+		let mut idx = start + 1;
+		while idx < chars.len() {
+			if chars[idx] == '$' && !super::tables::is_char_escaped(chars, idx) {
+				if idx + 1 < chars.len() && chars[idx + 1] == '$' {
+					idx += 2;
+					continue;
+				}
+				if chars[idx - 1].is_whitespace() {
+					idx += 1;
+					continue;
+				}
+				if idx + 1 < chars.len() && chars[idx + 1].is_ascii_digit() {
+					idx += 1;
+					continue;
+				}
+				return Some(idx);
+			}
+			idx += 1;
+		}
+		None
+	}
+}
+
 /// Find matching closing `)` for a link destination starting at `paren_start` where `chars[paren_start] == '('`.
 pub fn find_link_destination_end(chars: &[char], paren_start: usize) -> Option<usize> {
 	if paren_start >= chars.len() || chars[paren_start] != '(' {
@@ -471,6 +553,18 @@ pub fn collapse_multiple_spaces(line: &str) -> String {
 					result.push(c);
 				}
 				i = code_end + 1;
+				prev_was_space = false;
+				continue;
+			}
+		}
+
+		// Skip KaTeX / math spans
+		if chars[i] == '$' {
+			if let Some(math_end) = find_math_span_end(&chars, i) {
+				for &c in &chars[i..=math_end] {
+					result.push(c);
+				}
+				i = math_end + 1;
 				prev_was_space = false;
 				continue;
 			}

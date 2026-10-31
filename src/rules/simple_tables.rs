@@ -77,6 +77,14 @@ pub fn validate_table_syntax(line: &str) -> Vec<TableIssue> {
 					}
 				}
 
+				if chars[i] == '$' {
+					if let Some(math_end) = crate::format::lines::find_math_span_end(&chars, i) {
+						exempt_ranges.push((i, math_end));
+						i = math_end + 1;
+						continue;
+					}
+				}
+
 				if chars[i] == '<' && i + 1 < chars.len() {
 					let next_c = chars[i + 1];
 					if next_c.is_ascii_alphabetic()

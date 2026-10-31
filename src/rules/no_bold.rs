@@ -22,6 +22,15 @@ pub fn find_bold_text(line: &str) -> Vec<usize> {
 			}
 		}
 
+		// Exempt KaTeX / math spans
+		if chars[i] == '$' {
+			if let Some(math_end) = crate::format::lines::find_math_span_end(&chars, i) {
+				exempt_ranges.push((i, math_end));
+				i = math_end + 1;
+				continue;
+			}
+		}
+
 		// Exempt HTML tags, comments, and autolinks
 		if chars[i] == '<' && i + 1 < chars.len() {
 			let next_c = chars[i + 1];
