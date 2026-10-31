@@ -72,8 +72,20 @@ pub fn validate_markdown_with_config(content: &str, config: &ResolvedConfig) -> 
 			continue;
 		}
 
+		if in_code_block {
+			if let Some(col) = rules::find_ascii_graph(line) {
+				errors.push(LintError {
+					line: line_num,
+					column: col,
+					message: "ASCII graph detected in code block. Use LLM-readable formats instead: Structured CSV, JSON, Mermaid Diagram, Numbered List with Conditions, ZON format, or simple progress indicators".to_string(),
+					rule: "no-ascii-graph".to_string(),
+				});
+			}
+			continue;
+		}
+
 		if let Some(rest) = line.trim().strip_prefix("$$") {
-			if !rest.contains("$$") {
+			if !rest.starts_with('$') && !rest.contains("$$") {
 				in_math_block = !in_math_block;
 				continue;
 			}

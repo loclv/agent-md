@@ -112,33 +112,35 @@ pub fn parse(content: &str) -> ParsedMarkdown {
 
 		// Display Math Block handling ($$)
 		if let Some(rest) = trimmed.strip_prefix("$$") {
-			// Single-line display math block: $$...$$
-			if rest.contains("$$") {
-				let mut math_raw = line.to_string();
+			if !rest.starts_with('$') {
+				// Single-line display math block: $$...$$
+				if rest.contains("$$") {
+					let mut math_raw = line.to_string();
+					math_raw.push('\n');
+					blocks.push(MarkdownBlock::MathBlock(math_raw));
+					i += 1;
+					continue;
+				}
+
+				// Multi-line display math block
+				let mut math_raw = String::new();
+				math_raw.push_str(line);
 				math_raw.push('\n');
-				blocks.push(MarkdownBlock::MathBlock(math_raw));
 				i += 1;
+				while i < lines.len() {
+					let current_line = lines[i];
+					let current_trimmed = current_line.trim();
+					math_raw.push_str(current_line);
+					math_raw.push('\n');
+					if current_trimmed.ends_with("$$") {
+						i += 1;
+						break;
+					}
+					i += 1;
+				}
+				blocks.push(MarkdownBlock::MathBlock(math_raw));
 				continue;
 			}
-
-			// Multi-line display math block
-			let mut math_raw = String::new();
-			math_raw.push_str(line);
-			math_raw.push('\n');
-			i += 1;
-			while i < lines.len() {
-				let current_line = lines[i];
-				let current_trimmed = current_line.trim();
-				math_raw.push_str(current_line);
-				math_raw.push('\n');
-				if current_trimmed.ends_with("$$") {
-					i += 1;
-					break;
-				}
-				i += 1;
-			}
-			blocks.push(MarkdownBlock::MathBlock(math_raw));
-			continue;
 		}
 
 		// Blank line

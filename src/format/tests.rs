@@ -2418,3 +2418,58 @@ fn test_format_escaped_dollar() {
 	let result = format_markdown(content);
 	assert_eq!(result, content);
 }
+
+#[test]
+fn test_find_math_span_end_alphanumeric_prefix() {
+	use super::lines::find_math_span_end;
+
+	// Variable interpolation with alphanumeric prefix should not start a math span
+	let s: Vec<char> = "var$name$".chars().collect();
+	assert_eq!(find_math_span_end(&s, 3), None);
+
+	let s2: Vec<char> = "prefix$$display$$".chars().collect();
+	assert_eq!(find_math_span_end(&s2, 6), None);
+
+	// Triple dollars should not match
+	let s3: Vec<char> = "$$$not math$$$".chars().collect();
+	assert_eq!(find_math_span_end(&s3, 0), None);
+}
+
+#[test]
+fn test_format_katex_matrix_and_greek() {
+	let content = "$$\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$$\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+
+	let greek = "$\\alpha + \\beta = \\gamma$\n";
+	let result_greek = format_markdown(greek);
+	assert_eq!(result_greek, greek);
+}
+
+#[test]
+fn test_format_katex_multiple_inline_spans() {
+	let content = "Given $a = 1$, $b = 2$, and $c = 3$, we have $a + b + c = 6$.\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_katex_powers_and_subscripts() {
+	let content = "$x_1^2 + x_2^2 = r^2$\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_katex_multiline_with_empty_lines() {
+	let content = "$$\nf(x) = x^2\n\ng(x) = x^3\n$$\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}
+
+#[test]
+fn test_format_katex_inside_parentheses() {
+	let content = "The solution is ($y = ax + b$) for all points.\n";
+	let result = format_markdown(content);
+	assert_eq!(result, content);
+}

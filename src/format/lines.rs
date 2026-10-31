@@ -448,6 +448,8 @@ pub fn find_code_span_end(chars: &[char], start: usize) -> Option<usize> {
 ///
 /// Rules:
 /// - Delimiters must not be escaped with an odd number of preceding backslashes (`\$`).
+/// - Delimiters must not be preceded by an alphanumeric character (e.g. `var$name`).
+/// - Delimiters cannot have 3 or more contiguous dollar signs.
 /// - For single `$`, opening delimiter must not be immediately followed by whitespace.
 /// - For single `$`, closing delimiter must not be immediately preceded by whitespace.
 /// - For single `$`, closing delimiter must not be immediately followed by an ASCII digit
@@ -461,7 +463,20 @@ pub fn find_math_span_end(chars: &[char], start: usize) -> Option<usize> {
 		return None;
 	}
 
-	let is_double = start + 1 < chars.len() && chars[start + 1] == '$';
+	if start > 0 && chars[start - 1].is_alphanumeric() {
+		return None;
+	}
+
+	let mut dollar_count = 0;
+	while start + dollar_count < chars.len() && chars[start + dollar_count] == '$' {
+		dollar_count += 1;
+	}
+
+	if dollar_count > 2 {
+		return None;
+	}
+
+	let is_double = dollar_count == 2;
 	if is_double {
 		let mut idx = start + 2;
 		while idx + 1 < chars.len() {
@@ -469,6 +484,11 @@ pub fn find_math_span_end(chars: &[char], start: usize) -> Option<usize> {
 				&& chars[idx + 1] == '$'
 				&& !super::tables::is_char_escaped(chars, idx)
 			{
+				let next_is_dollar = idx + 2 < chars.len() && chars[idx + 2] == '$';
+				if next_is_dollar {
+					idx += 1;
+					continue;
+				}
 				return Some(idx + 1);
 			}
 			idx += 1;

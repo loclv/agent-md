@@ -56,72 +56,113 @@ pub fn find_ascii_graph(line: &str) -> Option<usize> {
 
 	let graph_indicators = ["graph:", "chart:", "diagram:", "flow:", "tree:"];
 
+	let chars: Vec<char> = line.chars().collect();
+	let mut exempt_ranges = Vec::new();
+	let mut i = 0;
+	while i < chars.len() {
+		if chars[i] == '`' {
+			if let Some(code_end) = crate::format::lines::find_code_span_end(&chars, i) {
+				exempt_ranges.push((i, code_end));
+				i = code_end + 1;
+				continue;
+			}
+		}
+		if chars[i] == '$' {
+			if let Some(math_end) = crate::format::lines::find_math_span_end(&chars, i) {
+				exempt_ranges.push((i, math_end));
+				i = math_end + 1;
+				continue;
+			}
+		}
+		i += 1;
+	}
+
 	for indicator in &graph_indicators {
 		// SIMD: Accelerate case-insensitive indicator detection across the line.
 		// Avoids calling `line.to_lowercase()` (allocating a new String) for every
 		// indicator when none are present in the line.
 		if crate::simd::contains_ascii_case_insensitive(line, indicator) {
-			if let Some(pos) = line.to_lowercase().find(indicator) {
-				return Some(pos + 1);
+			let line_lower = line.to_lowercase();
+			let mut search_pos = 0;
+			while let Some(pos) = line_lower[search_pos..].find(indicator) {
+				let abs_pos = search_pos + pos;
+				if !exempt_ranges
+					.iter()
+					.any(|&(s, e)| abs_pos >= s && abs_pos <= e)
+				{
+					return Some(abs_pos + 1);
+				}
+				search_pos = abs_pos + indicator.len();
 			}
 		}
 	}
 
 	for pattern in &ascii_graph_patterns {
-		if let Some(pos) = line.find(pattern) {
-			let pattern_count = line.matches(pattern).count();
-			if pattern_count >= 2
-				|| line.contains("┌")
-				|| line.contains("└")
-				|| line.contains("├")
-				|| line.contains("┤")
+		let mut search_pos = 0;
+		let mut matches_outside = Vec::new();
+		while let Some(pos) = line[search_pos..].find(pattern) {
+			let abs_pos = search_pos + pos;
+			if !exempt_ranges
+				.iter()
+				.any(|&(s, e)| abs_pos >= s && abs_pos <= e)
 			{
+				matches_outside.push(abs_pos);
+			}
+			search_pos = abs_pos + pattern.len();
+		}
+
+		if matches_outside.is_empty() {
+			continue;
+		}
+
+		let pos = matches_outside[0];
+		let pattern_count = matches_outside.len();
+
+		if pattern_count >= 2
+			|| line.contains('┌')
+			|| line.contains('└')
+			|| line.contains('├')
+			|| line.contains('┤')
+		{
+			return Some(pos + 1);
+		}
+
+		if *pattern == "├──"
+			|| *pattern == "└──"
+			|| *pattern == "│  "
+			|| *pattern == "┌─┐"
+			|| *pattern == "└─┘"
+			|| *pattern == "├─┤"
+		{
+			return Some(pos + 1);
+		} else if *pattern == "[ ]"
+			|| *pattern == "( )"
+			|| *pattern == "{ }"
+			|| *pattern == "->"
+			|| *pattern == "<-"
+		{
+			let arrows_count = count_matches_outside(line, "->", &exempt_ranges)
+				+ count_matches_outside(line, "<-", &exempt_ranges);
+			let brackets_count = count_matches_outside(line, "[ ]", &exempt_ranges)
+				+ count_matches_outside(line, "( )", &exempt_ranges);
+			if arrows_count >= 2 || brackets_count >= 2 {
 				return Some(pos + 1);
 			}
-
-			if *pattern == "├──"
-				|| *pattern == "└──"
-				|| *pattern == "│  "
-				|| *pattern == "┌─┐"
-				|| *pattern == "└─┘"
-				|| *pattern == "├─┤"
-			{
+		} else {
+			let (special_chars, total_chars) =
+				count_special_and_total_chars(&chars, &exempt_ranges);
+			if total_chars >= 5 && special_chars as f64 / total_chars as f64 > 0.4 {
 				return Some(pos + 1);
-			} else if *pattern == "[ ]"
-				|| *pattern == "( )"
-				|| *pattern == "{ }"
-				|| *pattern == "->"
-				|| *pattern == "<-"
-			{
-				if line.matches("->").count() + line.matches("<-").count() >= 2
-					|| line.matches("[ ]").count() + line.matches("( )").count() >= 2
-				{
-					return Some(pos + 1);
-				}
-			} else {
-				let special_chars = line
-					.chars()
-					.filter(|c| !c.is_alphabetic() && !c.is_whitespace() && *c != '.')
-					.count();
-
-				let total_chars = line.chars().filter(|c| !c.is_whitespace()).count();
-
-				if total_chars >= 5 && special_chars as f64 / total_chars as f64 > 0.4 {
-					return Some(pos + 1);
-				}
 			}
 		}
 	}
 
-	let special_chars = line
-		.chars()
-		.filter(|c| !c.is_alphabetic() && !c.is_whitespace() && *c != '.')
-		.count();
-
-	let total_chars = line.chars().filter(|c| !c.is_whitespace()).count();
-
+	let (special_chars, total_chars) = count_special_and_total_chars(&chars, &exempt_ranges);
 	if total_chars >= 5 && special_chars as f64 / total_chars as f64 > 0.4 {
-		for (i, c) in line.chars().enumerate() {
+		for (i, &c) in chars.iter().enumerate() {
+			if exempt_ranges.iter().any(|&(s, e)| i >= s && i <= e) {
+				continue;
+			}
 			if !c.is_alphabetic() && !c.is_whitespace() && c != '.' {
 				return Some(i + 1);
 			}
@@ -129,6 +170,42 @@ pub fn find_ascii_graph(line: &str) -> Option<usize> {
 	}
 
 	None
+}
+
+fn count_matches_outside(line: &str, pattern: &str, exempt_ranges: &[(usize, usize)]) -> usize {
+	let mut count = 0;
+	let mut search_pos = 0;
+	while let Some(pos) = line[search_pos..].find(pattern) {
+		let abs_pos = search_pos + pos;
+		if !exempt_ranges
+			.iter()
+			.any(|&(s, e)| abs_pos >= s && abs_pos <= e)
+		{
+			count += 1;
+		}
+		search_pos = abs_pos + pattern.len();
+	}
+	count
+}
+
+fn count_special_and_total_chars(
+	chars: &[char],
+	exempt_ranges: &[(usize, usize)],
+) -> (usize, usize) {
+	let mut special_chars = 0;
+	let mut total_chars = 0;
+	for (idx, &c) in chars.iter().enumerate() {
+		if exempt_ranges.iter().any(|&(s, e)| idx >= s && idx <= e) {
+			continue;
+		}
+		if !c.is_whitespace() {
+			total_chars += 1;
+			if !c.is_alphabetic() && c != '.' {
+				special_chars += 1;
+			}
+		}
+	}
+	(special_chars, total_chars)
 }
 
 #[cfg(test)]
@@ -294,5 +371,16 @@ mod tests {
 		let result = find_ascii_graph(line);
 		// This line actually has high special char density, so it will trigger
 		assert!(result.is_some());
+	}
+
+	#[test]
+	fn test_find_ascii_graph_ignores_katex_inline_and_display() {
+		assert!(find_ascii_graph("$y = ax + b$").is_none());
+		assert!(find_ascii_graph("$$y = ax + b$$").is_none());
+		assert!(find_ascii_graph("Formula: $f(x) = x^2 + 2x + 1$").is_none());
+		assert!(find_ascii_graph(
+			"Check: $f(x) = \\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$"
+		)
+		.is_none());
 	}
 }
