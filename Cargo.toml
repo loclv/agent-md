@@ -1,8 +1,8 @@
 [package]
 name = "agent-md"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
-description = "Fast Markdown editor, linter, and formatter designed for AI agents"
+description = "A linter and formatter for markdown files designed for AI agents"
 license = "MIT"
 repository = "https://github.com/loclv/agent-md"
 homepage = "https://github.com/loclv/agent-md"
