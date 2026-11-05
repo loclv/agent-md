@@ -2473,3 +2473,23 @@ fn test_format_katex_inside_parentheses() {
 	let result = format_markdown(content);
 	assert_eq!(result, content);
 }
+
+#[test]
+fn test_format_with_snake_case_resolved_config() {
+	let json = crate::json!({
+		"remove_bold": false,
+		"blanks_around_lists": false,
+		"blanks_around_headings": false
+	});
+	let resolved = crate::config::resolve_config(Some(&json));
+	let options = FormatOptions {
+		remove_bold: resolved.remove_bold,
+		blanks_around_lists: resolved.blanks_around_lists,
+		blanks_around_headings: resolved.blanks_around_headings,
+		..FormatOptions::default()
+	};
+	let content = "# Title\n\nSome text\n- item 1\n- item 2\n";
+	let result = format_markdown_with_options(content, options);
+	let expected = "# Title\nSome text\n- item 1\n- item 2\n";
+	assert_eq!(result, expected);
+}

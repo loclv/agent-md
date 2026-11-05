@@ -147,11 +147,12 @@ impl ResolvedConfig {
 			return defaults;
 		};
 
-		let get_bool = |key: &str, def: bool| -> bool {
-			cfg.get(key).and_then(|v| v.as_bool()).unwrap_or(def)
+		let get_u64_alias = |k1: &str, k2: &str, def: u64| -> u64 {
+			cfg.get(k1)
+				.or_else(|| cfg.get(k2))
+				.and_then(|v| v.as_u64())
+				.unwrap_or(def)
 		};
-		let get_u64 =
-			|key: &str, def: u64| -> u64 { cfg.get(key).and_then(|v| v.as_u64()).unwrap_or(def) };
 
 		// Read a boolean accepting kebab-case or snake_case keys.
 		// The kebab-case key wins when both are present; falls back to `def`.
@@ -175,29 +176,66 @@ impl ResolvedConfig {
 			get_bool_alias(k1, k2, def)
 		};
 
-		let no_duplicate = get_bool_alias(
-			"no-duplicate-heading",
-			"no-duplicate-headings",
-			defaults.no_duplicate_heading,
-		);
+		let no_duplicate = match (
+			cfg.get("no-duplicate-heading"),
+			cfg.get("no-duplicate-headings"),
+			cfg.get("no_duplicate_heading"),
+			cfg.get("no_duplicate_headings"),
+		) {
+			(Some(v), _, _, _) | (_, Some(v), _, _) | (_, _, Some(v), _) | (_, _, _, Some(v))
+				if v.is_boolean() =>
+			{
+				v.as_bool().unwrap_or(defaults.no_duplicate_heading)
+			}
+			_ => defaults.no_duplicate_heading,
+		};
 
 		Self {
-			blanks_around_headings: get_bool(
+			blanks_around_headings: get_format_bool(
 				"blanks-around-headings",
+				"blanks_around_headings",
 				defaults.blanks_around_headings,
 			),
-			blanks_around_lists: get_bool("blanks-around-lists", defaults.blanks_around_lists),
-			blanks_around_fences: get_bool("blanks-around-fences", defaults.blanks_around_fences),
-			blanks_around_tables: get_bool("blanks-around-tables", defaults.blanks_around_tables),
-			first_line_heading: get_bool("first-line-heading", defaults.first_line_heading),
+			blanks_around_lists: get_format_bool(
+				"blanks-around-lists",
+				"blanks_around_lists",
+				defaults.blanks_around_lists,
+			),
+			blanks_around_fences: get_format_bool(
+				"blanks-around-fences",
+				"blanks_around_fences",
+				defaults.blanks_around_fences,
+			),
+			blanks_around_tables: get_format_bool(
+				"blanks-around-tables",
+				"blanks_around_tables",
+				defaults.blanks_around_tables,
+			),
+			first_line_heading: get_bool_alias(
+				"first-line-heading",
+				"first_line_heading",
+				defaults.first_line_heading,
+			),
 			no_duplicate_heading: no_duplicate,
 			no_duplicate_headings: no_duplicate,
-			line_length: get_bool("line-length", defaults.line_length),
-			max_line_length: get_u64("max-line-length", defaults.max_line_length),
-			ol_prefix: get_bool("ol-prefix", defaults.ol_prefix),
-			table_column_style: get_bool("table-column-style", defaults.table_column_style),
-			no_hard_tabs: get_bool("no-hard-tabs", defaults.no_hard_tabs),
-			no_inline_html: get_bool("no-inline-html", defaults.no_inline_html),
+			line_length: get_bool_alias("line-length", "line_length", defaults.line_length),
+			max_line_length: get_u64_alias(
+				"max-line-length",
+				"max_line_length",
+				defaults.max_line_length,
+			),
+			ol_prefix: get_bool_alias("ol-prefix", "ol_prefix", defaults.ol_prefix),
+			table_column_style: get_bool_alias(
+				"table-column-style",
+				"table_column_style",
+				defaults.table_column_style,
+			),
+			no_hard_tabs: get_bool_alias("no-hard-tabs", "no_hard_tabs", defaults.no_hard_tabs),
+			no_inline_html: get_bool_alias(
+				"no-inline-html",
+				"no_inline_html",
+				defaults.no_inline_html,
+			),
 			ignore_markdownlintrc: get_bool_alias(
 				"ignore-markdownlintrc",
 				"ignore_markdownlintrc",
@@ -510,7 +548,11 @@ fn apply_override_rules(base: &mut ResolvedConfig, rules: &JsonValue) {
 	if let Some(v) = override_rule_bool(rules, "line-length", "line_length") {
 		base.line_length = v;
 	}
-	if let Some(v) = rules.get("max-line-length").and_then(|v| v.as_u64()) {
+	if let Some(v) = rules
+		.get("max-line-length")
+		.or_else(|| rules.get("max_line_length"))
+		.and_then(|v| v.as_u64())
+	{
 		base.max_line_length = v;
 	}
 	if let Some(v) = override_rule_bool(rules, "ol-prefix", "ol_prefix") {
@@ -883,7 +925,19 @@ mod tests {
 			"collapse_spaces": false,
 			"remove_horizontal_rules": false,
 			"remove_emphasis": false,
-			"minify_html": false
+			"minify_html": false,
+			"blanks_around_lists": false,
+			"blanks_around_headings": false,
+			"blanks_around_fences": false,
+			"blanks_around_tables": true,
+			"first_line_heading": false,
+			"no_duplicate_heading": false,
+			"line_length": true,
+			"max_line_length": 120,
+			"ol_prefix": true,
+			"table_column_style": true,
+			"no_hard_tabs": false,
+			"no_inline_html": true
 		});
 		let cfg = resolve_config(Some(&json));
 		assert!(!cfg.remove_bold);
@@ -892,6 +946,32 @@ mod tests {
 		assert!(!cfg.remove_horizontal_rules);
 		assert!(!cfg.remove_emphasis);
 		assert!(!cfg.minify_html);
+		assert!(!cfg.blanks_around_lists);
+		assert!(!cfg.blanks_around_headings);
+		assert!(!cfg.blanks_around_fences);
+		assert!(cfg.blanks_around_tables);
+		assert!(!cfg.first_line_heading);
+		assert!(!cfg.no_duplicate_heading);
+		assert!(!cfg.no_duplicate_headings);
+		assert!(cfg.line_length);
+		assert_eq!(cfg.max_line_length, 120);
+		assert!(cfg.ol_prefix);
+		assert!(cfg.table_column_style);
+		assert!(!cfg.no_hard_tabs);
+		assert!(cfg.no_inline_html);
+	}
+
+	#[test]
+	fn test_resolve_config_user_agent_md_example() {
+		let json = crate::json!({
+			"remove_bold": false,
+			"blanks_around_lists": false,
+			"blanks_around_headings": false
+		});
+		let cfg = resolve_config(Some(&json));
+		assert!(!cfg.remove_bold);
+		assert!(!cfg.blanks_around_lists);
+		assert!(!cfg.blanks_around_headings);
 	}
 
 	#[test]

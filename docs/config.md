@@ -25,6 +25,8 @@ agent-md --config samples/agent-md.json lint document.md
 
 ## Linter options
 
+All configuration options accept both kebab-case and snake_case keys (for example `blanks-around-headings` or `blanks_around_headings`, `blanks-around-lists` or `blanks_around_lists`). Spacing options (`blanks_around_*`) can also be specified under the `format` object.
+
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `blanks-around-headings` | bool | `true` | Require blank lines around headings |

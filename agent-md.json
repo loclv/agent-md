@@ -1,3 +1,5 @@
 {
-    "remove_bold": false
+    "remove_bold": false,
+    "blanks_around_lists": false,
+    "blanks_around_headings": false
 }
