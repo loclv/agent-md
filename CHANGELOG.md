@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-05
+
+### Fixed
+
+- Configuration Key Aliases: Supported snake_case keys (such as `blanks_around_headings`, `blanks_around_lists`, `blanks_around_fences`, `blanks_around_tables`, `first_line_heading`, `line_length`, `max_line_length`, etc.) in configuration files (`agent-md.json`, `.agent-md.json`), allowing options like `"blanks_around_lists": false` and `"blanks_around_headings": false` to properly resolve and take effect during formatting and linting. Also supported specifying spacing options within `format` objects.
+
 ## [0.5.1] - 2026-11-01
 
 ### Added
