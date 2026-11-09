@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-11-10
+
 ### Fixed
 
 - Configuration Discovery for Stdin Formatting: Updated `find_config_for_target_raw` to search ancestor directories when `target_path` is omitted (e.g. `agent-md fmt --stdin`), ensuring workspace `agent-md.json` files are discovered even when invoked without a direct file argument.
