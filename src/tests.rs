@@ -2212,6 +2212,113 @@ This web site is using `markedjs/marked`.
 	}
 
 	#[test]
+	fn test_format_options_target_none_searches_ancestors() {
+		let opts = crate::cli::get_format_options_for_target_with_options(
+			None, None, None, None, None, None, None, None, false,
+		);
+		assert!(!opts.blanks_around_headings);
+	}
+
+	#[test]
+	fn test_cli_format_options_overrides_and_fallbacks() {
+		let temp_dir = std::env::temp_dir().join("agent_md_test_cli_opts_override");
+		let _ = fs::remove_dir_all(&temp_dir);
+		fs::create_dir_all(&temp_dir).unwrap();
+
+		let cfg_path = temp_dir.join("agent-md.json");
+		fs::write(
+			&cfg_path,
+			r#"{
+				"remove_bold": false,
+				"compact_blank_lines": false,
+				"collapse_spaces": false,
+				"remove_horizontal_rules": false,
+				"remove_emphasis": false,
+				"minify_html": false,
+				"blanks_around_lists": false,
+				"blanks_around_fences": false,
+				"blanks_around_headings": false
+			}"#,
+		)
+		.unwrap();
+
+		let target = Some(temp_dir.to_str().unwrap());
+
+		// 1. When all CLI flags are None, config values are used
+		let opts_default = crate::cli::get_format_options_for_target_with_options(
+			None, None, None, None, None, None, None, target, false,
+		);
+		assert!(!opts_default.remove_bold);
+		assert!(!opts_default.compact_blank_lines);
+		assert!(!opts_default.collapse_spaces);
+		assert!(!opts_default.remove_horizontal_rules);
+		assert!(!opts_default.remove_emphasis);
+		assert!(!opts_default.minify_html);
+		assert!(!opts_default.blanks_around_lists);
+		assert!(!opts_default.blanks_around_fences);
+		assert!(!opts_default.blanks_around_headings);
+
+		// 2. CLI flag Some(true) overrides config false
+		let opts_override_true = crate::cli::get_format_options_for_target_with_options(
+			Some(true),
+			Some(true),
+			Some(true),
+			Some(true),
+			Some(true),
+			Some(true),
+			None,
+			target,
+			false,
+		);
+		assert!(opts_override_true.remove_bold);
+		assert!(opts_override_true.compact_blank_lines);
+		assert!(opts_override_true.collapse_spaces);
+		assert!(opts_override_true.remove_horizontal_rules);
+		assert!(opts_override_true.remove_emphasis);
+		assert!(opts_override_true.minify_html);
+
+		// 3. CLI flag Some(false) overrides default config true
+		let temp_dir_true = std::env::temp_dir().join("agent_md_test_cli_opts_override_true");
+		let _ = fs::remove_dir_all(&temp_dir_true);
+		fs::create_dir_all(&temp_dir_true).unwrap();
+		let cfg_path_true = temp_dir_true.join("agent-md.json");
+		fs::write(
+			&cfg_path_true,
+			r#"{
+				"remove_bold": true,
+				"compact_blank_lines": true,
+				"collapse_spaces": true,
+				"remove_horizontal_rules": true,
+				"remove_emphasis": true,
+				"minify_html": true
+			}"#,
+		)
+		.unwrap();
+		let target_true = Some(temp_dir_true.to_str().unwrap());
+
+		let opts_override_false = crate::cli::get_format_options_for_target_with_options(
+			Some(false),
+			Some(false),
+			Some(false),
+			Some(false),
+			Some(false),
+			Some(false),
+			None,
+			target_true,
+			false,
+		);
+		assert!(!opts_override_false.remove_bold);
+		assert!(!opts_override_false.compact_blank_lines);
+		assert!(!opts_override_false.collapse_spaces);
+		assert!(!opts_override_false.remove_horizontal_rules);
+		assert!(!opts_override_false.remove_emphasis);
+		assert!(!opts_override_false.minify_html);
+
+		let _ = fs::remove_dir_all(&temp_dir);
+		let _ = fs::remove_dir_all(&temp_dir_true);
+	}
+
+	#[test]
 	fn test_cwd_config_discovery_for_lint_options() {
 		let temp_dir = std::env::temp_dir().join("agent_md_test_cwd_lint");
 		let _ = fs::remove_dir_all(&temp_dir);

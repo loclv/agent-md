@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Configuration Discovery for Stdin Formatting: Updated `find_config_for_target_raw` to search ancestor directories when `target_path` is omitted (e.g. `agent-md fmt --stdin`), ensuring workspace `agent-md.json` files are discovered even when invoked without a direct file argument.
+- VS Code Extension CWD Parameter: Updated VS Code formatter to pass `--cwd` and process `cwd` pointing to the active document directory, enabling editor auto-formatting to properly locate and respect workspace configuration.
+
+### Tests
+
+- Comprehensive Unit Test Coverage for All Options: Added exhaustive unit tests covering all 19 configuration options in `ResolvedConfig` (individually verifying kebab-case, snake_case, nested `format` object, and precedence rules), all 10 formatting options in `FormatOptions` (verifying individual enabled and disabled formatting effects), and CLI flag overrides and fallbacks in `get_format_options_for_target_with_options`.
+
 ## [0.5.2] - 2026-11-05
 
 ### Fixed

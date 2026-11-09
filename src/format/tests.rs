@@ -2493,3 +2493,204 @@ fn test_format_with_snake_case_resolved_config() {
 	let expected = "# Title\nSome text\n- item 1\n- item 2\n";
 	assert_eq!(result, expected);
 }
+
+#[test]
+fn test_all_format_options_individual_effects() {
+	// 1. remove_bold
+	let content_bold = "This has **bold** and __bold2__ text";
+	let res_bold_on = format_markdown_with_options(
+		content_bold,
+		FormatOptions {
+			remove_bold: true,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_bold_on, "This has bold and bold2 text");
+	let res_bold_off = format_markdown_with_options(
+		content_bold,
+		FormatOptions {
+			remove_bold: false,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_bold_off, "This has **bold** and __bold2__ text");
+
+	// 2. compact_blank_lines
+	let content_blanks = "Line 1\n\n\n\nLine 2";
+	let res_compact_on = format_markdown_with_options(
+		content_blanks,
+		FormatOptions {
+			compact_blank_lines: true,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_compact_on, "Line 1\n\nLine 2");
+	let res_compact_off = format_markdown_with_options(
+		content_blanks,
+		FormatOptions {
+			compact_blank_lines: false,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_compact_off, "Line 1\n\n\n\nLine 2");
+
+	// 3. trim_trailing_whitespace
+	let content_trail = "Line 1   \nLine 2  ";
+	let res_trim_on = format_markdown_with_options(
+		content_trail,
+		FormatOptions {
+			trim_trailing_whitespace: true,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_trim_on, "Line 1\nLine 2");
+	let res_trim_off = format_markdown_with_options(
+		content_trail,
+		FormatOptions {
+			trim_trailing_whitespace: false,
+			collapse_spaces: false,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_trim_off, "Line 1   \nLine 2  ");
+
+	// 4. collapse_spaces
+	let content_spaces = "Word1     Word2";
+	let res_collapse_on = format_markdown_with_options(
+		content_spaces,
+		FormatOptions {
+			collapse_spaces: true,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_collapse_on, "Word1 Word2");
+	let res_collapse_off = format_markdown_with_options(
+		content_spaces,
+		FormatOptions {
+			collapse_spaces: false,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_collapse_off, "Word1     Word2");
+
+	// 5. remove_horizontal_rules
+	let content_hr = "Line 1\n\n---\n\nLine 2";
+	let res_hr_on = format_markdown_with_options(
+		content_hr,
+		FormatOptions {
+			remove_horizontal_rules: true,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_hr_on, "Line 1\n\nLine 2");
+	let res_hr_off = format_markdown_with_options(
+		content_hr,
+		FormatOptions {
+			remove_horizontal_rules: false,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_hr_off, "Line 1\n\n---\n\nLine 2");
+
+	// 6. remove_emphasis
+	let content_em = "This has *italic* and _italic2_ text";
+	let res_em_on = format_markdown_with_options(
+		content_em,
+		FormatOptions {
+			remove_emphasis: true,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_em_on, "This has italic and italic2 text");
+	let res_em_off = format_markdown_with_options(
+		content_em,
+		FormatOptions {
+			remove_emphasis: false,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_em_off, "This has *italic* and _italic2_ text");
+
+	// 7. blanks_around_lists
+	let content_list = "Text\n- Item 1\n- Item 2\nEnd";
+	let res_list_on = format_markdown_with_options(
+		content_list,
+		FormatOptions {
+			blanks_around_lists: true,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_list_on, "Text\n\n- Item 1\n- Item 2\n\nEnd");
+	let res_list_off = format_markdown_with_options(
+		content_list,
+		FormatOptions {
+			blanks_around_lists: false,
+			blanks_around_headings: false,
+			blanks_around_fences: false,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_list_off, "Text\n- Item 1\n- Item 2\nEnd");
+
+	// 8. blanks_around_fences
+	let content_fence = "Text\n```rust\nfn main() {}\n```\nEnd";
+	let res_fence_on = format_markdown_with_options(
+		content_fence,
+		FormatOptions {
+			blanks_around_fences: true,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_fence_on, "Text\n\n```rust\nfn main() {}\n```\n\nEnd");
+	let res_fence_off = format_markdown_with_options(
+		content_fence,
+		FormatOptions {
+			blanks_around_fences: false,
+			blanks_around_headings: false,
+			blanks_around_lists: false,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_fence_off, "Text\n```rust\nfn main() {}\n```\nEnd");
+
+	// 9. blanks_around_headings
+	let content_heading = "# Heading 1\n## Heading 2\nText";
+	let res_heading_on = format_markdown_with_options(
+		content_heading,
+		FormatOptions {
+			blanks_around_headings: true,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_heading_on, "# Heading 1\n\n## Heading 2\n\nText");
+	let res_heading_off = format_markdown_with_options(
+		content_heading,
+		FormatOptions {
+			blanks_around_headings: false,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_heading_off, "# Heading 1\n## Heading 2\nText");
+
+	// 10. minify_html
+	let content_html = "<div align=\"center\">\n<img src=\"logo.svg\" />\n</div>\n";
+	let res_html_on = format_markdown_with_options(
+		content_html,
+		FormatOptions {
+			minify_html: true,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(
+		res_html_on,
+		"<div align=\"center\"><img src=\"logo.svg\" /></div>\n"
+	);
+	let res_html_off = format_markdown_with_options(
+		content_html,
+		FormatOptions {
+			minify_html: false,
+			..FormatOptions::default()
+		},
+	);
+	assert_eq!(res_html_off, content_html);
+}

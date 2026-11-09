@@ -1062,6 +1062,314 @@ mod tests {
 		assert!(cfg.blanks_around_lists);
 	}
 
+	#[test]
+	fn test_resolve_config_all_individual_options_kebab_case() {
+		let defaults = ResolvedConfig::default();
+
+		// blanks-around-headings
+		let cfg = resolve_config(Some(&crate::json!({ "blanks-around-headings": false })));
+		assert!(!cfg.blanks_around_headings);
+		assert_eq!(cfg.blanks_around_lists, defaults.blanks_around_lists);
+
+		// blanks-around-lists
+		let cfg = resolve_config(Some(&crate::json!({ "blanks-around-lists": false })));
+		assert!(!cfg.blanks_around_lists);
+		assert_eq!(cfg.blanks_around_headings, defaults.blanks_around_headings);
+
+		// blanks-around-fences
+		let cfg = resolve_config(Some(&crate::json!({ "blanks-around-fences": false })));
+		assert!(!cfg.blanks_around_fences);
+
+		// blanks-around-tables
+		let cfg = resolve_config(Some(&crate::json!({ "blanks-around-tables": true })));
+		assert!(cfg.blanks_around_tables);
+
+		// first-line-heading
+		let cfg = resolve_config(Some(&crate::json!({ "first-line-heading": false })));
+		assert!(!cfg.first_line_heading);
+
+		// no-duplicate-heading
+		let cfg = resolve_config(Some(&crate::json!({ "no-duplicate-heading": false })));
+		assert!(!cfg.no_duplicate_heading);
+		assert!(!cfg.no_duplicate_headings);
+
+		// no-duplicate-headings
+		let cfg = resolve_config(Some(&crate::json!({ "no-duplicate-headings": false })));
+		assert!(!cfg.no_duplicate_heading);
+		assert!(!cfg.no_duplicate_headings);
+
+		// line-length
+		let cfg = resolve_config(Some(&crate::json!({ "line-length": true })));
+		assert!(cfg.line_length);
+
+		// max-line-length
+		let cfg = resolve_config(Some(&crate::json!({ "max-line-length": 90 })));
+		assert_eq!(cfg.max_line_length, 90);
+
+		// ol-prefix
+		let cfg = resolve_config(Some(&crate::json!({ "ol-prefix": true })));
+		assert!(cfg.ol_prefix);
+
+		// table-column-style
+		let cfg = resolve_config(Some(&crate::json!({ "table-column-style": true })));
+		assert!(cfg.table_column_style);
+
+		// no-hard-tabs
+		let cfg = resolve_config(Some(&crate::json!({ "no-hard-tabs": false })));
+		assert!(!cfg.no_hard_tabs);
+
+		// no-inline-html
+		let cfg = resolve_config(Some(&crate::json!({ "no-inline-html": true })));
+		assert!(cfg.no_inline_html);
+
+		// ignore-markdownlintrc
+		let cfg = resolve_config(Some(&crate::json!({ "ignore-markdownlintrc": true })));
+		assert!(cfg.ignore_markdownlintrc);
+
+		// remove-bold
+		let cfg = resolve_config(Some(&crate::json!({ "remove-bold": false })));
+		assert!(!cfg.remove_bold);
+
+		// compact-blank-lines
+		let cfg = resolve_config(Some(&crate::json!({ "compact-blank-lines": false })));
+		assert!(!cfg.compact_blank_lines);
+
+		// collapse-spaces
+		let cfg = resolve_config(Some(&crate::json!({ "collapse-spaces": false })));
+		assert!(!cfg.collapse_spaces);
+
+		// remove-horizontal-rules
+		let cfg = resolve_config(Some(&crate::json!({ "remove-horizontal-rules": false })));
+		assert!(!cfg.remove_horizontal_rules);
+
+		// remove-emphasis
+		let cfg = resolve_config(Some(&crate::json!({ "remove-emphasis": false })));
+		assert!(!cfg.remove_emphasis);
+
+		// minify-html
+		let cfg = resolve_config(Some(&crate::json!({ "minify-html": false })));
+		assert!(!cfg.minify_html);
+	}
+
+	#[test]
+	fn test_resolve_config_all_individual_options_snake_case() {
+		let defaults = ResolvedConfig::default();
+
+		// blanks_around_headings
+		let cfg = resolve_config(Some(&crate::json!({ "blanks_around_headings": false })));
+		assert!(!cfg.blanks_around_headings);
+		assert_eq!(cfg.blanks_around_lists, defaults.blanks_around_lists);
+
+		// blanks_around_lists
+		let cfg = resolve_config(Some(&crate::json!({ "blanks_around_lists": false })));
+		assert!(!cfg.blanks_around_lists);
+		assert_eq!(cfg.blanks_around_headings, defaults.blanks_around_headings);
+
+		// blanks_around_fences
+		let cfg = resolve_config(Some(&crate::json!({ "blanks_around_fences": false })));
+		assert!(!cfg.blanks_around_fences);
+
+		// blanks_around_tables
+		let cfg = resolve_config(Some(&crate::json!({ "blanks_around_tables": true })));
+		assert!(cfg.blanks_around_tables);
+
+		// first_line_heading
+		let cfg = resolve_config(Some(&crate::json!({ "first_line_heading": false })));
+		assert!(!cfg.first_line_heading);
+
+		// no_duplicate_heading
+		let cfg = resolve_config(Some(&crate::json!({ "no_duplicate_heading": false })));
+		assert!(!cfg.no_duplicate_heading);
+		assert!(!cfg.no_duplicate_headings);
+
+		// no_duplicate_headings
+		let cfg = resolve_config(Some(&crate::json!({ "no_duplicate_headings": false })));
+		assert!(!cfg.no_duplicate_heading);
+		assert!(!cfg.no_duplicate_headings);
+
+		// line_length
+		let cfg = resolve_config(Some(&crate::json!({ "line_length": true })));
+		assert!(cfg.line_length);
+
+		// max_line_length
+		let cfg = resolve_config(Some(&crate::json!({ "max_line_length": 110 })));
+		assert_eq!(cfg.max_line_length, 110);
+
+		// ol_prefix
+		let cfg = resolve_config(Some(&crate::json!({ "ol_prefix": true })));
+		assert!(cfg.ol_prefix);
+
+		// table_column_style
+		let cfg = resolve_config(Some(&crate::json!({ "table_column_style": true })));
+		assert!(cfg.table_column_style);
+
+		// no_hard_tabs
+		let cfg = resolve_config(Some(&crate::json!({ "no_hard_tabs": false })));
+		assert!(!cfg.no_hard_tabs);
+
+		// no_inline_html
+		let cfg = resolve_config(Some(&crate::json!({ "no_inline_html": true })));
+		assert!(cfg.no_inline_html);
+
+		// ignore_markdownlintrc
+		let cfg = resolve_config(Some(&crate::json!({ "ignore_markdownlintrc": true })));
+		assert!(cfg.ignore_markdownlintrc);
+
+		// remove_bold
+		let cfg = resolve_config(Some(&crate::json!({ "remove_bold": false })));
+		assert!(!cfg.remove_bold);
+
+		// compact_blank_lines
+		let cfg = resolve_config(Some(&crate::json!({ "compact_blank_lines": false })));
+		assert!(!cfg.compact_blank_lines);
+
+		// collapse_spaces
+		let cfg = resolve_config(Some(&crate::json!({ "collapse_spaces": false })));
+		assert!(!cfg.collapse_spaces);
+
+		// remove_horizontal_rules
+		let cfg = resolve_config(Some(&crate::json!({ "remove_horizontal_rules": false })));
+		assert!(!cfg.remove_horizontal_rules);
+
+		// remove_emphasis
+		let cfg = resolve_config(Some(&crate::json!({ "remove_emphasis": false })));
+		assert!(!cfg.remove_emphasis);
+
+		// minify_html
+		let cfg = resolve_config(Some(&crate::json!({ "minify_html": false })));
+		assert!(!cfg.minify_html);
+	}
+
+	#[test]
+	fn test_resolve_config_all_format_options_nested_kebab_and_snake() {
+		let format_options_cases = [
+			("blanks-around-headings", "blanks_around_headings"),
+			("blanks-around-lists", "blanks_around_lists"),
+			("blanks-around-fences", "blanks_around_fences"),
+			("remove-bold", "remove_bold"),
+			("compact-blank-lines", "compact_blank_lines"),
+			("collapse-spaces", "collapse_spaces"),
+			("remove-horizontal-rules", "remove_horizontal_rules"),
+			("remove-emphasis", "remove_emphasis"),
+			("minify-html", "minify_html"),
+		];
+
+		for (kebab, snake) in format_options_cases {
+			let mut obj_kebab = JsonObject::new();
+			obj_kebab.insert(kebab, false);
+			let mut root_kebab = JsonObject::new();
+			root_kebab.insert("format", JsonValue::Object(obj_kebab));
+			let cfg_kebab = resolve_config(Some(&JsonValue::Object(root_kebab)));
+
+			let mut obj_snake = JsonObject::new();
+			obj_snake.insert(snake, false);
+			let mut root_snake = JsonObject::new();
+			root_snake.insert("format", JsonValue::Object(obj_snake));
+			let cfg_snake = resolve_config(Some(&JsonValue::Object(root_snake)));
+
+			match kebab {
+				"blanks-around-headings" => {
+					assert!(!cfg_kebab.blanks_around_headings);
+					assert!(!cfg_snake.blanks_around_headings);
+				}
+				"blanks-around-lists" => {
+					assert!(!cfg_kebab.blanks_around_lists);
+					assert!(!cfg_snake.blanks_around_lists);
+				}
+				"blanks-around-fences" => {
+					assert!(!cfg_kebab.blanks_around_fences);
+					assert!(!cfg_snake.blanks_around_fences);
+				}
+				"remove-bold" => {
+					assert!(!cfg_kebab.remove_bold);
+					assert!(!cfg_snake.remove_bold);
+				}
+				"compact-blank-lines" => {
+					assert!(!cfg_kebab.compact_blank_lines);
+					assert!(!cfg_snake.compact_blank_lines);
+				}
+				"collapse-spaces" => {
+					assert!(!cfg_kebab.collapse_spaces);
+					assert!(!cfg_snake.collapse_spaces);
+				}
+				"remove-horizontal-rules" => {
+					assert!(!cfg_kebab.remove_horizontal_rules);
+					assert!(!cfg_snake.remove_horizontal_rules);
+				}
+				"remove-emphasis" => {
+					assert!(!cfg_kebab.remove_emphasis);
+					assert!(!cfg_snake.remove_emphasis);
+				}
+				"minify-html" => {
+					assert!(!cfg_kebab.minify_html);
+					assert!(!cfg_snake.minify_html);
+				}
+				_ => unreachable!(),
+			}
+		}
+
+		let cfg_t1 = resolve_config(Some(
+			&crate::json!({ "format": { "blanks-around-tables": true } }),
+		));
+		assert!(cfg_t1.blanks_around_tables);
+		let cfg_t2 = resolve_config(Some(
+			&crate::json!({ "format": { "blanks_around_tables": true } }),
+		));
+		assert!(cfg_t2.blanks_around_tables);
+	}
+
+	#[test]
+	fn test_resolve_config_precedence_rules() {
+		let json = crate::json!({
+			"blanks-around-headings": true,
+			"blanks_around_headings": false,
+			"remove-bold": true,
+			"remove_bold": false
+		});
+		let cfg = resolve_config(Some(&json));
+		assert!(cfg.blanks_around_headings);
+		assert!(cfg.remove_bold);
+
+		let json_format_precedence = crate::json!({
+			"remove_bold": true,
+			"format": {
+				"remove_bold": false
+			}
+		});
+		let cfg_fmt = resolve_config(Some(&json_format_precedence));
+		assert!(!cfg_fmt.remove_bold);
+	}
+
+	#[test]
+	fn test_resolved_config_to_json_roundtrip() {
+		let original = ResolvedConfig {
+			blanks_around_headings: false,
+			blanks_around_lists: false,
+			blanks_around_fences: false,
+			blanks_around_tables: true,
+			first_line_heading: false,
+			no_duplicate_heading: false,
+			no_duplicate_headings: false,
+			line_length: true,
+			max_line_length: 72,
+			ol_prefix: true,
+			table_column_style: true,
+			no_hard_tabs: false,
+			no_inline_html: true,
+			ignore_markdownlintrc: true,
+			remove_bold: false,
+			compact_blank_lines: false,
+			collapse_spaces: false,
+			remove_horizontal_rules: false,
+			remove_emphasis: false,
+			minify_html: false,
+		};
+
+		let json = original.to_json();
+		let recovered = ResolvedConfig::from_json(Some(&json));
+		assert_eq!(original, recovered);
+	}
+
 	// ---------- get_bool_config tests ----------
 
 	#[test]

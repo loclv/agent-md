@@ -156,7 +156,7 @@ fn find_config_for_target_raw(
 		}
 	}
 
-	find_config_file_raw(None, ignore_markdownlintrc)
+	find_config_in_ancestors_with_options(Path::new("."), ignore_markdownlintrc)
 }
 
 /// Resolve the effective `ignore-markdownlintrc` setting for a scope.
