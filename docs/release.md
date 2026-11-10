@@ -1,98 +1,71 @@
-# Release Process
+# Release Guide
 
-This document outlines the standard workflow for cutting a new release of `agent-md`.
+This guide describes how to release a new `agent-md` version and update the `loclv/tools` Homebrew tap. The `0.5.3` release used this process.
 
-## Pre-Release Checklist
+## Prepare the release
 
-1. Working directory is clean or contains only intended release changes.
-2. All feature changes are covered by unit and integration tests.
-3. Documentation in `README.md` and `docs/` is up to date.
+1. Check that the working tree is clean and that the changes to release are committed:
 
-## Step-by-Step Release Workflow
+   ```bash
+   git status -sb
+   git log -5 --oneline
+   ```
 
-### 1. Update Version in `Cargo.toml`
+2. Choose the next version from the changes since the previous release. For example, the configuration fixes after `0.5.2` became `0.5.3`.
+3. Update the package version in `Cargo.toml`.
+4. Move the entries under `Unreleased` in `CHANGELOG.md` into a dated section for the new version. Leave a fresh `Unreleased` section above it.
+5. Synchronize `Cargo.lock`, build the release binary, and verify its version:
 
-Update the `version` field under `[package]` in `Cargo.toml`:
+   ```bash
+   cargo check
+   cargo build --release
+   ./target/release/agent-md -v
+   ```
 
-```toml
-[package]
-name = "agent-md"
-version = "X.Y.Z"
-```
+## Validate the release
 
-### 2. Update `CHANGELOG.md`
-
-1. Move unreleased entries under a new version heading with the release date: `## [X.Y.Z] - YYYY-MM-DD`.
-2. Add a fresh, empty `## [Unreleased]` section directly above the new version heading.
-3. Group entries under standard categories (`### Added`, `### Fixed`, `### Changed`, `### Removed`).
-4. Ensure no bold markdown formatting is used; use italics or backticks instead.
-
-### 3. Synchronize `Cargo.lock`
-
-Update dependencies and lockfile:
+Run the release checks and lint the modified Markdown:
 
 ```bash
-cargo check
-```
-
-### 4. Build Release Binary
-
-Build the optimized release binary:
-
-```bash
-cargo build --release
-```
-
-Verify that the compiled binary outputs the expected version:
-
-```bash
-./target/release/agent-md -v
-```
-
-### 5. Validate Code Quality and Tests
-
-Run the full verification suite:
-
-```bash
-# Check code formatting
 cargo fmt --check
-
-# Run linter with warnings treated as errors
 cargo clippy --all-targets --all-features -- -D warnings
-
-# Run all tests under release profile
 cargo test --release
-```
-
-### 6. Lint Markdown Files
-
-Validate modified markdown files using `agent-md`:
-
-```bash
 ./target/release/agent-md lint CHANGELOG.md
 ```
 
-### 7. Commit and Tag
+Review any lint warnings. Record the work in `logs/chat.csv` with `l-log` as required by the project instructions.
 
-Commit release changes and create an annotated git tag:
+## Publish the GitHub release
+
+Replace `0.5.3` with the version being released. Review the staged files before committing.
 
 ```bash
-git add Cargo.toml Cargo.lock CHANGELOG.md docs/
-git commit -m "chore(release): vX.Y.Z"
-git tag -a vX.Y.Z -m "Release version X.Y.Z"
+git add Cargo.toml Cargo.lock CHANGELOG.md
+git diff --cached
+git commit -m 'chore(release): v0.5.3'
+git tag v0.5.3
+git push o main v0.5.3
+gh release create v0.5.3 --title v0.5.3 --notes 'Summarize the changes in this release.'
 ```
 
-### 8. Log Release Activity
+Use the appropriate remote and branch if they differ from `o` and `main`. Confirm the release page on GitHub after publication.
 
-Record the release action using the `l-log` CLI tool:
+## Update the Homebrew tap
+
+1. Download the tagged source archive and calculate its SHA-256 checksum:
+
+   ```bash
+   curl -fsSL -o /tmp/agent-md-v0.5.3.tar.gz https://github.com/loclv/agent-md/archive/refs/tags/v0.5.3.tar.gz
+   shasum -a 256 /tmp/agent-md-v0.5.3.tar.gz
+   ```
+
+2. In the `loclv/homebrew-tools` repository, update `Formula/agent-md.rb`: set the archive URL to the new tag and replace `sha256` with the checksum just calculated. Keep the existing build and test instructions unless they need to change.
+3. Commit and push the formula update to the tap. For `0.5.3`, the GitHub contents API was used to update the formula directly; its current file SHA was supplied to avoid overwriting a concurrent change.
+4. Verify the published formula points to the correct tag and checksum. Where possible, install or upgrade from the tap and run `brew test agent-md`.
+
+Users can update an existing installation with:
 
 ```bash
-l-log add ./logs/chat.csv "Release version X.Y.Z" \
-  --tags="release,version,changelog" \
-  --problem="Release version X.Y.Z" \
-  --solution="Bump version in Cargo.toml, update CHANGELOG.md, synchronize Cargo.lock, and verify test suite" \
-  --action="Bumped version, updated changelog, built release binary, ran test suite" \
-  --files="Cargo.toml,Cargo.lock,CHANGELOG.md" \
-  --tech-stack="rust" \
-  --created-by-agent="Antigravity"
+brew update
+brew upgrade agent-md
 ```
